@@ -42,6 +42,13 @@ impl Word {
                           (val % 64) as u8  ) 
     }
 
+    pub fn from_half_word(val: HalfWord) -> Word {
+        Word{
+            is_positive: val.is_positive,
+            bytes: [Byte::new(0),Byte::new(0),Byte::new(0), val.bytes[0], val.bytes[1]]
+        }
+    }
+
     pub fn read_partial_as_word(&self, l: u8, r: u8) -> Word {
         let is_positive = if l == 0 { self.is_positive } else { true };
         if r > 5 || l > 5 || r < l {
@@ -53,7 +60,10 @@ impl Word {
         let val2 = if r >= l+3 && r > 3{ self.bytes[(r-4) as usize].read() } else {0};
         let val1 = if r >= l+4 && r > 4 { self.bytes[(r-5) as usize].read() } else {0};
         Word::from_values(is_positive, val1, val2, val3, val4, val5)
-        
+    }
+
+    pub fn invert_sign(&mut self) {
+        self.is_positive = ! self.is_positive
     }
 }
 
@@ -65,16 +75,17 @@ pub struct HalfWord{
 
 impl HalfWord {
     pub fn new() -> HalfWord {
-        HalfWord {
-            is_positive: true,
-            bytes: [Byte{value: 0},Byte{value: 0}]
-        }
+        HalfWord::from_values(true, 0, 0)
     }
 
     pub fn from_value(value: i16) -> HalfWord {
+        HalfWord::from_values(value.is_positive(), (value.abs() / 64) as u8, (value.abs() % 64) as u8)
+    }
+
+    pub fn from_values(is_positive:bool, val1: u8, val2: u8) -> HalfWord {
         HalfWord {
-            is_positive: value.is_positive(),
-            bytes: [Byte::new((value.abs() / 64) as u8), Byte::new((value.abs() % 64) as u8)]
+            is_positive: is_positive,
+            bytes: [Byte{value: val1}, Byte{value: val2}]
         }
     }
 
