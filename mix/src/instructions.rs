@@ -1,4 +1,6 @@
 use crate::arch;
+
+#[derive(Clone, Copy)]
 pub struct Instruction {
      value: arch::Word
 }
@@ -37,6 +39,10 @@ impl Instruction {
 
 fn to_opcode(val: u8) -> OpCode {
     match val {
+        1 => OpCode::ADD,
+        2 => OpCode::SUB,
+        3 => OpCode::MUL,
+        4 => OpCode::DIV,
         8 => OpCode::LDA,
         9 => OpCode::LD1,
         10 => OpCode::LD2,
@@ -67,6 +73,10 @@ fn to_opcode(val: u8) -> OpCode {
     }
 }
 pub enum OpCode {
+    ADD = 1,
+    SUB = 2,
+    MUL = 3,
+    DIV = 4,
     LDA = 8,
     LD1 = 9,
     LD2 = 10,

@@ -1,6 +1,7 @@
 use crate::arch;
 use crate::instructions;
 
+use std::cmp;
 use instructions::Instruction;
 struct Registers {
     a: arch::Word,
@@ -30,6 +31,10 @@ struct Computer {
 impl Computer {
     pub fn run_command(&mut self, instruction: Instruction){
         let op = match instruction.op_code() {
+            instructions::OpCode::ADD => Computer::add,
+            instructions::OpCode::SUB => Computer::sub,
+            instructions::OpCode::MUL => Computer::mul,
+            instructions::OpCode::DIV => Computer::div,
             instructions::OpCode::LDA => Computer::loada,
             instructions::OpCode::LD1 => Computer::loadi1,
             instructions::OpCode::LD2 => Computer::loadi2,
@@ -232,9 +237,66 @@ impl Computer {
         for (index, byte_index) in ((l-1)..r).rev().zip((0..5).rev()) {
             self.memory[address as usize].bytes[index as usize] = value.bytes[byte_index as usize];
         }
-
-
     }
+
+  
+
+    fn add(&mut self, instruction: Instruction){
+        let addend2 = self.readmem(instruction).read();
+        self.add_to_register_a(instruction, addend2);
+   }
+    
+    fn sub(&mut self, instruction: Instruction){
+        let addend2 = self.readmem(instruction).read();
+        self.add_to_register_a(instruction, -1 * addend2);
+    }
+
+    fn add_to_register_a(&mut self, instruction: Instruction, addend2: i32){
+        let old_is_positive = self.registers.a.is_positive;
+        let addend1 = self.registers.a.read();
+        let total = addend1 + addend2;
+        self.registers.a = arch::Word::from_value(total);
+        if (addend1.is_positive() && addend2.is_positive() && self.registers.a.read()  < cmp::max(addend1, addend2)) ||
+           (!addend1.is_positive() && !addend2.is_positive() && self.registers.a.read() > cmp::max(addend1, addend2))  {
+                self.overflow = true;
+        }
+        if total == 0 {
+            self.registers.a.is_positive = old_is_positive 
+        }
+    }
+
+    fn mul(&mut self, instruction: Instruction) {
+        let multiplicand1 = self.registers.a.read();
+        let memory = self.readmem(instruction);
+        let multiplicand2 = memory.read();
+        let signs_are_same = self.registers.a.is_positive == memory.is_positive;
+        let product = multiplicand1.abs() as i64 * multiplicand2.abs() as i64;
+        self.registers.a = arch::Word::from_value((product >> 30) as i32);
+        self.registers.x = arch::Word::from_value((product % (1 << 30)) as i32);
+        self.registers.a.is_positive = signs_are_same;
+        self.registers.x.is_positive = signs_are_same;
+    }
+
+    fn div(&mut self, instruction:Instruction) {
+        let old_register_sign = self.registers.a.is_positive;
+        let modifier = if old_register_sign { 1 } else { -1 };
+        let dividend = ((self.registers.a.read() as i64) << 30) + modifier * self.registers.x.read().abs() as i64;
+        let divisor = self.readmem(instruction).read() as i64;
+        if divisor == 0 {
+            self.overflow = true;
+            return;
+        }
+        let quotient = dividend / divisor;
+        let remainder = dividend % divisor;
+        if quotient >= (1i64 << 30){
+            self.overflow = true;
+        }
+        self.registers.a = arch::Word::from_value(quotient as i32); 
+        self.registers.x = arch::Word::from_value(remainder as i32); 
+        self.registers.x.is_positive = old_register_sign;
+    }
+
+
 
     fn get_offset(&self, val: u8) -> i16 {
         match val {
@@ -511,5 +573,216 @@ mod tests {
         c.memory[2000] = arch::Word::from_values(false, 1, 16, 0, 0, 1);
         c.run_command(Instruction::new(instructions::OpCode::STZ, 5, 0, arch::HalfWord::from_value(2000)));
         assert_eq!(c.memory[2000], arch::Word::from_values(true, 0, 0, 0, 0, 0));
+    }
+
+    #[test]
+    fn test_add() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 1, 16, 0, 0, 1);
+        c.memory[2000] = arch::Word::from_values(true, 1, 1, 1, 1, 1);
+        c.run_command(Instruction::new(instructions::OpCode::ADD, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a, arch::Word::from_values(true, 2, 17, 1, 1, 2));
+    }
+
+    #[test]
+    fn test_add_two_negatives() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(false, 2, 16, 3, 4, 1);
+        c.memory[2000] = arch::Word::from_values(false, 1, 1, 1, 1, 1);
+        c.run_command(Instruction::new(instructions::OpCode::ADD, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a, arch::Word::from_values(false, 3, 17, 4, 5, 2));
+    }
+
+    #[test]
+    fn test_add_with_field_specifiers() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 2, 16, 3, 4, 1);
+        c.memory[2000] = arch::Word::from_values(true, 1, 2, 3, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::ADD, 19, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a, arch::Word::from_values(true, 2, 16, 3, 6, 4));
+    }
+    
+    #[test]
+    fn test_add_handles_overflow(){
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 63, 63, 63, 63, 63);
+        c.memory[2000] = arch::Word::from_values(true, 63, 63, 63, 63, 63);
+        c.run_command(Instruction::new(instructions::OpCode::ADD, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a, arch::Word::from_values(true, 63, 63, 63, 63, 62));
+        assert_eq!(c.overflow, true);
+    }
+    
+    #[test]
+    fn test_add_handles_negative_overflow(){
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(false, 63, 63, 63, 63, 63);
+        c.memory[2000] = arch::Word::from_values(false, 63, 63, 63, 63, 63);
+        c.run_command(Instruction::new(instructions::OpCode::ADD, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a, arch::Word::from_values(false, 63, 63, 63, 63, 62));
+        assert_eq!(c.overflow, true);
+    }
+    
+    #[test]
+    fn test_add_mixed_signs_cant_overflow(){
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(false, 63, 63, 63, 63, 63);
+        c.memory[2000] = arch::Word::from_values(true, 63, 63, 63, 63, 63);
+        c.run_command(Instruction::new(instructions::OpCode::ADD, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a, arch::Word::from_values(false, 0,0,0,0,0));
+        assert_eq!(c.overflow, false);
+    }
+    
+    #[test]
+    fn test_add_zero_result_preserves_sign(){
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 63, 63, 63, 63, 63);
+        c.memory[2000] = arch::Word::from_values(false, 63, 63, 63, 63, 63);
+        c.run_command(Instruction::new(instructions::OpCode::ADD, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a, arch::Word::from_values(true, 0,0,0,0,0));
+    }
+    
+    #[test]
+    fn test_add_zero_result_preserves_sign_when_addends_are_zero(){
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 0, 0, 0, 0, 0);
+        c.memory[2000] = arch::Word::from_values(false, 0, 0, 0, 0, 0);
+        c.run_command(Instruction::new(instructions::OpCode::ADD, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a, arch::Word::from_values(true, 0,0,0,0,0));
+    }
+
+    #[test]
+    fn test_subtract() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 1, 16, 0, 0, 1);
+        c.memory[2000] = arch::Word::from_values(true, 1, 1, 1, 1, 1);
+        c.run_command(Instruction::new(instructions::OpCode::SUB, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a, arch::Word::from_values(true, 0, 14, 62, 63, 0));
+    }
+    
+    #[test]
+    fn test_subtract_positive_to_negative() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 1, 1, 1, 1, 1);
+        c.memory[2000] = arch::Word::from_values(true, 2, 2, 2, 2, 2);
+        c.run_command(Instruction::new(instructions::OpCode::SUB, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a, arch::Word::from_values(false, 1, 1, 1, 1, 1));
+    }
+    
+    #[test]
+    fn test_multiply() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 0, 0, 0, 0, 3);
+        c.memory[2000] = arch::Word::from_values(true, 2, 2, 2, 2, 2);
+        c.run_command(Instruction::new(instructions::OpCode::MUL, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a, arch::Word::from_values(true, 0, 0, 0, 0, 0));
+        assert_eq!(c.registers.x, arch::Word::from_values(true, 6, 6, 6, 6, 6));
+        
+    }
+    
+    #[test]
+    fn test_multiply_big_num() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 63, 63, 63, 63, 63);
+        c.memory[2000] = arch::Word::from_values(true, 63, 63, 63, 63, 63);
+        c.run_command(Instruction::new(instructions::OpCode::MUL, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a, arch::Word::from_values(true, 63, 63, 63, 63, 62));
+        assert_eq!(c.registers.x, arch::Word::from_values(true, 0, 0, 0, 0, 1));
+        
+    }
+    
+    #[test]
+    fn test_multiply_mixed_signs() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 3, 3, 3, 3, 3);
+        c.memory[2000] = arch::Word::from_values(false, 0, 0, 0, 0, 6);
+        c.run_command(Instruction::new(instructions::OpCode::MUL, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a, arch::Word::from_values(false, 0, 0, 0, 0, 0));
+        assert_eq!(c.registers.x, arch::Word::from_values(false, 18, 18, 18, 18, 18));
+    }
+
+    #[test]
+    fn test_divide() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 0, 0, 0, 0, 0);
+        c.registers.x = arch::Word::from_values(true, 0, 0, 0, 0, 6);
+        c.memory[2000] = arch::Word::from_values(true, 0, 0, 0, 0, 3);
+        c.run_command(Instruction::new(instructions::OpCode::DIV, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a, arch::Word::from_values(true, 0, 0, 0, 0, 2));
+        assert_eq!(c.registers.x, arch::Word::from_values(true, 0, 0, 0, 0, 0));
+    }
+
+    #[test]
+    fn test_divide_with_remainder() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 0, 0, 0, 0, 0);
+        c.registers.x = arch::Word::from_values(true, 0, 0, 0, 0, 7);
+        c.memory[2000] = arch::Word::from_values(true, 0, 0, 0, 0, 3);
+        c.run_command(Instruction::new(instructions::OpCode::DIV, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a, arch::Word::from_values(true, 0, 0, 0, 0, 2));
+        assert_eq!(c.registers.x, arch::Word::from_values(true, 0, 0, 0, 0, 1));
+    }
+    
+    #[test]
+    fn test_divide_with_double_negative() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(false, 0, 0, 0, 0, 0);
+        c.registers.x = arch::Word::from_values(false, 0, 0, 0, 0, 6);
+        c.memory[2000] = arch::Word::from_values(false, 0, 0, 0, 0, 2);
+        c.run_command(Instruction::new(instructions::OpCode::DIV, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a, arch::Word::from_values(true, 0, 0, 0, 0, 3));
+        assert_eq!(c.registers.x, arch::Word::from_values(false, 0, 0, 0, 0, 0));
+    }
+    
+    #[test]
+    fn test_divide_with_mixed_signs() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 0, 0, 0, 0, 0);
+        c.registers.x = arch::Word::from_values(true, 0, 0, 0, 0, 6);
+        c.memory[2000] = arch::Word::from_values(false, 0, 0, 0, 0, 2);
+        c.run_command(Instruction::new(instructions::OpCode::DIV, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a, arch::Word::from_values(false, 0, 0, 0, 0, 3));
+        assert_eq!(c.registers.x, arch::Word::from_values(true, 0, 0, 0, 0, 0));
+    }
+
+    #[test]
+    fn test_divide_big_number() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 0, 0, 0, 0, 1);
+        c.registers.x = arch::Word::from_values(true, 0, 0, 0, 0, 0);
+        c.memory[2000] = arch::Word::from_values(true, 0, 0, 0, 1, 0);
+        c.run_command(Instruction::new(instructions::OpCode::DIV, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a, arch::Word::from_values(true, 1, 0, 0, 0, 0));
+        assert_eq!(c.registers.x, arch::Word::from_values(true, 0, 0, 0, 0, 0));
+    }
+
+    #[test]
+    fn test_divide_ignores_rx_sign() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 0, 0, 0, 0, 0);
+        c.registers.x = arch::Word::from_values(false, 0, 0, 0, 0, 9);
+        c.memory[2000] = arch::Word::from_values(true, 0, 0, 0, 0, 3);
+        c.run_command(Instruction::new(instructions::OpCode::DIV, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a, arch::Word::from_values(true, 0, 0, 0, 0, 3));
+        assert_eq!(c.registers.x, arch::Word::from_values(true, 0, 0, 0, 0, 0));
+    }
+    
+    #[test]
+    fn test_divide_handles_divide_by_zero() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 0, 0, 0, 0, 0);
+        c.registers.x = arch::Word::from_values(false, 0, 0, 0, 0, 9);
+        c.memory[2000] = arch::Word::from_values(true, 0, 0, 0, 0, 0);
+        c.run_command(Instruction::new(instructions::OpCode::DIV, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.overflow, true); 
+    }
+    
+    #[test]
+    fn test_divide_overflows_during_big_divide() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 1, 0, 0, 0, 0);
+        c.registers.x = arch::Word::from_values(false, 0, 0, 0, 0, 9);
+        c.memory[2000] = arch::Word::from_values(true, 0, 0, 0, 0, 1);
+        c.run_command(Instruction::new(instructions::OpCode::DIV, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.overflow, true); 
     }
 }

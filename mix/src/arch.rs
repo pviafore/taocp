@@ -35,11 +35,11 @@ impl Word {
 
     pub fn from_value(val: i32) -> Word {
         Word::from_values(val.is_positive(),
-                          ((val >> 24) % 64) as u8,
-                          ((val >> 18) % 64) as u8,
-                          ((val >> 12) % 64) as u8,
-                          ((val >> 6) % 64) as u8,
-                          (val % 64) as u8  ) 
+                          ((val.abs() >> 24) % 64) as u8,
+                          ((val.abs()>> 18) % 64) as u8,
+                          ((val.abs() >> 12) % 64) as u8,
+                          ((val.abs() >> 6) % 64) as u8,
+                          (val.abs() % 64) as u8  ) 
     }
 
     pub fn from_half_word(val: HalfWord) -> Word {
@@ -64,6 +64,15 @@ impl Word {
 
     pub fn invert_sign(&mut self) {
         self.is_positive = ! self.is_positive
+    }
+    
+    pub fn read(self) -> i32 {
+        let modifier: i8 = if self.is_positive { 1 } else { -1 };
+        i32::from(modifier) * (((i64::from(self.bytes[0].read()) << 24) + 
+                                (i64::from(self.bytes[1].read()) << 18) +
+                                (i64::from(self.bytes[2].read()) << 12) +
+                                (i64::from(self.bytes[3].read()) << 6) +
+                                 i64::from(self.bytes[4].read())) as i32)
     }
 }
 
