@@ -15,11 +15,28 @@ struct Registers {
     j: arch::HalfWord
 }
 
+#[derive(Debug, PartialEq)]
 enum ComparisonIndicator {
     LESS,
     EQUAL,
     GREATER
 }
+
+fn compare_half_word(value: arch::HalfWord, rhs: i32, instruction: Instruction) -> ComparisonIndicator {
+    compare_word(arch::Word::from_half_word(value), rhs, instruction)
+}
+
+fn compare_word(value: arch::Word, rhs: i32, instruction: Instruction) -> ComparisonIndicator {
+    let (l,r) = instruction.field_modifier();
+    let lhs = value.read_partial_as_word(l, r).read();
+    if lhs < rhs {
+        ComparisonIndicator::LESS 
+    }
+    else {
+        if lhs == rhs { ComparisonIndicator::EQUAL } else { ComparisonIndicator::GREATER }
+    }
+}
+
 struct Computer {
     registers: Registers,
     overflow: bool,
@@ -69,6 +86,14 @@ impl Computer {
             instructions::OpCode::AddressTransferI5 => Computer::address_transfer_i5,
             instructions::OpCode::AddressTransferI6 => Computer::address_transfer_i6,
             instructions::OpCode::AddressTransferX => Computer::address_transfer_x,
+            instructions::OpCode::CMPA => Computer::cmpa,
+            instructions::OpCode::CMP1 => Computer::cmpi1,
+            instructions::OpCode::CMP2 => Computer::cmpi2,
+            instructions::OpCode::CMP3 => Computer::cmpi3,
+            instructions::OpCode::CMP4 => Computer::cmpi4,
+            instructions::OpCode::CMP5 => Computer::cmpi5,
+            instructions::OpCode::CMP6 => Computer::cmpi6,
+            instructions::OpCode::CMPX => Computer::cmpx,
         };
         op(self, instruction)
     }
@@ -362,6 +387,33 @@ impl Computer {
 
     fn get_raw_value(&mut self, instruction:Instruction) -> i16 {
         instruction.address().read() as i16 + self.get_offset(instruction.index_specification()) as i16
+    }
+
+    fn cmpa(&mut self, instruction: Instruction) {
+        self.comparison = compare_word(self.registers.a, self.readmem(instruction).read(), instruction)
+    }
+    
+    fn cmpx(&mut self, instruction: Instruction) {
+        self.comparison = compare_word(self.registers.x, self.readmem(instruction).read(), instruction)
+    }
+    
+    fn cmpi1(&mut self, instruction: Instruction) {
+        self.comparison = compare_half_word(self.registers.i1, self.readmem(instruction).read(), instruction)
+    }
+    fn cmpi2(&mut self, instruction: Instruction) {
+        self.comparison = compare_half_word(self.registers.i2, self.readmem(instruction).read(), instruction)
+    }
+    fn cmpi3(&mut self, instruction: Instruction) {
+        self.comparison = compare_half_word(self.registers.i3, self.readmem(instruction).read(), instruction)
+    }
+    fn cmpi4(&mut self, instruction: Instruction) {
+        self.comparison = compare_half_word(self.registers.i4, self.readmem(instruction).read(), instruction)
+    }
+    fn cmpi5(&mut self, instruction: Instruction) {
+        self.comparison = compare_half_word(self.registers.i5, self.readmem(instruction).read(), instruction)
+    }
+    fn cmpi6(&mut self, instruction: Instruction) {
+        self.comparison = compare_half_word(self.registers.i6, self.readmem(instruction).read(), instruction)
     }
 
     fn get_offset(&self, val: u8) -> i16 {
@@ -1115,4 +1167,78 @@ mod tests {
         c.run_command(Instruction::new(instructions::OpCode::AddressTransferA, 0, 0, arch::HalfWord::from_value(-1)));
         assert_eq!(c.overflow, true);
     }
+
+    #[test]
+    fn test_cmpa(){
+        let mut c = Computer::new();
+        c.comparison = ComparisonIndicator::LESS;
+        c.registers.a = arch::Word::from_values(true, 1, 2, 3, 4, 5);
+        c.memory[2000] = arch::Word::from_values(true, 1, 2, 3, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::CMPA, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.comparison, ComparisonIndicator::EQUAL);
+    }
+    
+    #[test]
+    fn test_cmpx(){
+        let mut c = Computer::new();
+        c.registers.x = arch::Word::from_values(true, 1, 2, 3, 4, 4);
+        c.memory[2000] = arch::Word::from_values(true, 1, 2, 3, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::CMPA, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.comparison, ComparisonIndicator::LESS);
+    }
+    
+    #[test]
+    fn test_cmpi1 (){
+        let mut c = Computer::new();
+        c.registers.i1 = arch::HalfWord::from_values(true, 4, 6);
+        c.memory[2000] = arch::Word::from_values(true, 0, 0, 0, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::CMP1, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.comparison, ComparisonIndicator::GREATER);
+    }
+    
+    #[test]
+    fn test_cmpi2 (){
+        let mut c = Computer::new();
+        c.registers.i2 = arch::HalfWord::from_values(true, 4, 4);
+        c.memory[2000] = arch::Word::from_values(true, 0, 0, 0, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::CMP2, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.comparison, ComparisonIndicator::LESS);
+    }
+
+    #[test]
+    fn test_cmpi3 (){
+        let mut c = Computer::new();
+        c.registers.i3 = arch::HalfWord::from_values(true, 4, 4);
+        c.memory[2000] = arch::Word::from_values(true, 0, 0, 0, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::CMP3, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.comparison, ComparisonIndicator::EQUAL);
+    }
+    
+    #[test]
+    fn test_cmpi4 (){
+        let mut c = Computer::new();
+        c.registers.i4 = arch::HalfWord::from_values(true, 4, 4);
+        c.memory[2000] = arch::Word::from_values(true, 0, 0, 0, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::CMP4, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.comparison, ComparisonIndicator::EQUAL);
+    }
+    
+    #[test]
+    fn test_cmpi5 (){
+        let mut c = Computer::new();
+        c.registers.i5 = arch::HalfWord::from_values(true, 5, 4);
+        c.memory[2000] = arch::Word::from_values(true, 0, 0, 1, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::CMP5, 36, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.comparison, ComparisonIndicator::GREATER);
+    }
+    
+    #[test]
+    fn test_cmpi6 (){
+        let mut c = Computer::new();
+        c.registers.i6 = arch::HalfWord::from_values(true, 5, 4);
+        c.memory[2000] = arch::Word::from_values(true, 0, 0, 1, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::CMP6, 36, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.comparison, ComparisonIndicator::GREATER);
+    }
+
 }

@@ -77,6 +77,14 @@ fn to_opcode(val: u8) -> OpCode {
         53 => OpCode::AddressTransferI5,
         54 => OpCode::AddressTransferI6,
         55 => OpCode::AddressTransferX,
+        56 => OpCode::CMPA,
+        57 => OpCode::CMP1,
+        58 => OpCode::CMP2,
+        59 => OpCode::CMP3,
+        60 => OpCode::CMP4,
+        61 => OpCode::CMP5,
+        62 => OpCode::CMP6,
+        63 => OpCode::CMPX,
         _ => panic!("Invalid OpCode"),
     }
 }
@@ -118,5 +126,13 @@ pub enum OpCode {
     AddressTransferI4 = 52,
     AddressTransferI5 = 53,
     AddressTransferI6 = 54,
-    AddressTransferX = 55 
+    AddressTransferX = 55,
+    CMPA = 56,
+    CMP1 = 57,
+    CMP2 = 58,
+    CMP3 = 59,
+    CMP4 = 60,
+    CMP5 = 61,
+    CMP6 = 62,
+    CMPX = 63,
 }

@@ -54,12 +54,17 @@ impl Word {
         if r > 5 || l > 5 || r < l {
             panic!("Invalid field specifier");
         }
-        let val5 = self.bytes[(r-1) as usize].read();
-        let val4 = if r >= l+1 && r > 1 { self.bytes[(r-2) as usize].read() } else {0};
-        let val3 = if r >= l+2 && r > 2 { self.bytes[(r-3) as usize].read() } else {0};
-        let val2 = if r >= l+3 && r > 3{ self.bytes[(r-4) as usize].read() } else {0};
-        let val1 = if r >= l+4 && r > 4 { self.bytes[(r-5) as usize].read() } else {0};
-        Word::from_values(is_positive, val1, val2, val3, val4, val5)
+        if r == 0 {
+            Word::from_values(is_positive, 0, 0, 0, 0, 0)
+        }
+        else {
+            let val5 = self.bytes[(r-1) as usize].read();
+            let val4 = if r >= l+1 && r > 1 { self.bytes[(r-2) as usize].read() } else {0};
+            let val3 = if r >= l+2 && r > 2 { self.bytes[(r-3) as usize].read() } else {0};
+            let val2 = if r >= l+3 && r > 3{ self.bytes[(r-4) as usize].read() } else {0};
+            let val1 = if r >= l+4 && r > 4 { self.bytes[(r-5) as usize].read() } else {0};
+            Word::from_values(is_positive, val1, val2, val3, val4, val5)
+        }
     }
 
     pub fn invert_sign(&mut self) {
@@ -116,6 +121,7 @@ mod tests {
         assert_eq!(word.read_partial_as_word(1,2), Word::from_values(true, 0,0,0,1,2)); 
         assert_eq!(word.read_partial_as_word(4,4), Word::from_values(true, 0,0,0,0,4)); 
         assert_eq!(word.read_partial_as_word(0,2), Word::from_values(false, 0,0,0,1,2)); 
+        assert_eq!(word.read_partial_as_word(0,0), Word::from_values(false, 0,0,0,0,0)); 
     }
 
 }
