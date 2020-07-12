@@ -107,6 +107,7 @@ impl HalfWord {
         let modifier: i8 = if self.is_positive { 1 } else { -1 };
         i16::from(modifier) * (i16::from(self.bytes[0].read()) * 64 + i16::from(self.bytes[1].read()))
     }
+
 }
 
 #[cfg(test)]

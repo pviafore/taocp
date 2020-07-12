@@ -42,7 +42,8 @@ struct Computer {
     overflow: bool,
     comparison: ComparisonIndicator,
     memory: Vec<arch::Word>,
-    io: Vec<arch::Word>
+    io: Vec<arch::Word>,
+    instruction_pointer: arch::HalfWord
 }
 
 impl Computer {
@@ -78,6 +79,15 @@ impl Computer {
             instructions::OpCode::STX => Computer::stx,
             instructions::OpCode::STJ => Computer::stj,
             instructions::OpCode::STZ => Computer::stz,
+            instructions::OpCode::Jump => Computer::jump,
+            instructions::OpCode::JumpA => Computer::jumpa,
+            instructions::OpCode::JumpI1 => Computer::jumpi1,
+            instructions::OpCode::JumpI2 => Computer::jumpi2,
+            instructions::OpCode::JumpI3 => Computer::jumpi3,
+            instructions::OpCode::JumpI4 => Computer::jumpi4,
+            instructions::OpCode::JumpI5 => Computer::jumpi5,
+            instructions::OpCode::JumpI6 => Computer::jumpi6,
+            instructions::OpCode::JumpX => Computer::jumpx,
             instructions::OpCode::AddressTransferA => Computer::address_transfer_a,
             instructions::OpCode::AddressTransferI1 => Computer::address_transfer_i1,
             instructions::OpCode::AddressTransferI2 => Computer::address_transfer_i2,
@@ -115,7 +125,8 @@ impl Computer {
             overflow: false,
             comparison: ComparisonIndicator::EQUAL,
             memory: Vec::from_iter((0..4000).map(|_| arch::Word::new())),
-            io: Vec::from_iter((0..20).map(|_| arch::Word::new()))
+            io: Vec::from_iter((0..20).map(|_| arch::Word::new())),
+            instruction_pointer: arch::HalfWord::new()
         }
     }
 
@@ -414,6 +425,78 @@ impl Computer {
     }
     fn cmpi6(&mut self, instruction: Instruction) {
         self.comparison = compare_half_word(self.registers.i6, self.readmem(instruction).read(), instruction)
+    }
+
+    fn jump(&mut self, instruction: Instruction) {
+        let return_address = arch::HalfWord::from_value(
+            self.instruction_pointer.read() + 1
+        ); 
+        let condition = match instruction.modification() {
+            0 => true,
+            1 => true,
+            2 => self.overflow,
+            3 => !self.overflow,
+            4 => self.comparison == ComparisonIndicator::LESS,
+            5 => self.comparison == ComparisonIndicator::EQUAL,
+            6 => self.comparison == ComparisonIndicator::GREATER,
+            7 => self.comparison != ComparisonIndicator::LESS,
+            8 => self.comparison != ComparisonIndicator::EQUAL,
+            9 => self.comparison != ComparisonIndicator::GREATER,
+            _ => panic!("Invalid Jump modifier"),
+        };
+        if instruction.modification() == 2 || instruction.modification() == 3 {
+            self.overflow = false;
+        }
+        if condition {
+            self.instruction_pointer = instruction.address();
+            if instruction.modification() != 1 {
+                self.registers.j = return_address;
+            }
+        }
+    }
+
+    fn jumpa(&mut self, instruction: Instruction) {
+        self.jump_value(self.registers.a.read(), instruction.modification(), instruction.address())
+    }
+    fn jumpx(&mut self, instruction: Instruction) {
+        self.jump_value(self.registers.x.read(), instruction.modification(), instruction.address())
+    }
+    fn jumpi1(&mut self, instruction: Instruction) {
+        self.jump_value(self.registers.i1.read() as i32, instruction.modification(), instruction.address())
+    }
+    fn jumpi2(&mut self, instruction: Instruction) {
+        self.jump_value(self.registers.i2.read() as i32, instruction.modification(), instruction.address())
+    }
+    fn jumpi3(&mut self, instruction: Instruction) {
+        self.jump_value(self.registers.i3.read() as i32, instruction.modification(), instruction.address())
+    }
+    fn jumpi4(&mut self, instruction: Instruction) {
+        self.jump_value(self.registers.i4.read() as i32, instruction.modification(), instruction.address())
+    }
+    fn jumpi5(&mut self, instruction: Instruction) {
+        self.jump_value(self.registers.i5.read() as i32, instruction.modification(), instruction.address())
+    }
+    fn jumpi6(&mut self, instruction: Instruction) {
+        self.jump_value(self.registers.i6.read() as i32, instruction.modification(), instruction.address())
+    }
+
+    fn jump_value(&mut self, value: i32, modifier: u8, address: arch::HalfWord ) {
+        let condition = match modifier { 
+            0 => value < 0,
+            1 => value == 0,
+            2 => value > 0,
+            3 => value >= 0,
+            4 => value != 0,
+            5 => value <= 0,
+            _ => panic!("Invalid Register Jump Condition")    
+        };
+        let return_address = arch::HalfWord::from_value(
+            self.instruction_pointer.read() + 1
+        ); 
+        if condition {
+            self.instruction_pointer = address;
+            self.registers.j = return_address;
+        }
     }
 
     fn get_offset(&self, val: u8) -> i16 {
@@ -1241,4 +1324,324 @@ mod tests {
         assert_eq!(c.comparison, ComparisonIndicator::GREATER);
     }
 
+    #[test]
+    fn test_jmp() {
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::Jump, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 1);
+    }
+    
+    #[test]
+    fn test_jsj() {
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::Jump, 1, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 0);
+    }
+
+    #[test]
+    fn test_jov() {
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::Jump, 2, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 0);
+        assert_eq!(c.registers.j.read(), 0);
+
+        c.overflow = true;
+        c.run_command(Instruction::new(instructions::OpCode::Jump, 2, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 1);
+        assert_eq!(c.overflow, false);
+    }
+    
+    #[test]
+    fn test_jnov() {
+        let mut c = Computer::new();
+        c.overflow = true;
+        c.run_command(Instruction::new(instructions::OpCode::Jump, 3, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 0);
+        assert_eq!(c.registers.j.read(), 0);
+        assert_eq!(c.overflow, false);
+
+        c.run_command(Instruction::new(instructions::OpCode::Jump, 3, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 1);
+    }
+
+    #[test]
+    fn test_jl() {
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::Jump, 4, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 0);
+        assert_eq!(c.registers.j.read(), 0);
+
+        c.comparison = ComparisonIndicator::LESS;
+        c.run_command(Instruction::new(instructions::OpCode::Jump, 4, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 1);
+    }
+
+    #[test]
+    fn test_jg() {
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::Jump, 6, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 0);
+        assert_eq!(c.registers.j.read(), 0);
+
+        c.comparison = ComparisonIndicator::GREATER;
+        c.run_command(Instruction::new(instructions::OpCode::Jump, 6, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 1);
+    }
+    
+    #[test]
+    fn test_je() {
+        let mut c = Computer::new();
+        c.comparison = ComparisonIndicator::LESS;
+        c.run_command(Instruction::new(instructions::OpCode::Jump, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 0);
+        assert_eq!(c.registers.j.read(), 0);
+
+        c.comparison = ComparisonIndicator::EQUAL;
+        c.run_command(Instruction::new(instructions::OpCode::Jump, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 1);
+    }
+   
+    #[test]
+    fn test_jge() {
+        let mut c = Computer::new();
+        c.comparison = ComparisonIndicator::LESS;
+        c.run_command(Instruction::new(instructions::OpCode::Jump, 7, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 0);
+        assert_eq!(c.registers.j.read(), 0);
+
+        c.comparison = ComparisonIndicator::EQUAL;
+        c.run_command(Instruction::new(instructions::OpCode::Jump, 7, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 1);
+        
+        c.comparison = ComparisonIndicator::GREATER;
+        c.run_command(Instruction::new(instructions::OpCode::Jump, 7, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 2001);
+    }
+    
+    #[test]
+    fn test_jle() {
+        let mut c = Computer::new();
+        c.comparison = ComparisonIndicator::GREATER;
+        c.run_command(Instruction::new(instructions::OpCode::Jump, 9, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 0);
+        assert_eq!(c.registers.j.read(), 0);
+
+        c.comparison = ComparisonIndicator::EQUAL;
+        c.run_command(Instruction::new(instructions::OpCode::Jump, 9, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 1);
+        
+        c.comparison = ComparisonIndicator::LESS;
+        c.run_command(Instruction::new(instructions::OpCode::Jump, 9, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 2001);
+    }
+    
+    #[test]
+    fn test_jne() {
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::Jump, 8, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 0);
+        assert_eq!(c.registers.j.read(), 0);
+
+        c.comparison = ComparisonIndicator::LESS;
+        c.run_command(Instruction::new(instructions::OpCode::Jump, 8, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 1);
+        
+        c.comparison = ComparisonIndicator::GREATER;
+        c.run_command(Instruction::new(instructions::OpCode::Jump, 8, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 2001);
+    }
+    
+    #[test]
+    fn test_jan() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 1, 2, 3, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::JumpA, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 0);
+        assert_eq!(c.registers.j.read(), 0);
+
+        c.registers.a = arch::Word::from_values(false, 1, 2, 3, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::JumpA, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 1);
+    }
+
+    #[test]
+    fn test_jaz() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 1, 2, 3, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::JumpA, 1, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 0);
+        assert_eq!(c.registers.j.read(), 0);
+
+        c.registers.a = arch::Word::from_values(false, 0, 0, 0, 0, 0);
+        c.run_command(Instruction::new(instructions::OpCode::JumpA, 1, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 1);
+    }
+    
+    #[test]
+    fn test_jap() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(false, 1, 2, 3, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::JumpA, 2, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 0);
+        assert_eq!(c.registers.j.read(), 0);
+
+        c.registers.a = arch::Word::from_values(true, 0, 0, 0, 0, 1);
+        c.run_command(Instruction::new(instructions::OpCode::JumpA, 2, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 1);
+    }
+    
+    #[test]
+    fn test_jann() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(false, 1, 2, 3, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::JumpA, 3, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 0);
+        assert_eq!(c.registers.j.read(), 0);
+
+        c.registers.a = arch::Word::from_values(true, 0, 0, 0, 0, 0);
+        c.run_command(Instruction::new(instructions::OpCode::JumpA, 3, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 1);
+    }
+    
+    #[test]
+    fn test_janz() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(false, 0, 0, 0, 0, 0);
+        c.run_command(Instruction::new(instructions::OpCode::JumpA, 4, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 0);
+        assert_eq!(c.registers.j.read(), 0);
+
+        c.registers.a = arch::Word::from_values(true, 0, 0, 0, 0, 1);
+        c.run_command(Instruction::new(instructions::OpCode::JumpA, 4, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 1);
+    }
+    
+    #[test]
+    fn test_janp() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 0, 0, 0, 0, 1);
+        c.run_command(Instruction::new(instructions::OpCode::JumpA, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 0);
+        assert_eq!(c.registers.j.read(), 0);
+
+        c.registers.a = arch::Word::from_values(false, 0, 0, 0, 0, 0);
+        c.run_command(Instruction::new(instructions::OpCode::JumpA, 5, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 1);
+    }
+
+    #[test]
+    fn test_jxn() {
+        let mut c = Computer::new();
+        c.registers.x = arch::Word::from_values(true, 1, 2, 3, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::JumpX, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 0);
+        assert_eq!(c.registers.j.read(), 0);
+
+        c.registers.x = arch::Word::from_values(false, 1, 2, 3, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::JumpX, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 1);
+    }
+
+    #[test]
+    fn test_ji1n() {
+        let mut c = Computer::new();
+        c.registers.i1 = arch::HalfWord::from_values(true, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::JumpI1, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 0);
+        assert_eq!(c.registers.j.read(), 0);
+
+        c.registers.i1 = arch::HalfWord::from_values(false, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::JumpI1, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 1);
+    }
+
+    #[test]
+    fn test_ji2n() {
+        let mut c = Computer::new();
+        c.registers.i2 = arch::HalfWord::from_values(true, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::JumpI2, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 0);
+        assert_eq!(c.registers.j.read(), 0);
+
+        c.registers.i2 = arch::HalfWord::from_values(false, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::JumpI2, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 1);
+    }
+
+    #[test]
+    fn test_ji3n() {
+        let mut c = Computer::new();
+        c.registers.i3 = arch::HalfWord::from_values(true, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::JumpI3, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 0);
+        assert_eq!(c.registers.j.read(), 0);
+
+        c.registers.i3 = arch::HalfWord::from_values(false, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::JumpI3, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 1);
+    }
+    #[test]
+    fn test_ji4n() {
+        let mut c = Computer::new();
+        c.registers.i4 = arch::HalfWord::from_values(true, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::JumpI4, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 0);
+        assert_eq!(c.registers.j.read(), 0);
+
+        c.registers.i4 = arch::HalfWord::from_values(false, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::JumpI4, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 1);
+    }
+
+    #[test]
+    fn test_ji5n() {
+        let mut c = Computer::new();
+        c.registers.i5 = arch::HalfWord::from_values(true, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::JumpI5, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 0);
+        assert_eq!(c.registers.j.read(), 0);
+
+        c.registers.i5 = arch::HalfWord::from_values(false, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::JumpI5, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 1);
+    }
+
+    #[test]
+    fn test_ji6n() {
+        let mut c = Computer::new();
+        c.registers.i6 = arch::HalfWord::from_values(true, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::JumpI6, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 0);
+        assert_eq!(c.registers.j.read(), 0);
+
+        c.registers.i6 = arch::HalfWord::from_values(false, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::JumpI6, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.instruction_pointer.read(), 2000);
+        assert_eq!(c.registers.j.read(), 1);
+    }
 }
