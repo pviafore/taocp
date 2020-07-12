@@ -61,6 +61,14 @@ impl Computer {
             instructions::OpCode::STX => Computer::stx,
             instructions::OpCode::STJ => Computer::stj,
             instructions::OpCode::STZ => Computer::stz,
+            instructions::OpCode::AddressTransferA => Computer::address_transfer_a,
+            instructions::OpCode::AddressTransferI1 => Computer::address_transfer_i1,
+            instructions::OpCode::AddressTransferI2 => Computer::address_transfer_i2,
+            instructions::OpCode::AddressTransferI3 => Computer::address_transfer_i3,
+            instructions::OpCode::AddressTransferI4 => Computer::address_transfer_i4,
+            instructions::OpCode::AddressTransferI5 => Computer::address_transfer_i5,
+            instructions::OpCode::AddressTransferI6 => Computer::address_transfer_i6,
+            instructions::OpCode::AddressTransferX => Computer::address_transfer_x,
         };
         op(self, instruction)
     }
@@ -243,15 +251,15 @@ impl Computer {
 
     fn add(&mut self, instruction: Instruction){
         let addend2 = self.readmem(instruction).read();
-        self.add_to_register_a(instruction, addend2);
+        self.add_to_register_a(addend2);
    }
     
     fn sub(&mut self, instruction: Instruction){
         let addend2 = self.readmem(instruction).read();
-        self.add_to_register_a(instruction, -1 * addend2);
+        self.add_to_register_a(-1 * addend2);
     }
 
-    fn add_to_register_a(&mut self, instruction: Instruction, addend2: i32){
+    fn add_to_register_a(&mut self, addend2: i32){
         let old_is_positive = self.registers.a.is_positive;
         let addend1 = self.registers.a.read();
         let total = addend1 + addend2;
@@ -296,7 +304,65 @@ impl Computer {
         self.registers.x.is_positive = old_register_sign;
     }
 
+    fn address_transfer_a(&mut self, instruction:Instruction) {
+        let value = self.get_address_transfer_value(instruction, self.registers.a.read(), 30);
+        self.registers.a = arch::Word::from_value(value);
+    }
 
+    fn address_transfer_x(&mut self, instruction:Instruction) {
+        let value = self.get_address_transfer_value(instruction, self.registers.x.read(), 30);
+        self.registers.x = arch::Word::from_value(value);
+    }
+
+    fn address_transfer_i1(&mut self, instruction:Instruction) {
+        let value = self.get_address_transfer_value(instruction, self.registers.i1.read() as i32, 12);
+        self.registers.i1 = arch::HalfWord::from_value(value as i16);
+    }
+    
+    fn address_transfer_i2(&mut self, instruction:Instruction) {
+        let value = self.get_address_transfer_value(instruction, self.registers.i2.read() as i32, 12);
+        self.registers.i2 = arch::HalfWord::from_value(value as i16);
+    }
+    
+    fn address_transfer_i3(&mut self, instruction:Instruction) {
+        let value = self.get_address_transfer_value(instruction, self.registers.i3.read() as i32, 12);
+        self.registers.i3 = arch::HalfWord::from_value(value as i16);
+    }
+    
+    fn address_transfer_i4(&mut self, instruction:Instruction) {
+        let value = self.get_address_transfer_value(instruction, self.registers.i4.read() as i32, 12);
+        self.registers.i4 = arch::HalfWord::from_value(value as i16);
+    }
+    
+    fn address_transfer_i5(&mut self, instruction:Instruction) {
+        let value = self.get_address_transfer_value(instruction, self.registers.i5.read() as i32, 12);
+        self.registers.i5 = arch::HalfWord::from_value(value as i16);
+    }
+    
+    fn address_transfer_i6(&mut self, instruction:Instruction) {
+        let value = self.get_address_transfer_value(instruction, self.registers.i6.read() as i32, 12);
+        self.registers.i6 = arch::HalfWord::from_value(value as i16);
+    }
+
+    fn get_address_transfer_value(&mut self, instruction: Instruction, base: i32, bits: u8) -> i32 {
+        let raw_value = self.get_raw_value(instruction);
+
+        let value = match instruction.modification() {
+            0 => raw_value as i32 + base,
+            1 => raw_value as i32 - base,
+            2 => raw_value as i32,
+            3 => -1 * raw_value as i32,
+            _ => panic!("Invalid code for Address Transfer")
+        };
+        if value >= (1 << bits) || value <= -1 * (1 << bits) {
+            self.overflow = true;
+        }
+        value
+    }
+
+    fn get_raw_value(&mut self, instruction:Instruction) -> i16 {
+        instruction.address().read() as i16 + self.get_offset(instruction.index_specification()) as i16
+    }
 
     fn get_offset(&self, val: u8) -> i16 {
         match val {
@@ -784,5 +850,269 @@ mod tests {
         c.memory[2000] = arch::Word::from_values(true, 0, 0, 0, 0, 1);
         c.run_command(Instruction::new(instructions::OpCode::DIV, 5, 0, arch::HalfWord::from_value(2000)));
         assert_eq!(c.overflow, true); 
+    }
+    
+    #[test]
+    fn test_enta(){
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferA, 2, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a.read(), 2000); 
+    }
+
+    #[test]
+    fn test_enta_indexed(){
+        let mut c = Computer::new();
+        c.registers.i1 = arch::HalfWord::from_value(300);
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferA, 2, 1, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a.read(), 2300); 
+    }
+
+    #[test]
+    fn test_entx(){
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferX, 2, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.x.read(), 2000); 
+    }
+
+    #[test]
+    fn test_enti1(){
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI1, 2, 1, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i1.read(), 2000); 
+    }
+
+    #[test]
+    fn test_enti2(){
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI2, 2, 1, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i2.read(), 2000); 
+    }
+
+    #[test]
+    fn test_enti3(){
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI3, 2, 1, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i3.read(), 2000); 
+    }
+    
+    #[test]
+    fn test_enti4(){
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI4, 2, 1, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i4.read(), 2000); 
+    }
+
+    #[test]
+    fn test_enti5(){
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI5, 2, 1, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i5.read(), 2000); 
+    }
+    
+    #[test]
+    fn test_enti6(){
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI6, 2, 1, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i6.read(), 2000); 
+    }
+
+    #[test]
+    fn test_enna(){
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferA, 3, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a.read(), -2000); 
+    }
+    
+    #[test]
+    fn test_ennx(){
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferX, 3, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.x.read(), -2000); 
+    }
+    
+    #[test]
+    fn test_enni1(){
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI1, 3, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i1.read(), -2000); 
+    }
+    
+    #[test]
+    fn test_enni2(){
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI2, 3, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i2.read(), -2000); 
+    }
+    
+    #[test]
+    fn test_enni3(){
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI3, 3, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i3.read(), -2000); 
+    }
+    
+    #[test]
+    fn test_enni4(){
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI4, 3, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i4.read(), -2000); 
+    }
+    
+    #[test]
+    fn test_enni5(){
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI5, 3, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i5.read(), -2000); 
+    }
+
+    #[test]
+    fn test_enni6(){
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI6, 3, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i6.read(), -2000); 
+    }
+
+    #[test]
+    fn test_inca(){
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_value(5);
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferA, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a.read(), 2005); 
+    }
+    
+    #[test]
+    fn test_incx(){
+        let mut c = Computer::new();
+        c.registers.x = arch::Word::from_value(5);
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferX, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.x.read(), 2005); 
+    }
+    
+    #[test]
+    fn test_inci1(){
+        let mut c = Computer::new();
+        c.registers.i1 = arch::HalfWord::from_value(5);
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI1, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i1.read(), 2005); 
+    }
+    
+    #[test]
+    fn test_inci2(){
+        let mut c = Computer::new();
+        c.registers.i2 = arch::HalfWord::from_value(5);
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI2, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i2.read(), 2005); 
+    }
+    
+    #[test]
+    fn test_inci3(){
+        let mut c = Computer::new();
+        c.registers.i3 = arch::HalfWord::from_value(5);
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI3, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i3.read(), 2005); 
+    }
+    
+    #[test]
+    fn test_inci4(){
+        let mut c = Computer::new();
+        c.registers.i4 = arch::HalfWord::from_value(5);
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI4, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i4.read(), 2005); 
+    }
+    
+    #[test]
+    fn test_inci5(){
+        let mut c = Computer::new();
+        c.registers.i5 = arch::HalfWord::from_value(5);
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI5, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i5.read(), 2005); 
+    }
+
+    #[test]
+    fn test_inci6(){
+        let mut c = Computer::new();
+        c.registers.i6 = arch::HalfWord::from_value(5);
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI6, 0, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i6.read(), 2005); 
+    }
+    
+    #[test]
+    fn test_deca(){
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_value(5);
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferA, 1, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.a.read(), 1995); 
+    }
+    
+    #[test]
+    fn test_decx(){
+        let mut c = Computer::new();
+        c.registers.x = arch::Word::from_value(5);
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferX, 1, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.x.read(), 1995); 
+    }
+    
+    #[test]
+    fn test_deci1(){
+        let mut c = Computer::new();
+        c.registers.i1 = arch::HalfWord::from_value(5);
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI1, 1, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i1.read(), 1995); 
+    }
+    
+    #[test]
+    fn test_deci2(){
+        let mut c = Computer::new();
+        c.registers.i2 = arch::HalfWord::from_value(5);
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI2, 1, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i2.read(), 1995); 
+    }
+    
+    #[test]
+    fn test_deci3(){
+        let mut c = Computer::new();
+        c.registers.i3 = arch::HalfWord::from_value(5);
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI3, 1, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i3.read(), 1995); 
+    }
+    
+    #[test]
+    fn test_deci4(){
+        let mut c = Computer::new();
+        c.registers.i4 = arch::HalfWord::from_value(5);
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI4, 1, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i4.read(), 1995); 
+    }
+    
+    #[test]
+    fn test_deci5(){
+        let mut c = Computer::new();
+        c.registers.i5 = arch::HalfWord::from_value(5);
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI5, 1, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i5.read(), 1995); 
+    }
+
+    #[test]
+    fn test_deci6(){
+        let mut c = Computer::new();
+        c.registers.i6 = arch::HalfWord::from_value(5);
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI6, 1, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.registers.i6.read(), 1995); 
+    }
+
+    #[test]
+    fn test_inci6_overflows(){
+        let mut c = Computer::new();
+        c.registers.i6 = arch::HalfWord::from_value(64 * 64 - 1 );
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI6, 0, 0, arch::HalfWord::from_value(64*64 - 1)));
+        assert_eq!(c.overflow, true);
+    }
+    
+    #[test]
+    fn test_inca_overflows_negative(){
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_value(-64 * 64 * 64 * 64 * 64 + 1 );
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferA, 0, 0, arch::HalfWord::from_value(-1)));
+        assert_eq!(c.overflow, true);
     }
 }
