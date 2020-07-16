@@ -53,6 +53,7 @@ impl Computer {
             instructions::OpCode::SUB => Computer::sub,
             instructions::OpCode::MUL => Computer::mul,
             instructions::OpCode::DIV => Computer::div,
+            instructions::OpCode::Shift => Computer::shift,
             instructions::OpCode::LDA => Computer::loada,
             instructions::OpCode::LD1 => Computer::loadi1,
             instructions::OpCode::LD2 => Computer::loadi2,
@@ -496,6 +497,64 @@ impl Computer {
         if condition {
             self.instruction_pointer = address;
             self.registers.j = return_address;
+        }
+    }
+
+    fn shift(&mut self, instruction: Instruction) {
+        let mut bytes_to_shift = instruction.address().read();
+        if instruction.modification() == 0 {
+            for index in (bytes_to_shift..5).rev() {
+                self.registers.a.bytes[4 - index as usize] = self.registers.a.bytes[4 - (index - bytes_to_shift) as usize];
+            }
+            for index in 0..bytes_to_shift {
+                self.registers.a.bytes[4 - index as usize] = arch::Byte::new(0);
+            }
+
+        }
+        else if instruction.modification() == 1 {
+            for index in bytes_to_shift..5 {
+                self.registers.a.bytes[index as usize] = self.registers.a.bytes[(index - bytes_to_shift) as usize];
+            }
+            for index in 0..bytes_to_shift {
+                self.registers.a.bytes[index as usize] = arch::Byte::new(0);
+            }
+        }
+        else if instruction.modification() == 2 || instruction.modification() == 4 {
+            if instruction.modification() == 4 {
+                bytes_to_shift = bytes_to_shift % 10;
+            }
+            let dword = ((self.registers.a.read().abs() as u64) << 30) + self.registers.x.read().abs() as u64;
+            for index in (bytes_to_shift..10).rev() {
+                let amount_to_shift = 6 * (index - bytes_to_shift); 
+                let target_value = arch::Byte::new((dword >> amount_to_shift) as u8);
+                let reg: &mut arch::Word = if 9 - index < 5 { &mut self.registers.a } else { &mut self.registers.x };
+                reg.bytes[((9 - index) % 5) as usize] = target_value;
+            }
+            for index in (10 - bytes_to_shift)..10 {
+                let reg: &mut arch::Word = if index < 5 { &mut self.registers.a } else { &mut self.registers.x };
+                let target_value = if instruction.modification() == 2 { 0 } else { (dword >> 6 * (9 - (index - (10 - bytes_to_shift)))) as u8 };
+                reg.bytes[(index % 5) as usize] = arch::Byte::new(target_value);
+            } 
+        }
+        else if instruction.modification() == 3 || instruction.modification() == 5 {
+            if instruction.modification() == 5 {
+                bytes_to_shift = bytes_to_shift % 10;
+            }
+            let dword = ((self.registers.a.read().abs() as u64) << 30) + self.registers.x.read().abs() as u64;
+            for index in (bytes_to_shift..10).rev() {
+                let amount_to_shift = 6 * index; 
+                let target_value = arch::Byte::new((dword >> amount_to_shift) as u8);
+                let reg: &mut arch::Word = if index < 5 { &mut self.registers.a } else { &mut self.registers.x };
+                reg.bytes[((9 - (index - bytes_to_shift))  % 5) as usize] = target_value;
+            }
+            for index in 0..bytes_to_shift {
+                let reg: &mut arch::Word = if index < 5 { &mut self.registers.a } else { &mut self.registers.x };
+                let target_value = if instruction.modification() == 3 { 0 } else { (dword >> 6 * (bytes_to_shift - index - 1))  as u8 };
+                reg.bytes[(index % 5) as usize] = arch::Byte::new(target_value);
+            } 
+        }
+        else {
+            panic!("Invalid shift modification");
         }
     }
 
@@ -1643,5 +1702,61 @@ mod tests {
         c.run_command(Instruction::new(instructions::OpCode::JumpI6, 0, 0, arch::HalfWord::from_value(2000)));
         assert_eq!(c.instruction_pointer.read(), 2000);
         assert_eq!(c.registers.j.read(), 1);
+    }
+
+    #[test]
+    fn test_sla() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 1, 2, 3, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::Shift, 0, 0, arch::HalfWord::from_value(2)));
+        assert_eq!(c.registers.a, arch::Word::from_values(true, 3, 4, 5, 0, 0));
+    }
+    
+    #[test]
+    fn test_sra() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 1, 2, 3, 4, 5);
+        c.run_command(Instruction::new(instructions::OpCode::Shift, 1, 0, arch::HalfWord::from_value(3)));
+        assert_eq!(c.registers.a, arch::Word::from_values(true, 0, 0, 0, 1, 2));
+    }
+
+    #[test]
+    fn test_slax() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 1, 2, 3, 4, 5);
+        c.registers.x = arch::Word::from_values(true, 6, 7, 8, 9, 10);
+        c.run_command(Instruction::new(instructions::OpCode::Shift, 2, 0, arch::HalfWord::from_value(6)));
+        assert_eq!(c.registers.a, arch::Word::from_values(true, 7, 8, 9, 10, 0));
+        assert_eq!(c.registers.x, arch::Word::from_values(true, 0, 0, 0, 0, 0));
+    }
+    
+    #[test]
+    fn test_srax() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 1, 2, 3, 4, 5);
+        c.registers.x = arch::Word::from_values(true, 6, 7, 8, 9, 10);
+        c.run_command(Instruction::new(instructions::OpCode::Shift, 3, 0, arch::HalfWord::from_value(6)));
+        assert_eq!(c.registers.a, arch::Word::from_values(true, 0, 0, 0, 0, 0));
+        assert_eq!(c.registers.x, arch::Word::from_values(true, 0, 1, 2, 3, 4));
+    }
+    
+    #[test]
+    fn test_slc() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 1, 2, 3, 4, 5);
+        c.registers.x = arch::Word::from_values(true, 6, 7, 8, 9, 10);
+        c.run_command(Instruction::new(instructions::OpCode::Shift, 4, 0, arch::HalfWord::from_value(16)));
+        assert_eq!(c.registers.a, arch::Word::from_values(true, 7, 8, 9, 10, 1));
+        assert_eq!(c.registers.x, arch::Word::from_values(true, 2, 3, 4, 5, 6));
+    }
+ 
+    #[test]
+    fn test_src() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 1, 2, 3, 4, 5);
+        c.registers.x = arch::Word::from_values(true, 6, 7, 8, 9, 10);
+        c.run_command(Instruction::new(instructions::OpCode::Shift, 5, 0, arch::HalfWord::from_value(16)));
+        assert_eq!(c.registers.a, arch::Word::from_values(true, 5, 6, 7, 8, 9));
+        assert_eq!(c.registers.x, arch::Word::from_values(true, 10, 1, 2, 3, 4));
     }
 }
