@@ -1,6 +1,7 @@
 mod arch;
 mod computer;
 mod instructions;
+mod io;
 
 
 fn main() {

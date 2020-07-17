@@ -39,11 +39,14 @@ impl Instruction {
 
 fn to_opcode(val: u8) -> OpCode {
     match val {
+        0 => OpCode::NOP,
         1 => OpCode::ADD,
         2 => OpCode::SUB,
         3 => OpCode::MUL,
         4 => OpCode::DIV,
+        5 => OpCode::HLT,
         6 => OpCode::Shift,
+        7 => OpCode::MOVE,
         8 => OpCode::LDA,
         9 => OpCode::LD1,
         10 => OpCode::LD2,
@@ -99,11 +102,14 @@ fn to_opcode(val: u8) -> OpCode {
     }
 }
 pub enum OpCode {
+    NOP = 0,
     ADD = 1,
     SUB = 2,
     MUL = 3,
     DIV = 4,
+    HLT = 5,
     Shift = 6,
+    MOVE = 7,
     LDA = 8,
     LD1 = 9,
     LD2 = 10,

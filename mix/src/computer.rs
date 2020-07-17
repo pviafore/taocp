@@ -1,5 +1,6 @@
 use crate::arch;
 use crate::instructions;
+use crate::io;
 
 use std::cmp;
 use instructions::Instruction;
@@ -14,6 +15,7 @@ struct Registers {
     i6: arch::HalfWord,
     j: arch::HalfWord
 }
+
 
 #[derive(Debug, PartialEq)]
 enum ComparisonIndicator {
@@ -42,18 +44,22 @@ struct Computer {
     overflow: bool,
     comparison: ComparisonIndicator,
     memory: Vec<arch::Word>,
-    io: Vec<arch::Word>,
-    instruction_pointer: arch::HalfWord
+    io: io::IO,
+    instruction_pointer: arch::HalfWord,
+    is_halted: bool
 }
 
 impl Computer {
     pub fn run_command(&mut self, instruction: Instruction){
         let op = match instruction.op_code() {
+            instructions::OpCode::NOP => Computer::no_op,
             instructions::OpCode::ADD => Computer::add,
             instructions::OpCode::SUB => Computer::sub,
             instructions::OpCode::MUL => Computer::mul,
             instructions::OpCode::DIV => Computer::div,
+            instructions::OpCode::HLT => Computer::halt,
             instructions::OpCode::Shift => Computer::shift,
+            instructions::OpCode::MOVE => Computer::mov,
             instructions::OpCode::LDA => Computer::loada,
             instructions::OpCode::LD1 => Computer::loadi1,
             instructions::OpCode::LD2 => Computer::loadi2,
@@ -126,8 +132,9 @@ impl Computer {
             overflow: false,
             comparison: ComparisonIndicator::EQUAL,
             memory: Vec::from_iter((0..4000).map(|_| arch::Word::new())),
-            io: Vec::from_iter((0..20).map(|_| arch::Word::new())),
-            instruction_pointer: arch::HalfWord::new()
+            io: io::IO::new(), 
+            instruction_pointer: arch::HalfWord::new(),
+            is_halted: false
         }
     }
 
@@ -449,7 +456,8 @@ impl Computer {
             self.overflow = false;
         }
         if condition {
-            self.instruction_pointer = instruction.address();
+            let address = instruction.address().read() + self.get_offset(instruction.index_specification());
+            self.instruction_pointer = arch::HalfWord::from_value(address);
             if instruction.modification() != 1 {
                 self.registers.j = return_address;
             }
@@ -457,31 +465,39 @@ impl Computer {
     }
 
     fn jumpa(&mut self, instruction: Instruction) {
-        self.jump_value(self.registers.a.read(), instruction.modification(), instruction.address())
+        let address = instruction.address().read() + self.get_offset(instruction.index_specification());
+        self.jump_value(self.registers.a.read(), instruction.modification(), address)
     }
     fn jumpx(&mut self, instruction: Instruction) {
-        self.jump_value(self.registers.x.read(), instruction.modification(), instruction.address())
+        let address = instruction.address().read() + self.get_offset(instruction.index_specification());
+        self.jump_value(self.registers.x.read(), instruction.modification(), address)
     }
     fn jumpi1(&mut self, instruction: Instruction) {
-        self.jump_value(self.registers.i1.read() as i32, instruction.modification(), instruction.address())
+        let address = instruction.address().read() + self.get_offset(instruction.index_specification());
+        self.jump_value(self.registers.i1.read() as i32, instruction.modification(), address)
     }
     fn jumpi2(&mut self, instruction: Instruction) {
-        self.jump_value(self.registers.i2.read() as i32, instruction.modification(), instruction.address())
+        let address = instruction.address().read() + self.get_offset(instruction.index_specification());
+        self.jump_value(self.registers.i2.read() as i32, instruction.modification(), address)
     }
     fn jumpi3(&mut self, instruction: Instruction) {
-        self.jump_value(self.registers.i3.read() as i32, instruction.modification(), instruction.address())
+        let address = instruction.address().read() + self.get_offset(instruction.index_specification());
+        self.jump_value(self.registers.i3.read() as i32, instruction.modification(), address)
     }
     fn jumpi4(&mut self, instruction: Instruction) {
-        self.jump_value(self.registers.i4.read() as i32, instruction.modification(), instruction.address())
+        let address = instruction.address().read() + self.get_offset(instruction.index_specification());
+        self.jump_value(self.registers.i4.read() as i32, instruction.modification(), address)
     }
     fn jumpi5(&mut self, instruction: Instruction) {
-        self.jump_value(self.registers.i5.read() as i32, instruction.modification(), instruction.address())
+        let address = instruction.address().read() + self.get_offset(instruction.index_specification());
+        self.jump_value(self.registers.i5.read() as i32, instruction.modification(), address)
     }
     fn jumpi6(&mut self, instruction: Instruction) {
-        self.jump_value(self.registers.i6.read() as i32, instruction.modification(), instruction.address())
+        let address = instruction.address().read() + self.get_offset(instruction.index_specification());
+        self.jump_value(self.registers.i6.read() as i32, instruction.modification(), address)
     }
 
-    fn jump_value(&mut self, value: i32, modifier: u8, address: arch::HalfWord ) {
+    fn jump_value(&mut self, value: i32, modifier: u8, address: i16 ) {
         let condition = match modifier { 
             0 => value < 0,
             1 => value == 0,
@@ -495,13 +511,13 @@ impl Computer {
             self.instruction_pointer.read() + 1
         ); 
         if condition {
-            self.instruction_pointer = address;
+            self.instruction_pointer = arch::HalfWord::from_value(address);
             self.registers.j = return_address;
         }
     }
 
     fn shift(&mut self, instruction: Instruction) {
-        let mut bytes_to_shift = instruction.address().read();
+        let mut bytes_to_shift = instruction.address().read() + self.get_offset(instruction.index_specification());
         if instruction.modification() == 0 {
             for index in (bytes_to_shift..5).rev() {
                 self.registers.a.bytes[4 - index as usize] = self.registers.a.bytes[4 - (index - bytes_to_shift) as usize];
@@ -556,6 +572,23 @@ impl Computer {
         else {
             panic!("Invalid shift modification");
         }
+    }
+
+    fn mov(&mut self, instruction: Instruction) { 
+        let address = instruction.address().read() + self.get_offset(instruction.index_specification());
+        for index in 0..(instruction.modification() as i16) {
+            println!("{:?} {:?}", self.registers.i1.read(), address);
+            self.memory[(index + self.registers.i1.read()) as usize] = self.memory[(address + index) as usize];
+        }
+        self.registers.i1 = arch::HalfWord::from_value(self.registers.i1.read() + instruction.modification() as i16);
+    }
+
+    fn no_op(&mut self, instruction: Instruction) {
+
+    }
+
+    fn halt(&mut self, instruction: Instruction) {
+        self.is_halted = true;
     }
 
     fn get_offset(&self, val: u8) -> i16 {
@@ -1758,5 +1791,29 @@ mod tests {
         c.run_command(Instruction::new(instructions::OpCode::Shift, 5, 0, arch::HalfWord::from_value(16)));
         assert_eq!(c.registers.a, arch::Word::from_values(true, 5, 6, 7, 8, 9));
         assert_eq!(c.registers.x, arch::Word::from_values(true, 10, 1, 2, 3, 4));
+    }
+    
+    #[test]
+    fn test_move() {
+        let mut c = Computer::new();
+        c.memory[999] = arch::Word::from_values(true, 1, 2, 3, 4, 5);
+        c.memory[1000] = arch::Word::from_values(false, 11, 12, 13, 14, 15);
+        c.memory[1001] = arch::Word::from_values(true, 21, 22, 23, 24, 25);
+        c.memory[1002] = arch::Word::from_values(false, 31, 32, 33, 34, 35);
+        c.registers.i1 = arch::HalfWord::from_value(999);
+        c.run_command(Instruction::new(instructions::OpCode::MOVE, 3, 0, arch::HalfWord::from_value(1000)));
+        assert_eq!(c.memory[999], arch::Word::from_values(false, 11, 12, 13, 14, 15));
+        assert_eq!(c.memory[1000], arch::Word::from_values(true, 21, 22, 23, 24, 25));
+        assert_eq!(c.memory[1001], arch::Word::from_values(false, 31, 32, 33, 34, 35));
+        assert_eq!(c.memory[1002], arch::Word::from_values(false, 31, 32, 33, 34, 35));
+        assert_eq!(c.registers.i1, arch::HalfWord::from_value(1002));
+    }
+
+    #[test]
+    fn test_hlt() {
+        let mut c = Computer::new();
+        assert_eq!(c.is_halted, false);
+        c.run_command(Instruction::new(instructions::OpCode::HLT, 0, 0, arch::HalfWord::from_value(1000)));
+        assert_eq!(c.is_halted, true);
     }
 }
