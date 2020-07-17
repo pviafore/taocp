@@ -86,6 +86,11 @@ impl Computer {
             instructions::OpCode::STX => Computer::stx,
             instructions::OpCode::STJ => Computer::stj,
             instructions::OpCode::STZ => Computer::stz,
+            instructions::OpCode::JBUS => Computer::no_op, // we're never busy so no op
+            instructions::OpCode::IOC => Computer::ioctl,
+            instructions::OpCode::IN => Computer::read,
+            instructions::OpCode::OUT => Computer::write,
+            instructions::OpCode::JRED => Computer::jred, 
             instructions::OpCode::Jump => Computer::jump,
             instructions::OpCode::JumpA => Computer::jumpa,
             instructions::OpCode::JumpI1 => Computer::jumpi1,
@@ -435,6 +440,9 @@ impl Computer {
         self.comparison = compare_half_word(self.registers.i6, self.readmem(instruction).read(), instruction)
     }
 
+    fn jred(&mut self, instruction: Instruction) {
+        self.jump(Instruction::new(instruction.op_code(), 0, instruction.index_specification(), instruction.address()));
+    }
     fn jump(&mut self, instruction: Instruction) {
         let return_address = arch::HalfWord::from_value(
             self.instruction_pointer.read() + 1
@@ -583,12 +591,29 @@ impl Computer {
         self.registers.i1 = arch::HalfWord::from_value(self.registers.i1.read() + instruction.modification() as i16);
     }
 
-    fn no_op(&mut self, instruction: Instruction) {
+    fn no_op(&mut self, _instruction: Instruction) {
 
     }
 
-    fn halt(&mut self, instruction: Instruction) {
+    fn halt(&mut self, _instruction: Instruction) {
         self.is_halted = true;
+    }
+
+    fn read(&mut self, instruction: Instruction) {
+        let address = instruction.address().read() + self.get_offset(instruction.index_specification());
+        let values = self.io.read(instruction.modification(), self.registers.x.read().abs() as u32);
+        self.memory.splice(address as usize..(address as usize + values.len()), values.iter().cloned());
+    }
+
+    fn write(&mut self, instruction: Instruction) {
+        let address = instruction.address().read() + self.get_offset(instruction.index_specification());
+        self.io.write(instruction.modification(), self.registers.x.read().abs() as u32, &self.memory[address as usize..])
+    }
+
+    fn ioctl(&mut self, instruction: Instruction) {
+        let address = instruction.address().read() + self.get_offset(instruction.index_specification());
+        self.io.ioctl(instruction.modification(), address, self.registers.x.read().abs() as u32);
+
     }
 
     fn get_offset(&self, val: u8) -> i16 {
@@ -1815,5 +1840,53 @@ mod tests {
         assert_eq!(c.is_halted, false);
         c.run_command(Instruction::new(instructions::OpCode::HLT, 0, 0, arch::HalfWord::from_value(1000)));
         assert_eq!(c.is_halted, true);
+    }
+
+    #[test]
+    fn test_in() {
+        let mut c = Computer::new();
+        use std::iter::FromIterator;
+        let values = Vec::from_iter((0..100).map(|i| arch::Word::from_value(i)));
+        c.io.write(2, 0, &values[..]);
+        c.io.ioctl(2, 0, 0);
+        
+        c.run_command(Instruction::new(instructions::OpCode::IN, 2, 0, arch::HalfWord::from_value(1000)));
+        
+        for index in 0..100{
+            assert_eq!(c.memory[1000+index], arch::Word::from_value(index as i32));
+        }
+    }
+    
+    #[test]
+    fn test_out() {
+        let mut c = Computer::new();
+        for index in 0..100{
+            c.memory[1000+index] = arch::Word::from_value(index as i32);
+        }
+        
+        c.run_command(Instruction::new(instructions::OpCode::OUT, 2, 0, arch::HalfWord::from_value(1000)));
+        c.io.ioctl(2, 0, 0);
+       
+        let values = c.io.read(2, 0);
+        for index in 0..100{
+            assert_eq!(values[index], arch::Word::from_value(index as i32));
+        }
+    }
+    
+    #[test]
+    fn test_ioctl() {
+        let mut c = Computer::new();
+        for index in 0..200{
+            c.memory[1000+index] = arch::Word::from_value(index as i32);
+        }
+        
+        c.run_command(Instruction::new(instructions::OpCode::OUT, 2, 0, arch::HalfWord::from_value(1000)));
+        c.run_command(Instruction::new(instructions::OpCode::OUT, 2, 0, arch::HalfWord::from_value(1100)));
+        c.run_command(Instruction::new(instructions::OpCode::IOC, 2, 0, arch::HalfWord::from_value(-150)));
+       
+        let values = c.io.read(2, 0);
+        for index in 0..100{
+            assert_eq!(values[index], arch::Word::from_value(50 + index as i32));
+        }
     }
 }
