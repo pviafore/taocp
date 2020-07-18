@@ -57,7 +57,7 @@ impl Computer {
             instructions::OpCode::SUB => Computer::sub,
             instructions::OpCode::MUL => Computer::mul,
             instructions::OpCode::DIV => Computer::div,
-            instructions::OpCode::HLT => Computer::halt,
+            instructions::OpCode::HaltNumChar => Computer::halt_num_char,
             instructions::OpCode::Shift => Computer::shift,
             instructions::OpCode::MOVE => Computer::mov,
             instructions::OpCode::LDA => Computer::loada,
@@ -595,8 +595,46 @@ impl Computer {
 
     }
 
-    fn halt(&mut self, _instruction: Instruction) {
-        self.is_halted = true;
+    fn halt_num_char(&mut self, instruction: Instruction) {
+        if instruction.modification() == 2 {
+            self.is_halted = true;
+        }
+        else if instruction.modification() == 0 {
+            let val1 = self.registers.a.bytes;
+            let val2 = self.registers.x.bytes;
+            let num = 
+                (val1[0].read() % 10) as i32 * 1000000000 +
+                (val1[1].read() % 10) as i32 * 100000000 +
+                (val1[2].read() % 10) as i32 * 10000000 +
+                (val1[3].read() % 10) as i32 * 1000000 +
+                (val1[4].read() % 10) as i32 * 100000 +
+                (val2[0].read() % 10) as i32 * 10000 +
+                (val2[1].read() % 10) as i32 * 1000 +
+                (val2[2].read() % 10) as i32 * 100 +
+                (val2[3].read() % 10) as i32 * 10 +
+                (val2[4].read() % 10) as i32;
+            let modifier = if self.registers.a.is_positive { 1 } else { -1 };
+            println!("{:?}", num);
+            self.registers.a = arch::Word::from_value(modifier * num);
+        }
+
+        else if instruction.modification() == 1 {
+            let value = self.registers.a.read().abs();
+            println!("{:?}", value);
+            self.registers.a.bytes[0] = arch::Byte::new(30 + ((value / 1000000000) % 10) as u8);
+            self.registers.a.bytes[1] = arch::Byte::new(30 + ((value / 100000000) % 10) as u8);
+            self.registers.a.bytes[2] = arch::Byte::new(30 + ((value / 10000000) % 10) as u8);
+            self.registers.a.bytes[3] = arch::Byte::new(30 + ((value / 1000000) % 10) as u8);
+            self.registers.a.bytes[4] = arch::Byte::new(30 + ((value / 100000) % 10) as u8);
+            self.registers.x.bytes[0] = arch::Byte::new(30 + ((value / 10000) % 10) as u8);
+            self.registers.x.bytes[1] = arch::Byte::new(30 + ((value / 1000) % 10) as u8);
+            self.registers.x.bytes[2] = arch::Byte::new(30 + ((value / 100) % 10) as u8);
+            self.registers.x.bytes[3] = arch::Byte::new(30 + ((value / 10) % 10) as u8);
+            self.registers.x.bytes[4] = arch::Byte::new(30 + (value  % 10) as u8);
+        }
+        else {
+            panic!("Unknown halt/num/char")
+        }
     }
 
     fn read(&mut self, instruction: Instruction) {
@@ -1838,7 +1876,7 @@ mod tests {
     fn test_hlt() {
         let mut c = Computer::new();
         assert_eq!(c.is_halted, false);
-        c.run_command(Instruction::new(instructions::OpCode::HLT, 0, 0, arch::HalfWord::from_value(1000)));
+        c.run_command(Instruction::new(instructions::OpCode::HaltNumChar, 2, 0, arch::HalfWord::from_value(1000)));
         assert_eq!(c.is_halted, true);
     }
 
@@ -1889,4 +1927,35 @@ mod tests {
             assert_eq!(values[index], arch::Word::from_value(50 + index as i32));
         }
     }
+
+    #[test]
+    fn test_num() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 0, 0, 31, 32, 39);
+        c.registers.x = arch::Word::from_values(true, 37, 57, 47, 30, 30);
+        c.run_command(Instruction::new(instructions::OpCode::HaltNumChar, 0, 0, arch::HalfWord::from_value(0)));
+        assert_eq!(c.registers.x, arch::Word::from_values(true, 37, 57, 47, 30, 30));
+        assert_eq!(c.registers.a, arch::Word::from_value(12977700));
+    }
+
+    #[test]
+    fn test_num_overflow() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(false, 11, 0, 27, 63, 57);
+        c.registers.x = arch::Word::from_values(true, 4, 12, 41, 22, 34);
+        c.run_command(Instruction::new(instructions::OpCode::HaltNumChar, 0, 0, arch::HalfWord::from_value(0)));
+        assert_eq!(c.registers.x, arch::Word::from_values(true, 4, 12, 41, 22, 34));
+        assert_eq!(c.registers.a, arch::Word::from_value(-300));
+    }
+    
+    #[test]
+    fn test_char() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_value(-12977700);
+        c.registers.x = arch::Word::from_values(false, 4, 12, 41, 22, 34);
+        c.run_command(Instruction::new(instructions::OpCode::HaltNumChar, 1, 0, arch::HalfWord::from_value(0)));
+        assert_eq!(c.registers.a, arch::Word::from_values(false, 30, 30, 31, 32, 39));
+        assert_eq!(c.registers.x, arch::Word::from_values(false, 37, 37, 37, 30, 30));
+    }
+
 }
