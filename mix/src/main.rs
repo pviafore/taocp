@@ -2,6 +2,7 @@ mod arch;
 mod computer;
 mod instructions;
 mod io;
+mod timing;
 
 
 fn main() {

@@ -1,6 +1,7 @@
 use crate::arch;
 use crate::instructions;
 use crate::io;
+use crate::timing;
 
 use std::cmp;
 use instructions::Instruction;
@@ -46,7 +47,8 @@ struct Computer {
     memory: Vec<arch::Word>,
     io: io::IO,
     instruction_pointer: arch::HalfWord,
-    is_halted: bool
+    is_halted: bool,
+    timer: timing::TimingUnit
 }
 
 impl Computer {
@@ -117,6 +119,7 @@ impl Computer {
             instructions::OpCode::CMP6 => Computer::cmpi6,
             instructions::OpCode::CMPX => Computer::cmpx,
         };
+        self.timer.add_time_to_run(instruction);
         op(self, instruction)
     }
 
@@ -139,7 +142,8 @@ impl Computer {
             memory: Vec::from_iter((0..4000).map(|_| arch::Word::new())),
             io: io::IO::new(), 
             instruction_pointer: arch::HalfWord::new(),
-            is_halted: false
+            is_halted: false,
+            timer: timing::TimingUnit::new() 
         }
     }
 
@@ -403,7 +407,7 @@ impl Computer {
             3 => -1 * raw_value as i32,
             _ => panic!("Invalid code for Address Transfer")
         };
-        if value >= (1 << bits) || value <= -1 * (1 << bits) {
+        if bits == 30 && (value >= (1 << bits) || value <= -1 * (1 << bits)) {
             self.overflow = true;
         }
         value
@@ -1381,21 +1385,13 @@ mod tests {
         c.run_command(Instruction::new(instructions::OpCode::AddressTransferI5, 1, 0, arch::HalfWord::from_value(2000)));
         assert_eq!(c.registers.i5.read(), 1995); 
     }
-
+    
     #[test]
     fn test_deci6(){
         let mut c = Computer::new();
         c.registers.i6 = arch::HalfWord::from_value(5);
         c.run_command(Instruction::new(instructions::OpCode::AddressTransferI6, 1, 0, arch::HalfWord::from_value(2000)));
         assert_eq!(c.registers.i6.read(), 1995); 
-    }
-
-    #[test]
-    fn test_inci6_overflows(){
-        let mut c = Computer::new();
-        c.registers.i6 = arch::HalfWord::from_value(64 * 64 - 1 );
-        c.run_command(Instruction::new(instructions::OpCode::AddressTransferI6, 0, 0, arch::HalfWord::from_value(64*64 - 1)));
-        assert_eq!(c.overflow, true);
     }
     
     #[test]
@@ -1956,6 +1952,16 @@ mod tests {
         c.run_command(Instruction::new(instructions::OpCode::HaltNumChar, 1, 0, arch::HalfWord::from_value(0)));
         assert_eq!(c.registers.a, arch::Word::from_values(false, 30, 30, 31, 32, 39));
         assert_eq!(c.registers.x, arch::Word::from_values(false, 37, 37, 37, 30, 30));
+    }
+
+    #[test]
+    fn time_computer() {
+        let mut c = Computer::new();
+        c.run_command(Instruction::new(instructions::OpCode::AddressTransferA, 1, 0, arch::HalfWord::from_value(1000)));
+        c.run_command(Instruction::new(instructions::OpCode::STA, 5, 0, arch::HalfWord::from_value(2000)));
+        c.run_command(Instruction::new(instructions::OpCode::MUL, 5, 0, arch::HalfWord::from_value(2000)));
+        c.run_command(Instruction::new(instructions::OpCode::MOVE, 60, 0, arch::HalfWord::from_value(2000)));
+        assert_eq!(c.timer.get_time_to_run(), 134);
     }
 
 }
