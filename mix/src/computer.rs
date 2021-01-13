@@ -40,7 +40,7 @@ fn compare_word(value: arch::Word, rhs: i32, instruction: Instruction) -> Compar
     }
 }
 
-struct Computer {
+pub struct Computer {
     registers: Registers,
     overflow: bool,
     comparison: ComparisonIndicator,
@@ -589,7 +589,6 @@ impl Computer {
     fn mov(&mut self, instruction: Instruction) { 
         let address = instruction.address().read() + self.get_offset(instruction.index_specification());
         for index in 0..(instruction.modification() as i16) {
-            println!("{:?} {:?}", self.registers.i1.read(), address);
             self.memory[(index + self.registers.i1.read()) as usize] = self.memory[(address + index) as usize];
         }
         self.registers.i1 = arch::HalfWord::from_value(self.registers.i1.read() + instruction.modification() as i16);
