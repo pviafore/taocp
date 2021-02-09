@@ -71,16 +71,41 @@ impl Disk {
 
 }
 
+struct CardReader {
+    cards: Vec<[u8; 80]>
+}
+
+impl CardReader {
+    pub fn new() -> CardReader {
+        CardReader {
+            cards: vec![]
+        }
+    }
+
+    pub fn add_card(&mut self, card: [u8; 80]) {
+        self.cards.push(card)
+    }
+
+    pub fn read_card(&mut self) -> [u8; 80] {
+        let card = self.cards[0];
+        self.cards = self.cards[1..].to_vec();
+        card
+    }
+}
+
+
 pub struct IO {
     tapes: [TapeUnit; 8],
-    disks: [Disk; 8]
+    disks: [Disk; 8],
+    card_reader: CardReader
 }
 
 impl IO {
     pub fn new() -> IO {
         IO {
             tapes: [TapeUnit::new(), TapeUnit::new(), TapeUnit::new(), TapeUnit::new(), TapeUnit::new(), TapeUnit::new(), TapeUnit::new(), TapeUnit::new()],
-            disks: [Disk::new(), Disk::new(), Disk::new(), Disk::new(), Disk::new(), Disk::new(), Disk::new(), Disk::new() ]
+            disks: [Disk::new(), Disk::new(), Disk::new(), Disk::new(), Disk::new(), Disk::new(), Disk::new(), Disk::new() ],
+            card_reader: CardReader::new()
         }
     }
 
@@ -90,6 +115,12 @@ impl IO {
         }
         else if unit <= 15 {
             self.disks[(unit - 8) as usize].read(position_if_disk)
+        }
+        else if unit == 16 {
+            self.card_reader.read_card()
+                            .chunks(5)
+                            .map(|b| arch::Word::from_values(true, b[0], b[1], b[2], b[3], b[4]))
+                            .collect()
         }
         else {
             panic!("Unreadable unit");
@@ -118,6 +149,15 @@ impl IO {
         else {
             panic!("Unable to ioctl unit");
         }
+    }
+
+    pub fn add_card(&mut self, data: Vec<u8>) {
+        assert!(data.len() <= 80);
+        let mut card: [u8; 80] = [0; 80];
+        for i in 0..(data.len()) {
+            card[i] = data[i]
+        }
+        self.card_reader.add_card(card)
     }
 }
 

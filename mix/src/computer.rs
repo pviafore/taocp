@@ -42,6 +42,7 @@ fn compare_word(value: arch::Word, rhs: i32, instruction: Instruction) -> Compar
 
 pub struct Computer {
     registers: Registers,
+    trace: bool,
     overflow: bool,
     comparison: ComparisonIndicator,
     memory: Vec<arch::Word>,
@@ -123,6 +124,45 @@ impl Computer {
         op(self, instruction)
     }
 
+    pub fn run_from_cards(&mut self) {
+        let first_card = self.io.read(16,0);
+        self.write_to_memory(first_card, 0);
+        self.run();
+    }
+
+    fn run(&mut self){
+        while !self.is_halted {
+            let instruction = Instruction::from_word(self.memory[self.instruction_pointer.read() as usize]);
+            if self.trace {
+                println!("{:?}: {:?}", self.instruction_pointer.read(), instruction);
+            }
+            self.run_command(instruction);
+            if !instruction.is_jump() {
+                self.instruction_pointer = arch::HalfWord::from_value(
+                    self.instruction_pointer.read() + 1
+                );
+            }
+        }
+    }
+
+    pub fn write_to_memory(&mut self, data: Vec<arch::Word>, location: usize) {
+        for i in 0..(data.len()) {
+            self.memory[location+i] = data[i]
+        }
+    }
+
+    pub fn read_from_memory(self, location: usize, length: usize) -> Vec<i32> {
+        self.memory[location..location+length].iter().map(|x| arch::Word::read(*x)).collect()
+    }
+
+    pub fn add_card(&mut self, data: Vec<u8>) {
+        self.io.add_card(data)
+    }
+
+    pub fn turn_tracing_on(&mut self) {
+        self.trace = true;
+    }
+
     pub fn new() -> Computer{
         use std::iter::FromIterator;
         Computer { 
@@ -137,6 +177,7 @@ impl Computer {
                 i6: arch::HalfWord::new(),
                 j: arch::HalfWord::new()
             },
+            trace: false,
             overflow: false,
             comparison: ComparisonIndicator::EQUAL,
             memory: Vec::from_iter((0..4000).map(|_| arch::Word::new())),
@@ -299,8 +340,6 @@ impl Computer {
             self.memory[address as usize].bytes[index as usize] = value.bytes[byte_index as usize];
         }
     }
-
-  
 
     fn add(&mut self, instruction: Instruction){
         let addend2 = self.readmem(instruction).read();
@@ -526,6 +565,10 @@ impl Computer {
             self.instruction_pointer = arch::HalfWord::from_value(address);
             self.registers.j = return_address;
         }
+        else {
+            // need to mess with instruction_pointer because we may not jump
+            self.instruction_pointer = return_address;
+        }
     }
 
     fn shift(&mut self, instruction: Instruction) {
@@ -617,13 +660,11 @@ impl Computer {
                 (val2[3].read() % 10) as i32 * 10 +
                 (val2[4].read() % 10) as i32;
             let modifier = if self.registers.a.is_positive { 1 } else { -1 };
-            println!("{:?}", num);
             self.registers.a = arch::Word::from_value(modifier * num);
         }
 
         else if instruction.modification() == 1 {
             let value = self.registers.a.read().abs();
-            println!("{:?}", value);
             self.registers.a.bytes[0] = arch::Byte::new(30 + ((value / 1000000000) % 10) as u8);
             self.registers.a.bytes[1] = arch::Byte::new(30 + ((value / 100000000) % 10) as u8);
             self.registers.a.bytes[2] = arch::Byte::new(30 + ((value / 10000000) % 10) as u8);

@@ -1,6 +1,6 @@
 use crate::arch;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Instruction {
      value: arch::Word
 }
@@ -35,6 +35,30 @@ impl Instruction {
             value: arch::Word::from_values(address.is_positive, address.bytes[0].read(), address.bytes[1].read(), index_specification, modification, op_code as u8)
         }
     }
+
+    pub fn from_word(word: arch::Word) -> Instruction {
+        Instruction { 
+            value: word
+        }
+    }
+
+    //do not include JBUS because that is a no-op for us
+    pub fn is_jump(self) -> bool{
+        match self.op_code() {
+            OpCode::Jump => true,
+            OpCode::JRED => true,
+            OpCode::JumpA => true,
+            OpCode::JumpX => true,
+            OpCode::JumpI1 => true,
+            OpCode::JumpI2 => true,
+            OpCode::JumpI3 => true,
+            OpCode::JumpI4 => true,
+            OpCode::JumpI5 => true,
+            OpCode::JumpI6 => true,
+            _ => false
+        }
+    }
+
 }
 
 fn to_opcode(val: u8) -> OpCode {
@@ -106,6 +130,8 @@ fn to_opcode(val: u8) -> OpCode {
         _ => panic!("Invalid OpCode"),
     }
 }
+
+#[derive(Debug)]
 pub enum OpCode {
     NOP = 0,
     ADD = 1,
@@ -171,4 +197,15 @@ pub enum OpCode {
     CMP5 = 61,
     CMP6 = 62,
     CMPX = 63,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_jbus_is_not_jump() {
+        let instruction = Instruction::new(OpCode::JBUS, 5, 0, arch::HalfWord::from_value(2000));
+        assert_eq!(instruction.is_jump(), false);
+    }
 }
