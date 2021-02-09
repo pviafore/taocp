@@ -96,7 +96,7 @@ fn to_opcode(val: u8) -> OpCode {
         30 => OpCode::ST6,
         31 => OpCode::STX,
         32 => OpCode::STJ,
-        33 => OpCode::STJ,
+        33 => OpCode::STZ,
         34 => OpCode::JBUS,
         35 => OpCode::IOC,
         36 => OpCode::IN,

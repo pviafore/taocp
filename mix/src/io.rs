@@ -134,6 +134,9 @@ impl IO {
         else if unit <= 15 {
             self.disks[(unit - 8) as usize].write(position_if_disk, values)
         }
+        else if unit == 18 {
+            println!("{:?}", values[0..24].iter().map(|x| x.read()))
+        }
         else {
             panic!("Unwriteable unit");
         }

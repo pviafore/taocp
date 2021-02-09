@@ -32,7 +32,9 @@ struct CreateCardpack {
 struct Run {
     cardpack_name: String,
     #[clap(long, short)]
-    trace: bool
+    trace: bool,
+    #[clap(long, short='x')]
+    timing: bool
 }
 
 fn main() {
@@ -47,16 +49,16 @@ fn main() {
 fn create_cardpack(cmd: CreateCardpack) {
     // this is derived from bootloader.mixal
     let loading_card_1 = " O O6 A O4    I 2 O6 C O4 3 EH A  F F CF 0  E = EU 3 IH H BB $ EU = EJ  CA. 5A-H\n";
-    let loading_card_2 = " U BB  C U = EH F BA = EU 4AEH 5AEN   BG S  E  CLU $ EH F BB $ EU L B. B  9     \n";
+    let loading_card_2 = " U BB  C U = EH F BA = EU 4AEH 5AEN  ABG S  E  CLU $ EH F BB $ EU L B. B  9     \n";
     let transfer_card  = format!("+TRANS0{:04}", cmd.start_location);
     let filename = format!("{}", cmd.cardpack_name);
     let mut file = std::fs::File::create(filename).expect("create failed");
-    file.write_all(loading_card_1.as_bytes());
-    file.write_all(loading_card_2.as_bytes());
+    file.write_all(loading_card_1.as_bytes()).unwrap();
+    file.write_all(loading_card_2.as_bytes()).unwrap();
     let contents = fs::read(cmd.program_file).unwrap();
     let punch_cards = convert_to_punch_cards(contents, cmd.start_location);
-    file.write_all(&punch_cards.as_bytes());
-    file.write_all(transfer_card.as_bytes());
+    file.write_all(&punch_cards.as_bytes()).unwrap();
+    file.write_all(transfer_card.as_bytes()).unwrap();
 
 }
 
@@ -85,6 +87,9 @@ fn run(cmd: Run) {
         comp.add_card(translate_data_card(contents[i]))
     }
     comp.run_from_cards();
+    if cmd.timing {
+        println!("Time to run: {:?}", comp.get_time_to_run())
+    }
 }
 
 fn translate(text: &str) -> Vec<u8> {

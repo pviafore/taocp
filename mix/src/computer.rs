@@ -124,6 +124,10 @@ impl Computer {
         op(self, instruction)
     }
 
+    pub fn get_time_to_run(self) -> u32 {
+        self.timer.get_time_to_run()
+    }
+
     pub fn run_from_cards(&mut self) {
         let first_card = self.io.read(16,0);
         self.write_to_memory(first_card, 0);
@@ -149,10 +153,6 @@ impl Computer {
         for i in 0..(data.len()) {
             self.memory[location+i] = data[i]
         }
-    }
-
-    pub fn read_from_memory(self, location: usize, length: usize) -> Vec<i32> {
-        self.memory[location..location+length].iter().map(|x| arch::Word::read(*x)).collect()
     }
 
     pub fn add_card(&mut self, data: Vec<u8>) {
@@ -189,7 +189,7 @@ impl Computer {
     }
 
     fn loada(&mut self, instruction: Instruction) {
-        self.registers.a = self.readmem(instruction)
+        self.registers.a = self.readmem(instruction);
     }
     
     fn loadx(&mut self, instruction: Instruction) {
@@ -347,6 +347,7 @@ impl Computer {
    }
     
     fn sub(&mut self, instruction: Instruction){
+
         let addend2 = self.readmem(instruction).read();
         self.add_to_register_a(-1 * addend2);
     }
