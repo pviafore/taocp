@@ -49,7 +49,7 @@ fn create_cardpack(cmd: CreateCardpack) {
     let loading_card_1 = " O O6 A O4    I 2 O6 C O4 3 EH A  F F CF 0  E = EU 3 IH H BB $ EU = EJ  CA. 5A-H\n";
     let loading_card_2 = " U BB  C U = EH F BA = EU 4AEH 5AEN   BG S  E  CLU $ EH F BB $ EU L B. B  9     \n";
     let transfer_card  = format!("+TRANS0{:04}", cmd.start_location);
-    let filename = format!("{}.cardpack", cmd.cardpack_name);
+    let filename = format!("{}", cmd.cardpack_name);
     let mut file = std::fs::File::create(filename).expect("create failed");
     file.write_all(loading_card_1.as_bytes());
     file.write_all(loading_card_2.as_bytes());
