@@ -1,4 +1,5 @@
 use crate::arch;
+use crate::chartable;
 
 struct TapeUnit {
     tape: Vec<arch::Word>,
@@ -135,7 +136,12 @@ impl IO {
             self.disks[(unit - 8) as usize].write(position_if_disk, values)
         }
         else if unit == 18 {
-            println!("{:?}", values[0..24].iter().map(|x| x.read()))
+            let data: Vec<Vec<u8>> = values[0..24]
+                                    .iter()
+                                    .map(|x| x.bytes.iter().map(|x| x.read()).collect())
+                                    .collect();
+            let bytes: Vec<u8> = data.into_iter().flatten().collect();
+            println!("{:?}", chartable::to_char(bytes));
         }
         else {
             panic!("Unwriteable unit");
