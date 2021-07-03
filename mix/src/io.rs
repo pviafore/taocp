@@ -138,7 +138,7 @@ impl IO {
         else if unit == 18 {
             let data: Vec<Vec<u8>> = values[0..24]
                                     .iter()
-                                    .map(|x| x.bytes.iter().map(|x| x.read()).collect())
+                                    .map(|x| x.as_u8s())
                                     .collect();
             let bytes: Vec<u8> = data.into_iter().flatten().collect();
             println!("{:?}", chartable::to_char(bytes));

@@ -1,0 +1,335 @@
+use crate::arch;
+use crate::instructions;
+
+use std::fs::File;
+use std::io::{self, BufRead, Write};
+
+pub fn assemble(filename: &str, output_filename: &str) {
+    let file = File::open(filename).unwrap();
+    let lines = io::BufReader::new(file).lines();
+    let words: Vec<arch::Word> = lines.map(|x| to_instruction(&x.unwrap())).collect();
+    let word_bytes: Vec<Vec<u8>> = words.iter().map(|x| x.as_u8s()).collect();
+
+    let mut output_file = std::fs::File::create(output_filename).expect("create failed");
+    let bytes: Vec<u8> = word_bytes.into_iter().flatten().collect();
+    output_file.write_all(&bytes);
+}
+
+fn to_instruction(line: &str) -> arch::Word {
+    // tokenize into words (with empty spaces)
+    // strip the 1..n  empty spaces
+    // 1st word is ignored (for now)
+    // 2nd word is op code
+    // 3rd word is address,I(F)
+    let (label, op, address_string) = tokenize(line);
+    let opcode = instructions::str_to_opcode(op);
+    let (address, index, modifier) = parse_address_string(op, address_string);
+    arch::Word::from_values(address.is_positive, address.bytes[0].read(), address.bytes[1].read(),
+                            index, modifier, opcode as u8)
+}
+
+fn tokenize(line: &str) -> (&str, &str, &str) {
+    // this routine does not handle extra remarks
+    let spl: Vec<&str> = line.split(" ").collect();
+    let label = spl[0];
+    let filtered_split: Vec<&str> = spl[1..].iter().cloned().filter(|x| *x != "").collect();
+    let address = if filtered_split.len() > 1 { filtered_split[1] } else { "" };
+    (label, filtered_split[0], address)
+}
+
+fn parse_address_string(op: &str, address_string: &str) -> (arch::HalfWord, u8, u8) {
+    let spl: Vec<&str> = address_string.split(",").collect();
+    if spl.len() == 0 || spl[0] == "" {
+        match op {
+            "HLT" => (arch::HalfWord::new(), 0, 2),
+            "NOP" => (arch::HalfWord::new(), 0, 0),
+            _ => (arch::HalfWord::new(), 0, 5)
+        }
+    }
+    else {
+        let address = _get_address(&spl);
+        let index = _get_index(&spl);
+        let modifier = _get_modifier(op, spl);
+        (address, index, modifier)
+    }
+}
+
+fn _get_address(spl: &Vec<&str>) -> arch::HalfWord {
+    if spl[0].contains('(') {
+        let address_split: Vec<&str> = spl[0].split('(').collect();
+        arch::HalfWord::from_value(address_split[0].parse::<i16>().unwrap())
+    }
+    else {
+        arch::HalfWord::from_value(spl[0].parse::<i16>().unwrap())
+    }
+}
+
+fn _get_index(spl: &Vec<&str>) -> u8 {
+    if spl.len() > 1 {
+        if spl[1].starts_with("(") {
+            // this is the modifier field
+            0
+        }
+        else {
+            let index_split: Vec<&str> = spl[1].split("(").collect();
+            index_split[0].parse::<u8>().unwrap()
+        }
+    }
+    else {
+        0
+    }
+}
+
+fn _get_modifier(op: &str, spl: Vec<&str>) -> u8 {
+    match op {
+        "HLT" => 2,
+        "NUM" => 0,
+        "CHAR" => 1,
+        "SLA" => 0,
+        "SRA" => 1,
+        "SLAX" => 2,
+        "SRAX" => 3,
+        "SLC" => 4,
+        "SRC" => 5,
+        "MOVE" => _parse_modifier(spl, 1),
+        "STJ" => _parse_modifier(spl, 2),
+        "JBUS" | "IOC" | "IN" | "OUT" | "JRED" => _parse_modifier(spl, 0),
+        "JMP" => 0,
+        "JSJ" => 1,
+        "JOV" => 2,
+        "JNOV" => 3,
+        "JL" => 4,
+        "JE" => 5,
+        "JG" => 6,
+        "JGE" => 7,
+        "JNE" => 8,
+        "JLE" => 9,
+        "JAN" | "J1N" | "J2N" | "J3N" | "J4N" | "J5N" | "J6N" | "JXN" => 0,
+        "JAZ" | "J1Z" | "J2Z" | "J3Z" | "J4Z" | "J5Z" | "J6Z" | "JXZ" => 1,
+        "JAP" | "J1P" | "J2P" | "J3P" | "J4P" | "J5P" | "J6P" | "JXP" => 2,
+        "JANN" | "J1NN" | "J2NN" | "J3NN" | "J4NN" | "J5NN" | "J6NN" | "JXNN" => 3,
+        "JANZ" | "J1NZ" | "J2NZ" | "J3NZ" | "J4NZ" | "J5NZ" | "J6NZ" | "JXNZ" => 4,
+        "JANP" | "J1NP" | "J2NP" | "J3NP" | "J4NP" | "J5NP" | "J6NP" | "JXNP" => 5,
+        "INCA" | "INC1" | "INC2" | "INC3" | "INC4" | "INC5" | "INC6" | "INCX" => 0,
+        "DECA" | "DEC1" | "DEC2" | "DEC3" | "DEC4" | "DEC5" | "DEC6" | "DECX" => 1,
+        "ENTA" | "ENT1" | "ENT2" | "ENT3" | "ENT4" | "ENT5" | "ENT6" | "ENTX" => 2,
+        "ENNA" | "ENN1" | "ENN2" | "ENN3" | "ENN4" | "ENN5" | "ENN6" | "ENNX" => 3,
+        _ => _parse_modifier(spl, 5)
+    }
+}
+
+fn _parse_modifier(spl: Vec<&str>, default: u8) -> u8 {
+    if spl.len() > 1 {
+        if spl[1].starts_with("(") {
+            let modifier: Vec<&str> = spl[1].strip_prefix('(').unwrap().strip_suffix(')').unwrap().split(':').collect();
+            modifier[0].parse::<u8>().unwrap() * 8 + modifier[1].parse::<u8>().unwrap()
+        }
+        else {
+            let modifier_split: Vec<&str> = spl[1].split('(').collect();
+            if modifier_split.len() > 1 {
+                let modifier: Vec<&str> = modifier_split[1].strip_suffix(')').unwrap().split(':').collect();
+                if modifier.len() == 2 {
+                    modifier[0].parse::<u8>().unwrap() * 8 + modifier[1].parse::<u8>().unwrap()
+                }
+                else {
+                    modifier[0].parse::<u8>().unwrap()
+                }
+            }
+            else
+            {
+                default
+            }
+        }
+
+    }
+    else {
+        let modifier_split: Vec<&str> = spl[0].split('(').collect();
+        if modifier_split.len() > 1 {
+            let modifier: Vec<&str> = modifier_split[1].strip_suffix(')').unwrap().split(':').collect();
+            if modifier.len() == 2 {
+                modifier[0].parse::<u8>().unwrap() * 8 + modifier[1].parse::<u8>().unwrap()
+            }
+            else {
+                modifier[0].parse::<u8>().unwrap()
+            }
+        }
+        else
+        {
+            default
+        }
+    }
+
+}
+
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tokenize() {
+        assert_eq!(tokenize(" HLT"), ("", "HLT", "")); // no label
+        assert_eq!(tokenize("    HLT"), ("", "HLT", "")); // no label extra spaces
+        assert_eq!(tokenize("X HLT"), ("X", "HLT", "")); // label
+        assert_eq!(tokenize("LABEL  HLT"), ("LABEL", "HLT", "")); // extra spaces
+        assert_eq!(tokenize("LABEL  HLT"), ("LABEL", "HLT", "")); // extra spaces
+        assert_eq!(tokenize("LABEL  ADD 240,1(2:5)"), ("LABEL", "ADD", "240,1(2:5)")); // address
+    }
+
+    #[test]
+    fn test_parse_address_string() {
+        assert_eq!(parse_address_string("ADD", "240,1(2:5)"), (arch::HalfWord::from_value(240), 1, 21));
+        assert_eq!(parse_address_string("ADD", "240,1(15)"), (arch::HalfWord::from_value(240), 1, 15));
+        assert_eq!(parse_address_string("ADD", "240,1"), (arch::HalfWord::from_value(240), 1, 5));
+        assert_eq!(parse_address_string("ADD", "240"), (arch::HalfWord::from_value(240), 0, 5));
+        assert_eq!(parse_address_string("ADD", "240(2:5)"), (arch::HalfWord::from_value(240), 0, 21));
+        assert_eq!(parse_address_string("ADD", "240(15)"), (arch::HalfWord::from_value(240), 0, 15));
+    }
+
+    #[test]
+    fn test_to_instruction() {
+        assert_eq!(to_instruction(" HLT"), arch::Word::from_values(true, 0,0,0,2,5));
+        assert_eq!(to_instruction(" NOP"), arch::Word::from_values(true, 0,0,0,0,0));
+        assert_eq!(to_instruction(" ADD 100,1(2:5)"), arch::Word::from_values(true, 1,36,1,21,1));
+        assert_eq!(to_instruction(" ADD 100"), arch::Word::from_values(true, 1,36,0,5,1));
+        assert_eq!(to_instruction(" SUB 100,3(2:5)"), arch::Word::from_values(true, 1,36,3,21,2));
+        assert_eq!(to_instruction(" MUL -12,3(3:5)"), arch::Word::from_values(false, 0,12,3,29,3));
+        assert_eq!(to_instruction(" DIV -12,3(3:5)"), arch::Word::from_values(false, 0,12,3,29,4));
+        assert_eq!(to_instruction(" NUM 5"), arch::Word::from_values(true, 0,5,0,0,5));
+        assert_eq!(to_instruction(" CHAR 5"), arch::Word::from_values(true, 0,5,0,1,5));
+        assert_eq!(to_instruction(" SLA 2"), arch::Word::from_values(true, 0,2,0,0,6));
+        assert_eq!(to_instruction(" SRA 2"), arch::Word::from_values(true, 0,2,0,1,6));
+        assert_eq!(to_instruction(" SLAX 2,1"), arch::Word::from_values(true, 0,2,1,2,6));
+        assert_eq!(to_instruction(" SRAX 2"), arch::Word::from_values(true, 0,2,0,3,6));
+        assert_eq!(to_instruction(" SLC 2"), arch::Word::from_values(true, 0,2,0,4,6));
+        assert_eq!(to_instruction(" SRC 2"), arch::Word::from_values(true, 0,2,0,5,6));
+        assert_eq!(to_instruction(" MOVE 2"), arch::Word::from_values(true, 0,2,0,1,7));
+        assert_eq!(to_instruction(" LDA 2"), arch::Word::from_values(true, 0,2,0,5,8));
+        assert_eq!(to_instruction(" LD1 2"), arch::Word::from_values(true, 0,2,0,5,9));
+        assert_eq!(to_instruction(" LD2 2"), arch::Word::from_values(true, 0,2,0,5,10));
+        assert_eq!(to_instruction(" LD3 2"), arch::Word::from_values(true, 0,2,0,5,11));
+        assert_eq!(to_instruction(" LD4 2"), arch::Word::from_values(true, 0,2,0,5,12));
+        assert_eq!(to_instruction(" LD5 2"), arch::Word::from_values(true, 0,2,0,5,13));
+        assert_eq!(to_instruction(" LD6 2"), arch::Word::from_values(true, 0,2,0,5,14));
+        assert_eq!(to_instruction(" LDX 2"), arch::Word::from_values(true, 0,2,0,5,15));
+        assert_eq!(to_instruction(" LDAN 2"), arch::Word::from_values(true, 0,2,0,5,16));
+        assert_eq!(to_instruction(" LD1N 2"), arch::Word::from_values(true, 0,2,0,5,17));
+        assert_eq!(to_instruction(" LD2N 2"), arch::Word::from_values(true, 0,2,0,5,18));
+        assert_eq!(to_instruction(" LD3N 2"), arch::Word::from_values(true, 0,2,0,5,19));
+        assert_eq!(to_instruction(" LD4N 2"), arch::Word::from_values(true, 0,2,0,5,20));
+        assert_eq!(to_instruction(" LD5N 2"), arch::Word::from_values(true, 0,2,0,5,21));
+        assert_eq!(to_instruction(" LD6N 2"), arch::Word::from_values(true, 0,2,0,5,22));
+        assert_eq!(to_instruction(" LDXN 2"), arch::Word::from_values(true, 0,2,0,5,23));
+        assert_eq!(to_instruction(" STA 2"), arch::Word::from_values(true, 0,2,0,5,24));
+        assert_eq!(to_instruction(" ST1 2"), arch::Word::from_values(true, 0,2,0,5,25));
+        assert_eq!(to_instruction(" ST2 2"), arch::Word::from_values(true, 0,2,0,5,26));
+        assert_eq!(to_instruction(" ST3 2"), arch::Word::from_values(true, 0,2,0,5,27));
+        assert_eq!(to_instruction(" ST4 2"), arch::Word::from_values(true, 0,2,0,5,28));
+        assert_eq!(to_instruction(" ST5 2"), arch::Word::from_values(true, 0,2,0,5,29));
+        assert_eq!(to_instruction(" ST6 2"), arch::Word::from_values(true, 0,2,0,5,30));
+        assert_eq!(to_instruction(" STX 2"), arch::Word::from_values(true, 0,2,0,5,31));
+        assert_eq!(to_instruction(" STJ 2"), arch::Word::from_values(true, 0,2,0,2,32));
+        assert_eq!(to_instruction(" STZ 2"), arch::Word::from_values(true, 0,2,0,5,33));
+        assert_eq!(to_instruction(" JBUS 2"), arch::Word::from_values(true, 0,2,0,0,34));
+        assert_eq!(to_instruction(" IOC 2"), arch::Word::from_values(true, 0,2,0,0,35));
+        assert_eq!(to_instruction(" IN 2"), arch::Word::from_values(true, 0,2,0,0,36));
+        assert_eq!(to_instruction(" OUT 2"), arch::Word::from_values(true, 0,2,0,0,37));
+        assert_eq!(to_instruction(" JRED 2"), arch::Word::from_values(true, 0,2,0,0,38));
+        assert_eq!(to_instruction(" JMP 2"), arch::Word::from_values(true, 0,2,0,0,39));
+        assert_eq!(to_instruction(" JSJ 2"), arch::Word::from_values(true, 0,2,0,1,39));
+        assert_eq!(to_instruction(" JOV 2"), arch::Word::from_values(true, 0,2,0,2,39));
+        assert_eq!(to_instruction(" JNOV 2"), arch::Word::from_values(true, 0,2,0,3,39));
+        assert_eq!(to_instruction(" JL 2"), arch::Word::from_values(true, 0,2,0,4,39));
+        assert_eq!(to_instruction(" JE 2"), arch::Word::from_values(true, 0,2,0,5,39));
+        assert_eq!(to_instruction(" JG 2"), arch::Word::from_values(true, 0,2,0,6,39));
+        assert_eq!(to_instruction(" JGE 2"), arch::Word::from_values(true, 0,2,0,7,39));
+        assert_eq!(to_instruction(" JNE 2"), arch::Word::from_values(true, 0,2,0,8,39));
+        assert_eq!(to_instruction(" JLE 2"), arch::Word::from_values(true, 0,2,0,9,39));
+        assert_eq!(to_instruction(" JAN 2"), arch::Word::from_values(true, 0,2,0,0,40));
+        assert_eq!(to_instruction(" JAZ 2"), arch::Word::from_values(true, 0,2,0,1,40));
+        assert_eq!(to_instruction(" JAP 2"), arch::Word::from_values(true, 0,2,0,2,40));
+        assert_eq!(to_instruction(" JANN 2"), arch::Word::from_values(true, 0,2,0,3,40));
+        assert_eq!(to_instruction(" JANZ 2"), arch::Word::from_values(true, 0,2,0,4,40));
+        assert_eq!(to_instruction(" JANP 2"), arch::Word::from_values(true, 0,2,0,5,40));
+        assert_eq!(to_instruction(" J1N 2"), arch::Word::from_values(true, 0,2,0,0,41));
+        assert_eq!(to_instruction(" J1Z 2"), arch::Word::from_values(true, 0,2,0,1,41));
+        assert_eq!(to_instruction(" J1P 2"), arch::Word::from_values(true, 0,2,0,2,41));
+        assert_eq!(to_instruction(" J1NN 2"), arch::Word::from_values(true, 0,2,0,3,41));
+        assert_eq!(to_instruction(" J1NZ 2"), arch::Word::from_values(true, 0,2,0,4,41));
+        assert_eq!(to_instruction(" J1NP 2"), arch::Word::from_values(true, 0,2,0,5,41));
+        assert_eq!(to_instruction(" J2N 2"), arch::Word::from_values(true, 0,2,0,0,42));
+        assert_eq!(to_instruction(" J2Z 2"), arch::Word::from_values(true, 0,2,0,1,42));
+        assert_eq!(to_instruction(" J2P 2"), arch::Word::from_values(true, 0,2,0,2,42));
+        assert_eq!(to_instruction(" J2NN 2"), arch::Word::from_values(true, 0,2,0,3,42));
+        assert_eq!(to_instruction(" J2NZ 2"), arch::Word::from_values(true, 0,2,0,4,42));
+        assert_eq!(to_instruction(" J2NP 2"), arch::Word::from_values(true, 0,2,0,5,42));
+        assert_eq!(to_instruction(" J3N 2"), arch::Word::from_values(true, 0,2,0,0,43));
+        assert_eq!(to_instruction(" J3Z 2"), arch::Word::from_values(true, 0,2,0,1,43));
+        assert_eq!(to_instruction(" J3P 2"), arch::Word::from_values(true, 0,2,0,2,43));
+        assert_eq!(to_instruction(" J3NN 2"), arch::Word::from_values(true, 0,2,0,3,43));
+        assert_eq!(to_instruction(" J3NZ 2"), arch::Word::from_values(true, 0,2,0,4,43));
+        assert_eq!(to_instruction(" J3NP 2"), arch::Word::from_values(true, 0,2,0,5,43));
+        assert_eq!(to_instruction(" J4N 2"), arch::Word::from_values(true, 0,2,0,0,44));
+        assert_eq!(to_instruction(" J4Z 2"), arch::Word::from_values(true, 0,2,0,1,44));
+        assert_eq!(to_instruction(" J4P 2"), arch::Word::from_values(true, 0,2,0,2,44));
+        assert_eq!(to_instruction(" J4NN 2"), arch::Word::from_values(true, 0,2,0,3,44));
+        assert_eq!(to_instruction(" J4NZ 2"), arch::Word::from_values(true, 0,2,0,4,44));
+        assert_eq!(to_instruction(" J4NP 2"), arch::Word::from_values(true, 0,2,0,5,44));
+        assert_eq!(to_instruction(" J5N 2"), arch::Word::from_values(true, 0,2,0,0,45));
+        assert_eq!(to_instruction(" J5Z 2"), arch::Word::from_values(true, 0,2,0,1,45));
+        assert_eq!(to_instruction(" J5P 2"), arch::Word::from_values(true, 0,2,0,2,45));
+        assert_eq!(to_instruction(" J5NN 2"), arch::Word::from_values(true, 0,2,0,3,45));
+        assert_eq!(to_instruction(" J5NZ 2"), arch::Word::from_values(true, 0,2,0,4,45));
+        assert_eq!(to_instruction(" J5NP 2"), arch::Word::from_values(true, 0,2,0,5,45));
+        assert_eq!(to_instruction(" J6N 2"), arch::Word::from_values(true, 0,2,0,0,46));
+        assert_eq!(to_instruction(" J6Z 2"), arch::Word::from_values(true, 0,2,0,1,46));
+        assert_eq!(to_instruction(" J6P 2"), arch::Word::from_values(true, 0,2,0,2,46));
+        assert_eq!(to_instruction(" J6NN 2"), arch::Word::from_values(true, 0,2,0,3,46));
+        assert_eq!(to_instruction(" J6NZ 2"), arch::Word::from_values(true, 0,2,0,4,46));
+        assert_eq!(to_instruction(" J6NP 2"), arch::Word::from_values(true, 0,2,0,5,46));
+        assert_eq!(to_instruction(" JXN 2"), arch::Word::from_values(true, 0,2,0,0,47));
+        assert_eq!(to_instruction(" JXZ 2"), arch::Word::from_values(true, 0,2,0,1,47));
+        assert_eq!(to_instruction(" JXP 2"), arch::Word::from_values(true, 0,2,0,2,47));
+        assert_eq!(to_instruction(" JXNN 2"), arch::Word::from_values(true, 0,2,0,3,47));
+        assert_eq!(to_instruction(" JXNZ 2"), arch::Word::from_values(true, 0,2,0,4,47));
+        assert_eq!(to_instruction(" JXNP 2"), arch::Word::from_values(true, 0,2,0,5,47));
+        assert_eq!(to_instruction(" INCA 2"), arch::Word::from_values(true, 0,2,0,0,48));
+        assert_eq!(to_instruction(" DECA 2"), arch::Word::from_values(true, 0,2,0,1,48));
+        assert_eq!(to_instruction(" ENTA 2"), arch::Word::from_values(true, 0,2,0,2,48));
+        assert_eq!(to_instruction(" ENNA 2"), arch::Word::from_values(true, 0,2,0,3,48));
+        assert_eq!(to_instruction(" INC1 2"), arch::Word::from_values(true, 0,2,0,0,49));
+        assert_eq!(to_instruction(" DEC1 2"), arch::Word::from_values(true, 0,2,0,1,49));
+        assert_eq!(to_instruction(" ENT1 2"), arch::Word::from_values(true, 0,2,0,2,49));
+        assert_eq!(to_instruction(" ENN1 2"), arch::Word::from_values(true, 0,2,0,3,49));
+        assert_eq!(to_instruction(" INC2 2"), arch::Word::from_values(true, 0,2,0,0,50));
+        assert_eq!(to_instruction(" DEC2 2"), arch::Word::from_values(true, 0,2,0,1,50));
+        assert_eq!(to_instruction(" ENT2 2"), arch::Word::from_values(true, 0,2,0,2,50));
+        assert_eq!(to_instruction(" ENN2 2"), arch::Word::from_values(true, 0,2,0,3,50));
+        assert_eq!(to_instruction(" INC3 2"), arch::Word::from_values(true, 0,2,0,0,51));
+        assert_eq!(to_instruction(" DEC3 2"), arch::Word::from_values(true, 0,2,0,1,51));
+        assert_eq!(to_instruction(" ENT3 2"), arch::Word::from_values(true, 0,2,0,2,51));
+        assert_eq!(to_instruction(" ENN3 2"), arch::Word::from_values(true, 0,2,0,3,51));
+        assert_eq!(to_instruction(" INC4 2"), arch::Word::from_values(true, 0,2,0,0,52));
+        assert_eq!(to_instruction(" DEC4 2"), arch::Word::from_values(true, 0,2,0,1,52));
+        assert_eq!(to_instruction(" ENT4 2"), arch::Word::from_values(true, 0,2,0,2,52));
+        assert_eq!(to_instruction(" ENN4 2"), arch::Word::from_values(true, 0,2,0,3,52));
+        assert_eq!(to_instruction(" INC5 2"), arch::Word::from_values(true, 0,2,0,0,53));
+        assert_eq!(to_instruction(" DEC5 2"), arch::Word::from_values(true, 0,2,0,1,53));
+        assert_eq!(to_instruction(" ENT5 2"), arch::Word::from_values(true, 0,2,0,2,53));
+        assert_eq!(to_instruction(" ENN5 2"), arch::Word::from_values(true, 0,2,0,3,53));
+        assert_eq!(to_instruction(" INC6 2"), arch::Word::from_values(true, 0,2,0,0,54));
+        assert_eq!(to_instruction(" DEC6 2"), arch::Word::from_values(true, 0,2,0,1,54));
+        assert_eq!(to_instruction(" ENT6 2"), arch::Word::from_values(true, 0,2,0,2,54));
+        assert_eq!(to_instruction(" ENN6 2"), arch::Word::from_values(true, 0,2,0,3,54));
+        assert_eq!(to_instruction(" INCX 2"), arch::Word::from_values(true, 0,2,0,0,55));
+        assert_eq!(to_instruction(" DECX 2"), arch::Word::from_values(true, 0,2,0,1,55));
+        assert_eq!(to_instruction(" ENTX 2"), arch::Word::from_values(true, 0,2,0,2,55));
+        assert_eq!(to_instruction(" ENNX 2"), arch::Word::from_values(true, 0,2,0,3,55));
+        assert_eq!(to_instruction(" CMPA 2"), arch::Word::from_values(true, 0,2,0,5,56));
+        assert_eq!(to_instruction(" CMP1 2"), arch::Word::from_values(true, 0,2,0,5,57));
+        assert_eq!(to_instruction(" CMP2 2"), arch::Word::from_values(true, 0,2,0,5,58));
+        assert_eq!(to_instruction(" CMP3 2"), arch::Word::from_values(true, 0,2,0,5,59));
+        assert_eq!(to_instruction(" CMP4 2"), arch::Word::from_values(true, 0,2,0,5,60));
+        assert_eq!(to_instruction(" CMP5 2"), arch::Word::from_values(true, 0,2,0,5,61));
+        assert_eq!(to_instruction(" CMP6 2"), arch::Word::from_values(true, 0,2,0,5,62));
+        assert_eq!(to_instruction(" CMPX 2"), arch::Word::from_values(true, 0,2,0,5,63));
+    }
+}

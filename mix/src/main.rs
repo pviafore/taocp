@@ -1,4 +1,5 @@
 mod arch;
+mod assembler;
 mod cards;
 mod chartable;
 mod computer;
@@ -20,7 +21,8 @@ struct Opts {
 #[derive(Clap)]
 enum SubCommand {
     CreateCardpack(CreateCardpack),
-    Run(Run)
+    Run(Run),
+    Assemble(Assemble)
 }
 
 #[derive(Clap)]
@@ -39,12 +41,19 @@ struct Run {
     timing: bool
 }
 
+#[derive(Clap)]
+struct Assemble {
+    input_filename: String,
+    output_filename: String
+}
+
 fn main() {
 
     let opts: Opts = Opts::parse();
     match opts.subcmd {
         SubCommand::CreateCardpack(cmd) => { create_cardpack(cmd) }
         SubCommand::Run(cmd) => { run(cmd) }
+        SubCommand::Assemble(cmd) => { assemble(cmd)}
     }
 }
 
@@ -81,4 +90,8 @@ fn run(cmd: Run) {
     if cmd.timing {
         println!("Time to run: {:?}", comp.get_time_to_run())
     }
+}
+
+fn assemble(cmd: Assemble) {
+    assembler::assemble(&cmd.input_filename, &cmd.output_filename)
 }

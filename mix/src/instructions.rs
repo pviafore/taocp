@@ -37,7 +37,7 @@ impl Instruction {
     }
 
     pub fn from_word(word: arch::Word) -> Instruction {
-        Instruction { 
+        Instruction {
             value: word
         }
     }
@@ -131,6 +131,7 @@ fn to_opcode(val: u8) -> OpCode {
     }
 }
 
+
 #[derive(Debug)]
 pub enum OpCode {
     NOP = 0,
@@ -197,6 +198,75 @@ pub enum OpCode {
     CMP5 = 61,
     CMP6 = 62,
     CMPX = 63,
+}
+
+pub fn str_to_opcode(line: &str) -> OpCode {
+    match line {
+        "HLT" | "NUM" | "CHAR" => OpCode::HaltNumChar,
+        "ADD" => OpCode::ADD,
+        "SUB" => OpCode::SUB,
+        "MUL" => OpCode::MUL,
+        "DIV" => OpCode::DIV,
+        "SLA" | "SLAX" | "SRA" | "SRAX" | "SLC" | "SRC" => OpCode::Shift,
+        "MOVE" => OpCode::MOVE,
+        "LDA" => OpCode::LDA,
+        "LD1" => OpCode::LD1,
+        "LD2" => OpCode::LD2,
+        "LD3" => OpCode::LD3,
+        "LD4" => OpCode::LD4,
+        "LD5" => OpCode::LD5,
+        "LD6" => OpCode::LD6,
+        "LDX" => OpCode::LDX,
+        "LDAN" => OpCode::LDAN,
+        "LD1N" => OpCode::LD1N,
+        "LD2N" => OpCode::LD2N,
+        "LD3N" => OpCode::LD3N,
+        "LD4N" => OpCode::LD4N,
+        "LD5N" => OpCode::LD5N,
+        "LD6N" => OpCode::LD6N,
+        "LDXN" => OpCode::LDXN,
+        "STA" => OpCode::STA,
+        "ST1" => OpCode::ST1,
+        "ST2" => OpCode::ST2,
+        "ST3" => OpCode::ST3,
+        "ST4" => OpCode::ST4,
+        "ST5" => OpCode::ST5,
+        "ST6" => OpCode::ST6,
+        "STX" => OpCode::STX,
+        "STJ" => OpCode::STJ,
+        "STZ" => OpCode::STZ,
+        "JBUS" => OpCode::JBUS,
+        "IOC" => OpCode::IOC,
+        "IN" => OpCode::IN,
+        "OUT" => OpCode::OUT,
+        "JRED" => OpCode::JRED,
+        "JMP" | "JSJ" | "JOV" | "JNOV" | "JL" | "JE" | "JG" | "JGE" | "JNE" | "JLE" => OpCode::Jump,
+        "JAN" | "JAZ" | "JAP" | "JANN" | "JANZ" | "JANP" => OpCode::JumpA,
+        "J1N" | "J1Z" | "J1P" | "J1NN" | "J1NZ" | "J1NP" => OpCode::JumpI1,
+        "J2N" | "J2Z" | "J2P" | "J2NN" | "J2NZ" | "J2NP" => OpCode::JumpI2,
+        "J3N" | "J3Z" | "J3P" | "J3NN" | "J3NZ" | "J3NP" => OpCode::JumpI3,
+        "J4N" | "J4Z" | "J4P" | "J4NN" | "J4NZ" | "J4NP" => OpCode::JumpI4,
+        "J5N" | "J5Z" | "J5P" | "J5NN" | "J5NZ" | "J5NP" => OpCode::JumpI5,
+        "J6N" | "J6Z" | "J6P" | "J6NN" | "J6NZ" | "J6NP" => OpCode::JumpI6,
+        "JXN" | "JXZ" | "JXP" | "JXNN" | "JXNZ" | "JXNP" => OpCode::JumpX,
+        "INCA" | "DECA" | "ENTA" | "ENNA" => OpCode::AddressTransferA,
+        "INC1" | "DEC1" | "ENT1" | "ENN1" => OpCode::AddressTransferI1,
+        "INC2" | "DEC2" | "ENT2" | "ENN2" => OpCode::AddressTransferI2,
+        "INC3" | "DEC3" | "ENT3" | "ENN3" => OpCode::AddressTransferI3,
+        "INC4" | "DEC4" | "ENT4" | "ENN4" => OpCode::AddressTransferI4,
+        "INC5" | "DEC5" | "ENT5" | "ENN5" => OpCode::AddressTransferI5,
+        "INC6" | "DEC6" | "ENT6" | "ENN6" => OpCode::AddressTransferI6,
+        "INCX" | "DECX" | "ENTX" | "ENNX" => OpCode::AddressTransferX,
+        "CMPA" => OpCode::CMPA,
+        "CMP1" => OpCode::CMP1,
+        "CMP2" => OpCode::CMP2,
+        "CMP3" => OpCode::CMP3,
+        "CMP4" => OpCode::CMP4,
+        "CMP5" => OpCode::CMP5,
+        "CMP6" => OpCode::CMP6,
+        "CMPX" => OpCode::CMPX,
+        _ => OpCode::NOP
+    }
 }
 
 #[cfg(test)]

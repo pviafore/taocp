@@ -34,7 +34,7 @@ impl Word {
     }
 
     pub fn from_value(val: i32) -> Word {
-        Word::from_values(val.is_positive(),
+        Word::from_values(val.is_positive() || val == 0,
                           ((val.abs() >> 24) % 64) as u8,
                           ((val.abs()>> 18) % 64) as u8,
                           ((val.abs() >> 12) % 64) as u8,
@@ -78,6 +78,10 @@ impl Word {
                                 (i64::from(self.bytes[2].read()) << 12) +
                                 (i64::from(self.bytes[3].read()) << 6) +
                                  i64::from(self.bytes[4].read())) as i32)
+    }
+
+    pub fn as_u8s(self) -> Vec<u8> {
+        self.bytes.iter().map(|x| x.read()).collect()
     }
 }
 
@@ -123,6 +127,12 @@ mod tests {
         assert_eq!(word.read_partial_as_word(4,4), Word::from_values(true, 0,0,0,0,4)); 
         assert_eq!(word.read_partial_as_word(0,2), Word::from_values(false, 0,0,0,1,2)); 
         assert_eq!(word.read_partial_as_word(0,0), Word::from_values(false, 0,0,0,0,0)); 
+    }
+
+    #[test]
+    fn from_bytes() {
+        let word = Word::from_values(true, 1,2,3,4,5);
+        assert_eq!(word.as_u8s(), vec![1,2,3,4,5])
     }
 
 }
