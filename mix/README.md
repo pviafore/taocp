@@ -41,10 +41,9 @@ Some notes on the current implementation of MIXAL:
 
 * If no label is supplied, the command has to start with a space " "
 * Labels are not supported for jumping
-* '*' for Jump instructions are not supported
-* No ability to specify start address through the program
 * No comments
 * No Alphabetic data
+* Only + and - are allowed on pointer arithmetic for the address field
 
 ## Running programs
 

@@ -66,15 +66,15 @@ fn create_cardpack(cmd: CreateCardpack) {
     let filename = format!("{}", cmd.cardpack_name);
     let mut file = std::fs::File::create(filename).expect("create failed");
     let contents = fs::read(cmd.program_file).unwrap();
-    let cards = convert_mix_to_cardpack(contents, cmd.start_location);
+    let cards = convert_mix_to_cardpack(contents, cmd.start_location as usize);
     file.write_all(cards.as_bytes()).unwrap();
 }
 
-fn convert_mix_to_cardpack(bytes: Vec<u8>, start_location: i16) -> String {
+fn convert_mix_to_cardpack(bytes: Vec<u8>, start_location: usize) -> String {
     let loading_card_1 = " O O6 A O4    I 2 O6 C O4 3 EH A  F F CF 0  E = EU 3 IH H BB $ EU = EJ  CA. 5A-H\n";
     let loading_card_2 = " U BB  C U = EH F BA = EU 4AEH 5AEN  ABG S  E  CLU $ EH F BB $ EU L B. B  9     \n";
     let transfer_card  = format!("+TRANS0{:04}", start_location);
-    let punch_cards = cards::convert_to_punch_cards(bytes, start_location);
+    let punch_cards = cards::convert_to_punch_cards(bytes, start_location as usize);
     format!("{}{}{}{}", loading_card_1, loading_card_2, punch_cards, transfer_card)
 }
 
@@ -103,17 +103,30 @@ fn get_computer(program_filename: String, from: String, start: i16) -> computer:
         if start == -1 {
             panic!("Must provide start address for running mix")
         }
-        let cardpack = convert_mix_to_cardpack(bytes, start);
+        let cardpack = convert_mix_to_cardpack(bytes, start as usize);
         load_cards_into_computer(cardpack.as_bytes().to_vec())
     }
     else if from == "mixal"{
-        if start == -1 {
-            panic!("Must provide start address for running mixal")
-        }
         let file = File::open(program_filename).unwrap();
         let lines: Vec<String> = std::io::BufReader::new(file).lines().map(|x| x.unwrap()).collect();
-        let assembled = assembler::assemble(lines);
-        let cardpack = convert_mix_to_cardpack(assembled, start);
+        let (assembled, start_location) = assembler::assemble(lines);
+        let program_start = match start_location {
+            Some(loc) => if start != -1 {
+                panic!("Program start already lives inside program")
+            }
+            else {
+                loc
+            }
+            None => {
+                if start == -1 {
+                    panic!("Must provide start address for running mixal")
+                }
+                else {
+                    start as usize
+                }
+            }
+        };
+        let cardpack = convert_mix_to_cardpack(assembled, program_start);
         load_cards_into_computer(cardpack.as_bytes().to_vec())
     }
     else {
@@ -136,7 +149,7 @@ fn run(cmd: Run) {
 fn assemble(cmd: Assemble) {
     let file = File::open(cmd.input_filename).unwrap();
     let lines: Vec<String> = std::io::BufReader::new(file).lines().map(|x| x.unwrap()).collect();
-    let assembled = assembler::assemble(lines);
+    let (assembled, _program_data) = assembler::assemble(lines);
     let mut output_file = std::fs::File::create(cmd.output_filename).expect("create failed");
     output_file.write_all(&assembled).unwrap();
 }

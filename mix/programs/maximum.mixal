@@ -1,4 +1,5 @@
 X EQU  1000
+  ORIG 100
   ENTA 1000
   STA  1000
   ENTA 450
@@ -20,10 +21,10 @@ X EQU  1000
   ENT3 0,1
   JMP  122
   CMPA X,3
-  JGE  124
+  JGE  *+3
   ENT2 0,3
   LDA  X,3
   DEC3 1
   J3P  120
-  JMP  0
+  JMP  *
   HLT

@@ -1,12 +1,12 @@
 use crate::chartable;
-pub fn convert_to_punch_cards(vec: Vec<u8>, start_location: i16) -> String {
+pub fn convert_to_punch_cards(vec: Vec<u8>, start_location: usize) -> String {
     vec.chunks(6)
         .map(|x| (x[0], (x[1] as i32) * 64_i32.pow(4) + (x[2] as i32) * 64_i32.pow(3) + (x[3] as i32) * 64_i32.pow(2) + (x[4] as i32) * 64 + (x[5] as i32)))
         .map(|x| format!("{}{:0>10}", x.0 as char, x.1.to_string()))
         .collect::<Vec<String>>()
         .chunks(7)
         .enumerate()
-        .map(|(i,x)| format!("+PRGRM{}{:04}{}", x.len(), start_location+(i as i16)*7, x.join("")))
+        .map(|(i,x)| format!("+PRGRM{}{:04}{}", x.len(), start_location+i*7, x.join("")))
         .collect::<Vec<String>>()
         .join("\n") + "\n"
 }
