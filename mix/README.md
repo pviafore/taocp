@@ -1,8 +1,11 @@
 # MIX
 
 This is a computer simulating a MIX computer as described in Donald Knuth's book : The Art of Computer Programming.
+Mix Language: https://en.wikipedia.org/wiki/MIX
 
-It is still a work in progress, there may still be bugs.
+It is still a work in progress, there may still be bugs. For full transparency, this is a project in which I'm learning
+Rust. I expect it to be terrible Rust (unwraps with no regard for error checking, superfluous borrows, etc.). Hopefully,
+it will get better as time goes on.
 
 To run the program, write a MIXAL file (examples in "programs"), and run
 `.mix run <program-filename> <start-location>`. This will assemble the mixal file to a mix file, and then convert the
@@ -40,10 +43,11 @@ Once you have a hardpack, you can do
 Some notes on the current implementation of MIXAL:
 
 * If no label is supplied, the command has to start with a space " "
-* Labels are not supported for jumping
-* No comments
 * No Alphabetic data
 * Only + and - are allowed on pointer arithmetic for the address field
+* No symbolic constants
+* No constants
+* No symbolic labels
 
 ## Running programs
 

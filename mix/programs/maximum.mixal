@@ -1,12 +1,16 @@
+* This is a program to calculate the maximum number of elements
+*
 X  EQU  1000
    ORIG 100
 
    JMP  ENTER_DATA
 
+*  Calculate maximum
    ENTA 1000
    ENT1 6
    JMP  MAXIMUM
 
+*  Print the values
    JMP PRINT_A
 
    HLT

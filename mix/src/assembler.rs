@@ -37,7 +37,7 @@ fn get_program_data(lines: Vec<String>) -> ProgramData {
     let mut program_data = ProgramData::new();
     let mut index = 0;
     for line in lines {
-        if line.is_empty() {
+        if line.is_empty() || line.starts_with('*'){
             continue
         }
         let (label, op, address) = tokenize(&line);
