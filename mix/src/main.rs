@@ -8,8 +8,8 @@ mod io;
 mod timing;
 
 use clap::Clap;
-use std::fs;
-use std::io::Write;
+use std::fs::{self, File};
+use std::io::{BufRead, Write};
 
 #[derive(Clap)]
 #[clap(version = "1.0", author = "Pat V <patviafore@gmail.com>")]
@@ -34,10 +34,14 @@ struct CreateCardpack {
 
 #[derive(Clap)]
 struct Run {
-    cardpack_name: String,
-    #[clap(long, short)]
-    trace: bool,
+    program_name: String,
+    #[clap(long, short, required=false, default_value="cardpack")]
+    from: String,
+    #[clap(long, short, required=false, default_value="-1")]
+    start: i16,
     #[clap(long, short='x')]
+    trace: bool,
+    #[clap(long, short)]
     timing: bool
 }
 
@@ -59,32 +63,69 @@ fn main() {
 
 fn create_cardpack(cmd: CreateCardpack) {
     // this is derived from bootloader.mixal
-    let loading_card_1 = " O O6 A O4    I 2 O6 C O4 3 EH A  F F CF 0  E = EU 3 IH H BB $ EU = EJ  CA. 5A-H\n";
-    let loading_card_2 = " U BB  C U = EH F BA = EU 4AEH 5AEN  ABG S  E  CLU $ EH F BB $ EU L B. B  9     \n";
-    let transfer_card  = format!("+TRANS0{:04}", cmd.start_location);
     let filename = format!("{}", cmd.cardpack_name);
     let mut file = std::fs::File::create(filename).expect("create failed");
-    file.write_all(loading_card_1.as_bytes()).unwrap();
-    file.write_all(loading_card_2.as_bytes()).unwrap();
     let contents = fs::read(cmd.program_file).unwrap();
-    let punch_cards = cards::convert_to_punch_cards(contents, cmd.start_location);
-    file.write_all(&punch_cards.as_bytes()).unwrap();
-    file.write_all(transfer_card.as_bytes()).unwrap();
-
+    let cards = convert_mix_to_cardpack(contents, cmd.start_location);
+    file.write_all(cards.as_bytes()).unwrap();
 }
 
-fn run(cmd: Run) {
+fn convert_mix_to_cardpack(bytes: Vec<u8>, start_location: i16) -> String {
+    let loading_card_1 = " O O6 A O4    I 2 O6 C O4 3 EH A  F F CF 0  E = EU 3 IH H BB $ EU = EJ  CA. 5A-H\n";
+    let loading_card_2 = " U BB  C U = EH F BA = EU 4AEH 5AEN  ABG S  E  CLU $ EH F BB $ EU L B. B  9     \n";
+    let transfer_card  = format!("+TRANS0{:04}", start_location);
+    let punch_cards = cards::convert_to_punch_cards(bytes, start_location);
+    format!("{}{}{}{}", loading_card_1, loading_card_2, punch_cards, transfer_card)
+}
+
+fn load_cards_into_computer(cardpack_bytes: Vec<u8>) -> computer::Computer{
     use std::str;
     let mut comp = computer::Computer::new();
-    if cmd.trace {
-        comp.turn_tracing_on()
-    }
-    let bytes = fs::read(cmd.cardpack_name).unwrap();
-    let contents: Vec<&str> = str::from_utf8(&bytes).unwrap().split("\n").collect();
+    let contents: Vec<&str> = str::from_utf8(&cardpack_bytes).unwrap().split("\n").collect();
     comp.add_card(chartable::translate(contents[0]));
     comp.add_card(chartable::translate(contents[1]));
     for i in 2..(contents.len()) {
         comp.add_card(cards::translate_data_card(contents[i]))
+    }
+    comp
+}
+
+fn get_computer(program_filename: String, from: String, start: i16) -> computer::Computer {
+    if from == "cardpack" {
+        let bytes = fs::read(program_filename).unwrap();
+        if start != -1 {
+            println!("Ignoring start address {:?} for running from cardpack", start)
+        }
+        load_cards_into_computer(bytes)
+    }
+    else if from == "mix" {
+        let bytes = fs::read(program_filename).unwrap();
+        if start == -1 {
+            panic!("Must provide start address for running mix")
+        }
+        let cardpack = convert_mix_to_cardpack(bytes, start);
+        load_cards_into_computer(cardpack.as_bytes().to_vec())
+    }
+    else if from == "mixal"{
+        if start == -1 {
+            panic!("Must provide start address for running mixal")
+        }
+        let file = File::open(program_filename).unwrap();
+        let lines: Vec<String> = std::io::BufReader::new(file).lines().map(|x| x.unwrap()).collect();
+        let assembled = assembler::assemble(lines);
+        let cardpack = convert_mix_to_cardpack(assembled, start);
+        load_cards_into_computer(cardpack.as_bytes().to_vec())
+    }
+    else {
+        panic!("Can only read from cardpacks, mix, or mixal files");
+    }
+
+}
+
+fn run(cmd: Run) {
+    let mut comp = get_computer(cmd.program_name, cmd.from, cmd.start);
+    if cmd.trace {
+        comp.turn_tracing_on()
     }
     comp.run_from_cards();
     if cmd.timing {
@@ -93,5 +134,9 @@ fn run(cmd: Run) {
 }
 
 fn assemble(cmd: Assemble) {
-    assembler::assemble(&cmd.input_filename, &cmd.output_filename)
+    let file = File::open(cmd.input_filename).unwrap();
+    let lines: Vec<String> = std::io::BufReader::new(file).lines().map(|x| x.unwrap()).collect();
+    let assembled = assembler::assemble(lines);
+    let mut output_file = std::fs::File::create(cmd.output_filename).expect("create failed");
+    output_file.write_all(&assembled).unwrap();
 }

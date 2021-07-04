@@ -1,18 +1,19 @@
 use crate::arch;
 use crate::instructions;
 
-use std::fs::File;
-use std::io::{self, BufRead, Write};
-
-pub fn assemble(filename: &str, output_filename: &str) {
-    let file = File::open(filename).unwrap();
-    let lines = io::BufReader::new(file).lines();
-    let words: Vec<arch::Word> = lines.map(|x| to_instruction(&x.unwrap())).collect();
-    let word_bytes: Vec<Vec<u8>> = words.iter().map(|x| x.as_u8s()).collect();
-
-    let mut output_file = std::fs::File::create(output_filename).expect("create failed");
+pub fn assemble(lines: Vec<String>) -> Vec<u8> {
+    let words: Vec<arch::Word> = lines.iter().filter(|x| !x.is_empty()).map(|x| to_instruction(&x)).collect();
+    let word_bytes: Vec<Vec<u8>> = words.iter().map(_make_bytes).collect();
     let bytes: Vec<u8> = word_bytes.into_iter().flatten().collect();
-    output_file.write_all(&bytes);
+    bytes
+}
+
+fn _make_bytes(word: &arch::Word) -> Vec<u8> {
+    let mut u8s = word.as_u8s();
+    let sign = if word.is_positive { '+' } else { '-' };
+    u8s.insert(0, sign as u8);
+    u8s
+
 }
 
 fn to_instruction(line: &str) -> arch::Word {
@@ -21,7 +22,7 @@ fn to_instruction(line: &str) -> arch::Word {
     // 1st word is ignored (for now)
     // 2nd word is op code
     // 3rd word is address,I(F)
-    let (label, op, address_string) = tokenize(line);
+    let (_label, op, address_string) = tokenize(line);
     let opcode = instructions::str_to_opcode(op);
     let (address, index, modifier) = parse_address_string(op, address_string);
     arch::Word::from_values(address.is_positive, address.bytes[0].read(), address.bytes[1].read(),
@@ -162,6 +163,7 @@ fn _parse_modifier(spl: Vec<&str>, default: u8) -> u8 {
 }
 
 mod tests {
+
     use super::*;
 
     #[test]

@@ -1,4 +1,4 @@
-// Define a byte to hold up to 64 bits 
+// Define a byte to hold up to 64 bits
 const BYTE_MASK: u8 = 0x3F;
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Byte {
@@ -7,7 +7,7 @@ pub struct Byte {
 impl Byte {
 
     pub fn read(&self) -> u8{
-        return self.value & BYTE_MASK 
+        return self.value & BYTE_MASK
     }
 
     pub fn new(value: u8) -> Byte {
@@ -39,7 +39,7 @@ impl Word {
                           ((val.abs()>> 18) % 64) as u8,
                           ((val.abs() >> 12) % 64) as u8,
                           ((val.abs() >> 6) % 64) as u8,
-                          (val.abs() % 64) as u8  ) 
+                          (val.abs() % 64) as u8  )
     }
 
     pub fn from_half_word(val: HalfWord) -> Word {
@@ -70,10 +70,10 @@ impl Word {
     pub fn invert_sign(&mut self) {
         self.is_positive = ! self.is_positive
     }
-    
+
     pub fn read(self) -> i32 {
         let modifier: i8 = if self.is_positive { 1 } else { -1 };
-        i32::from(modifier) * (((i64::from(self.bytes[0].read()) << 24) + 
+        i32::from(modifier) * (((i64::from(self.bytes[0].read()) << 24) +
                                 (i64::from(self.bytes[1].read()) << 18) +
                                 (i64::from(self.bytes[2].read()) << 12) +
                                 (i64::from(self.bytes[3].read()) << 6) +
@@ -97,7 +97,7 @@ impl HalfWord {
     }
 
     pub fn from_value(value: i16) -> HalfWord {
-        HalfWord::from_values(value.is_positive(), (value.abs() / 64) as u8, (value.abs() % 64) as u8)
+        HalfWord::from_values(!value.is_negative(), (value.abs() / 64) as u8, (value.abs() % 64) as u8)
     }
 
     pub fn from_values(is_positive:bool, val1: u8, val2: u8) -> HalfWord {
@@ -121,12 +121,12 @@ mod tests {
     #[test]
     fn partial_word_reads() {
         let word = Word::from_values(false, 1, 2, 3, 4, 5);
-        assert_eq!(word.read_partial_as_word(0,5), word); 
-        assert_eq!(word.read_partial_as_word(1,5), Word::from_values(true, 1,2,3,4,5)); 
-        assert_eq!(word.read_partial_as_word(1,2), Word::from_values(true, 0,0,0,1,2)); 
-        assert_eq!(word.read_partial_as_word(4,4), Word::from_values(true, 0,0,0,0,4)); 
-        assert_eq!(word.read_partial_as_word(0,2), Word::from_values(false, 0,0,0,1,2)); 
-        assert_eq!(word.read_partial_as_word(0,0), Word::from_values(false, 0,0,0,0,0)); 
+        assert_eq!(word.read_partial_as_word(0,5), word);
+        assert_eq!(word.read_partial_as_word(1,5), Word::from_values(true, 1,2,3,4,5));
+        assert_eq!(word.read_partial_as_word(1,2), Word::from_values(true, 0,0,0,1,2));
+        assert_eq!(word.read_partial_as_word(4,4), Word::from_values(true, 0,0,0,0,4));
+        assert_eq!(word.read_partial_as_word(0,2), Word::from_values(false, 0,0,0,1,2));
+        assert_eq!(word.read_partial_as_word(0,0), Word::from_values(false, 0,0,0,0,0));
     }
 
     #[test]

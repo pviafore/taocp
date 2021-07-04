@@ -6,9 +6,9 @@ struct TapeUnit {
     position: u16
 }
 
-impl TapeUnit { 
+impl TapeUnit {
     pub fn new() -> TapeUnit{
-        TapeUnit { 
+        TapeUnit {
             tape: vec![],
             position: 0
         }
@@ -20,7 +20,7 @@ impl TapeUnit {
         self.position += 100;
         values
     }
-    
+
     pub fn write(&mut self, values: &[arch::Word]) {
         for index in 0..100 {
             if self.position < self.tape.len() as u16{
@@ -38,7 +38,7 @@ impl TapeUnit {
     }
 }
 
-struct Disk { 
+struct Disk {
     disk: Vec<arch::Word>,
     position: u32
 }
@@ -51,7 +51,7 @@ impl Disk {
             position: 0
         }
     }
-    
+
     pub fn read(&mut self, position: u32) -> Vec<arch::Word> {
         use std::iter::FromIterator;
         self.position = position;
@@ -187,7 +187,7 @@ mod tests {
             assert_eq!(values[index], arch::Word::from_value(index as i32));
         }
     }
-    
+
     #[test]
     fn can_read_disk() {
         let mut io = IO::new();
@@ -201,7 +201,7 @@ mod tests {
             assert_eq!(values[index], arch::Word::from_value(index as i32));
         }
     }
-    
+
     #[test]
     fn can_write_tape() {
         let mut io = IO::new();
@@ -214,7 +214,7 @@ mod tests {
             assert_eq!(io.tapes[7].tape[index], arch::Word::from_value(index as i32));
         }
     }
-    
+
     #[test]
     fn can_write_disk() {
         let mut io = IO::new();
@@ -240,7 +240,7 @@ mod tests {
         io.ioctl(0, -4, 0);
         assert_eq!(io.tapes[0].position, 0);
     }
-    
+
     #[test]
     fn ioctl_disk(){
         let mut io = IO::new();
@@ -250,5 +250,5 @@ mod tests {
         io.ioctl(8, 0, 13);
         assert_eq!(io.disks[0].position, 13);
     }
-    
+
 }
