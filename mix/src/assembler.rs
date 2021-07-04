@@ -35,7 +35,11 @@ pub fn assemble(lines: Vec<String>) -> (Vec<u8>, Option<usize>) {
 
 fn get_program_data(lines: Vec<String>) -> ProgramData {
     let mut program_data = ProgramData::new();
+    let mut index = 0;
     for line in lines {
+        if line.is_empty() {
+            continue
+        }
         let (label, op, address) = tokenize(&line);
         if op == "EQU" {
             program_data.symbol_table.insert(String::from(label), address.parse::<i16>().unwrap());
@@ -44,7 +48,11 @@ fn get_program_data(lines: Vec<String>) -> ProgramData {
             program_data.start_location = address.parse::<usize>().ok();
         }
         else {
+            if label != "" {
+                program_data.label_table.insert(label.to_string(), program_data.start_location.unwrap() + index);
+            }
             program_data.instruction_lines.push(line);
+            index += 1;
         }
     }
     program_data
@@ -115,7 +123,8 @@ fn _get_address(spl: &Vec<&str>, index: usize, program_data: &ProgramData) -> ar
         program_data.symbol_table.get(&evaluated).unwrap().clone()
     }
     else {
-        evaluated.parse::<i16>().unwrap()
+        evaluated.parse::<i16>()
+                .unwrap_or_else(|_| *program_data.label_table.get(&evaluated).unwrap() as i16)
     };
     arch::HalfWord::from_value(val)
 }
@@ -135,7 +144,15 @@ fn _evaluate(text: &str, index: usize, program_data: &ProgramData) -> String {
          _evaluate(split[1], index, program_data).parse::<i16>().unwrap()).to_string()
     }
     else {
-        String::from(text)
+        if program_data.label_table.contains_key(text) {
+            program_data.label_table.get(text).unwrap().to_string()
+        }
+        else if program_data.symbol_table.contains_key(text) {
+            program_data.symbol_table.get(text).unwrap().to_string()
+        }
+        else{
+            String::from(text)
+        }
     }
 }
 
@@ -266,16 +283,25 @@ mod tests {
         let mut program_data = ProgramData::new();
         program_data.symbol_table.insert("X".to_string(), 1000);
         assert_eq!(parse_address_string("ADD", "X,1(2:5)", 0, &program_data), (arch::HalfWord::from_value(1000), 1, 21));
+        assert_eq!(parse_address_string("ADD", "X+1,1(2:5)", 0, &program_data), (arch::HalfWord::from_value(1001), 1, 21));
     }
 
     #[test]
-    fn test_parse_address_string_with_start_location() {
+    fn test_parse_address_string_with_asterisk() {
         let mut program_data = ProgramData::new();
         program_data.start_location = Some(150);
         assert_eq!(parse_address_string("JMP", "*", 0, &program_data), (arch::HalfWord::from_value(150), 0, 0));
         assert_eq!(parse_address_string("JMP", "*+3", 0, &program_data), (arch::HalfWord::from_value(153), 0, 0));
         assert_eq!(parse_address_string("JMP", "*-3", 0, &program_data), (arch::HalfWord::from_value(147), 0, 0));
         assert_eq!(parse_address_string("JMP", "*+3", 100, &program_data), (arch::HalfWord::from_value(253), 0, 0));
+    }
+
+    #[test]
+    fn test_parse_address_string_with_label() {
+        let mut program_data = ProgramData::new();
+        program_data.start_location = Some(150);
+        program_data.label_table.insert("LOC".to_string(), 200);
+        assert_eq!(parse_address_string("JMP", "LOC", 100, &program_data), (arch::HalfWord::from_value(200), 0, 0));
     }
 
     #[test]

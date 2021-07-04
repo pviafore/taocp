@@ -1,30 +1,44 @@
-X EQU  1000
-  ORIG 100
-  ENTA 1000
-  STA  1000
-  ENTA 450
-  STA  1001
-  ENTA 1233
-  STA  1002
-  ENTA 1200
-  STA  1003
-  ENTA 1050
-  STA  1004
-  ENTA 1000
-  ENT1 5
-  JMP  117
-  CHAR 0
-  STX  240
-  OUT  240(18)
-  HLT
-  STJ  126
-  ENT3 0,1
-  JMP  122
-  CMPA X,3
-  JGE  *+3
-  ENT2 0,3
-  LDA  X,3
-  DEC3 1
-  J3P  120
-  JMP  *
-  HLT
+X  EQU  1000
+   ORIG 100
+
+   JMP  ENTER_DATA
+
+   ENTA 1000
+   ENT1 6
+   JMP  MAXIMUM
+
+   JMP PRINT_A
+
+   HLT
+
+MAXIMUM STJ  EXIT
+INIT    ENT3 0,1
+        JMP  CHANGEM
+LOOP    CMPA X,3
+        JGE  *+3
+CHANGEM ENT2 0,3
+        LDA  X,3
+        DEC3 1
+        J3P  LOOP
+EXIT    JMP  *
+
+ENTER_DATA  STJ ED_EXIT
+            ENTA 1000
+            STA  X
+            ENTA 450
+            STA  X+1
+            ENTA 1233
+            STA  X+2
+            ENTA 1200
+            STA  X+3
+            ENTA 1050
+            STA  X+4
+            ENTA 3050
+            STA  X+5
+ED_EXIT     JMP *
+
+PRINT_A    STJ PRINTA_EXT
+           CHAR 0
+           STX  240
+           OUT  240(18)
+PRINTA_EXT JMP *
