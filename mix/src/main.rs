@@ -35,7 +35,7 @@ struct CreateCardpack {
 #[derive(Clap)]
 struct Run {
     program_name: String,
-    #[clap(long, short, required=false, default_value="cardpack")]
+    #[clap(long, short, required=false, default_value="mixal")]
     from: String,
     #[clap(long, short, required=false, default_value="-1")]
     start: i16,
