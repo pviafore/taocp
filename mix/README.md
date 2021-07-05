@@ -43,10 +43,7 @@ Once you have a hardpack, you can do
 Some notes on the current implementation of MIXAL:
 
 * If no label is supplied, the command has to start with a space " "
-* No Alphabetic data
 * Only + and - are allowed on pointer arithmetic for the address field
-* No symbolic constants
-* No constants
 * No symbolic labels
 
 ## Running programs

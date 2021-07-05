@@ -8,7 +8,8 @@ struct ProgramData {
     start_location: Option<usize>,
     symbol_table: HashMap<String, i16>,
     label_table: HashMap<String, usize>,
-    instruction_lines: Vec<String>
+    instruction_lines: Vec<String>,
+    symbolic_constants: Vec<String>
 }
 
 impl ProgramData {
@@ -17,8 +18,15 @@ impl ProgramData {
             start_location: None,
             symbol_table: HashMap::new(),
             label_table: HashMap::new(),
-            instruction_lines: Vec::new()
+            instruction_lines: Vec::new(),
+            symbolic_constants: Vec::new()
         }
+    }
+
+    pub fn add_symbolic_constant(&mut self, text: &str) -> String {
+        let name = format!("con{}", self.symbolic_constants.len());
+        self.symbolic_constants.push(text.to_string());
+        name
     }
 }
 
@@ -37,6 +45,7 @@ pub fn assemble(lines: Vec<String>) -> (Vec<u8>, Option<usize>) {
 fn get_program_data(lines: Vec<String>) -> ProgramData {
     let mut program_data = ProgramData::new();
     let mut index = 0;
+    let mut last_location: Option<usize> = None;
     for line in lines {
         if line.is_empty() || line.starts_with('*'){
             continue
@@ -46,13 +55,36 @@ fn get_program_data(lines: Vec<String>) -> ProgramData {
             program_data.symbol_table.insert(String::from(label), address.parse::<i16>().unwrap());
         }
         else if op == "ORIG" {
-            program_data.start_location = address.parse::<usize>().ok();
+            let location = address.parse::<usize>().ok();
+            match last_location {
+                None => {
+                    program_data.start_location = location
+                }
+                _ => {}
+            }
+            last_location = location;
+        }
+        else if op == "END" {
+            for (idx, symbolic_constant) in program_data.symbolic_constants.iter().enumerate() {
+                program_data.label_table.insert(format!("con{}", idx), program_data.start_location.unwrap() + program_data.instruction_lines.len());
+                program_data.instruction_lines.push(format!("con{} CON {}", index, symbolic_constant));
+                index += 1;
+            }
+            program_data.instruction_lines.push(" HLT".to_string());
+            index += 1;
         }
         else {
             if label != "" {
                 program_data.label_table.insert(label.to_string(), program_data.start_location.unwrap() + index);
             }
-            program_data.instruction_lines.push(line);
+            if address.starts_with('=') && address.ends_with('=') {
+                let spl: Vec<&str> = address.split('=').collect();
+                let symbolic_constant = program_data.add_symbolic_constant(spl[1]);
+                program_data.instruction_lines.push(format!("{} {} {}", label, op, symbolic_constant))
+            }
+            else {
+                program_data.instruction_lines.push(line);
+            }
             index += 1;
         }
     }
@@ -143,7 +175,6 @@ fn _get_address(spl: &Vec<&str>, index: usize, program_data: &ProgramData) -> ar
     else {
         String::from(text)
     };
-    println!("{:?}", evaluated);
     let val = if program_data.symbol_table.contains_key(&evaluated) {
         program_data.symbol_table.get(&evaluated).unwrap().clone()
     }

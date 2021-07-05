@@ -7,13 +7,13 @@ X  EQU  1000
 
 *  Calculate maximum
    ENTA 1000
-   ENT1 6
+   ENT1 =6=
    JMP  MAXIMUM
 
 *  Print the values
    JMP PRINT_A
 
-   HLT
+   END
 
 MAXIMUM STJ  EXIT
 INIT    ENT3 0,1

@@ -141,7 +141,7 @@ impl IO {
                                     .map(|x| x.as_u8s())
                                     .collect();
             let bytes: Vec<u8> = data.into_iter().flatten().collect();
-            println!("{:?}", chartable::to_char(bytes));
+            println!("{}", chartable::to_char(bytes));
         }
         else {
             panic!("Unwriteable unit");
