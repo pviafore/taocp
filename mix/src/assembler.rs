@@ -1,4 +1,5 @@
 use crate::arch;
+use crate::chartable;
 use crate::instructions;
 
 use std::collections::HashMap;
@@ -73,10 +74,33 @@ fn to_instruction(line: &str, line_index: usize, program_data: &ProgramData) -> 
     // 2nd word is op code
     // 3rd word is address,I(F)
     let (_label, op, address_string) = tokenize(line);
-    let opcode = instructions::str_to_opcode(op);
-    let (address, index, modifier) = parse_address_string(op, address_string, line_index, program_data );
-    arch::Word::from_values(address.is_positive, address.bytes[0].read(), address.bytes[1].read(),
-                            index, modifier, opcode as u8)
+    match op {
+        "CON" => {
+            arch::Word::from_value(_evaluate(address_string, 0, program_data).parse::<i32>().unwrap())
+        },
+        "ALF" => {
+            _parse_alphabetic(line)
+        },
+        _ => {
+            let (address, index, modifier) = parse_address_string(op, address_string, line_index, program_data );
+            let opcode = instructions::str_to_opcode(op);
+            arch::Word::from_values(address.is_positive, address.bytes[0].read(), address.bytes[1].read(),
+                                    index, modifier, opcode as u8)
+        }
+    }
+}
+
+fn _parse_alphabetic(line: &str) -> arch::Word{
+    let text: Vec<&str> = line.split("ALF ").collect();
+    let letters: Vec<char> = text[1].chars().collect();
+    if letters[0] == ' ' {
+        arch::Word::from_values(true, chartable::to_u8(letters[1]), chartable::to_u8(letters[2]), chartable::to_u8(letters[3]),
+                                      chartable::to_u8(letters[4]), chartable::to_u8(letters[5]))
+    }
+    else {
+        arch::Word::from_values(true, chartable::to_u8(letters[0]), chartable::to_u8(letters[1]), chartable::to_u8(letters[2]),
+                                      chartable::to_u8(letters[3]), chartable::to_u8(letters[4]))
+    }
 }
 
 fn tokenize(line: &str) -> (&str, &str, &str) {
@@ -119,7 +143,8 @@ fn _get_address(spl: &Vec<&str>, index: usize, program_data: &ProgramData) -> ar
     else {
         String::from(text)
     };
-    let val = if program_data.symbol_table.contains_key(text) {
+    println!("{:?}", evaluated);
+    let val = if program_data.symbol_table.contains_key(&evaluated) {
         program_data.symbol_table.get(&evaluated).unwrap().clone()
     }
     else {
@@ -452,4 +477,23 @@ mod tests {
         assert_eq!(to_instruction(" CMP6 2", 0, &ProgramData::new()), arch::Word::from_values(true, 0,2,0,5,62));
         assert_eq!(to_instruction(" CMPX 2", 0, &ProgramData::new()), arch::Word::from_values(true, 0,2,0,5,63));
     }
+
+    #[test]
+    fn test_to_instruction_constant() {
+        let mut program_data = ProgramData::new();
+        assert_eq!(to_instruction(" CON 2", 0, &program_data), arch::Word::from_values(true, 0,0,0,0,2));
+
+        program_data.symbol_table.insert("X".to_string(), 125);
+        assert_eq!(to_instruction(" CON X+3", 0, &program_data), arch::Word::from_values(true, 0,0,0,2,0));
+
+    }
+
+    #[test]
+    fn test_to_alphabetic_constant() {
+        let program_data = ProgramData::new();
+        assert_eq!(to_instruction(" ALF ABCDE", 0, &program_data), arch::Word::from_values(true, 1,2,3,4,5));
+        assert_eq!(to_instruction(" ALF  DEFGH", 0, &program_data), arch::Word::from_values(true, 4,5,6,7,8));
+        assert_eq!(to_instruction(" ALF   EFGH", 0, &program_data), arch::Word::from_values(true, 0,5,6,7,8));
+    }
+
 }
