@@ -44,7 +44,6 @@ Some notes on the current implementation of MIXAL:
 
 * If no label is supplied, the command has to start with a space " "
 * Only + and - are allowed on pointer arithmetic for the address field
-* No symbolic labels
 
 ## Running programs
 

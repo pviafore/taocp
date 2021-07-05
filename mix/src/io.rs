@@ -155,6 +155,9 @@ impl IO {
         else if unit <= 15 {
             self.disks[(unit - 8) as usize].set_position(x_value);
         }
+        else if unit == 18 {
+            // do nothing
+        }
         else {
             panic!("Unable to ioctl unit");
         }

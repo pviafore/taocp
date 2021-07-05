@@ -328,7 +328,7 @@ impl Computer {
     fn writemem(&mut self, instruction: Instruction, value: arch::Word) {
         let address = instruction.address().read() + self.get_offset(instruction.index_specification());
         if address < 0 || address >= 4000 {
-            panic!("Address cannot be negative or out of range")
+            panic!("Address cannot be negative or out of range: {}", address)
         }
 
         let (mut l,r) = instruction.field_modifier();

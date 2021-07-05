@@ -9,7 +9,9 @@ struct ProgramData {
     symbol_table: HashMap<String, i16>,
     label_table: HashMap<String, usize>,
     instruction_lines: Vec<String>,
-    symbolic_constants: Vec<String>
+    symbolic_constants: Vec<String>,
+    local_symbols: HashMap<String, Vec<usize>>,
+    location_lookup: HashMap<usize, usize>
 }
 
 impl ProgramData {
@@ -19,7 +21,9 @@ impl ProgramData {
             symbol_table: HashMap::new(),
             label_table: HashMap::new(),
             instruction_lines: Vec::new(),
-            symbolic_constants: Vec::new()
+            symbolic_constants: Vec::new(),
+            local_symbols: HashMap::new(),
+            location_lookup: HashMap::new()
         }
     }
 
@@ -28,23 +32,47 @@ impl ProgramData {
         self.symbolic_constants.push(text.to_string());
         name
     }
+
+    pub fn get_instructions(&self) -> Vec<String> {
+        let mut vec: Vec<String> = Vec::new();
+        for index in *self.location_lookup.keys().min().unwrap() as u32..=*self.location_lookup.keys().max().unwrap() as u32 {
+            if self.location_lookup.contains_key(&(index as usize)) {
+                let line_index: usize = *self.location_lookup.get(&(index as usize)).unwrap();
+                vec.push(self.instruction_lines[line_index].clone())
+            }
+            else {
+                vec.push(" NOP".to_string());
+            }
+        }
+        vec
+    }
+
+    pub fn get_min_address(&self) -> usize {
+        return *self.location_lookup.keys().min().unwrap()
+    }
 }
 
-pub fn assemble(lines: Vec<String>) -> (Vec<u8>, Option<usize>) {
+fn _is_local_symbol(text: &str) -> bool {
+    let chars: Vec<char> = text.chars().collect();
+    chars.len() == 2 && chars[0].is_digit(10) && (chars[1] == 'H' || chars[1] == 'F' || chars[1] == 'B')
+}
+
+pub fn assemble(lines: Vec<String>) -> (Vec<u8>, usize, Option<usize>) {
     let program_data = get_program_data(lines);
-    let words: Vec<arch::Word> = program_data.instruction_lines.iter()
+    let words: Vec<arch::Word> = program_data.get_instructions().iter()
                                              .filter(|x| !x.is_empty())
                                              .enumerate()
-                                             .map(|(i, x)| to_instruction(&x, i, &program_data))
+                                             .map(|(i, x)| to_instruction(&x, i+program_data.get_min_address(), &program_data))
                                              .collect();
     let word_bytes: Vec<Vec<u8>> = words.iter().map(_make_bytes).collect();
     let bytes: Vec<u8> = word_bytes.into_iter().flatten().collect();
-    (bytes, program_data.start_location)
+    (bytes, program_data.get_min_address(), program_data.start_location)
 }
 
 fn get_program_data(lines: Vec<String>) -> ProgramData {
     let mut program_data = ProgramData::new();
     let mut index = 0;
+    let mut relative_index = 0;
     let mut last_location: Option<usize> = None;
     for line in lines {
         if line.is_empty() || line.starts_with('*'){
@@ -52,30 +80,46 @@ fn get_program_data(lines: Vec<String>) -> ProgramData {
         }
         let (label, op, address) = tokenize(&line);
         if op == "EQU" {
-            program_data.symbol_table.insert(String::from(label), address.parse::<i16>().unwrap());
+            let val = _evaluate(address, 0, &program_data);
+            program_data.symbol_table.insert(String::from(label), val.parse::<i16>().unwrap());
         }
         else if op == "ORIG" {
-            let location = address.parse::<usize>().ok();
+            let location = _evaluate(address, 0, &program_data).parse::<usize>().ok();
+
             match last_location {
                 None => {
                     program_data.start_location = location
                 }
                 _ => {}
             }
+            relative_index = 0;
             last_location = location;
         }
         else if op == "END" {
             for (idx, symbolic_constant) in program_data.symbolic_constants.iter().enumerate() {
-                program_data.label_table.insert(format!("con{}", idx), program_data.start_location.unwrap() + program_data.instruction_lines.len());
-                program_data.instruction_lines.push(format!("con{} CON {}", index, symbolic_constant));
+                program_data.instruction_lines.push(format!("con{} CON {}", idx, symbolic_constant));
+                program_data.location_lookup.insert(last_location.unwrap()+relative_index, index);
+                program_data.label_table.insert(format!("con{}", idx), last_location.unwrap() + relative_index);
+                relative_index += 1;
                 index += 1;
             }
+            relative_index += 1;
             program_data.instruction_lines.push(" HLT".to_string());
+            program_data.location_lookup.insert(last_location.unwrap()+relative_index, index);
             index += 1;
         }
         else {
             if label != "" {
-                program_data.label_table.insert(label.to_string(), program_data.start_location.unwrap() + index);
+                if _is_local_symbol(label) {
+                    let first_digit = label.chars().next().unwrap().to_string();
+                    if !program_data.local_symbols.contains_key(&first_digit) {
+                        program_data.local_symbols.insert(first_digit.clone(), Vec::new());
+                    }
+                    program_data.local_symbols.get_mut(&first_digit).unwrap().push(last_location.unwrap() + relative_index);
+                }
+                else {
+                    program_data.label_table.insert(label.to_string(), last_location.unwrap() + relative_index);
+                }
             }
             if address.starts_with('=') && address.ends_with('=') {
                 let spl: Vec<&str> = address.split('=').collect();
@@ -85,7 +129,9 @@ fn get_program_data(lines: Vec<String>) -> ProgramData {
             else {
                 program_data.instruction_lines.push(line);
             }
+            program_data.location_lookup.insert(last_location.unwrap() + relative_index, index);
             index += 1;
+            relative_index += 1;
         }
     }
     program_data
@@ -108,7 +154,7 @@ fn to_instruction(line: &str, line_index: usize, program_data: &ProgramData) -> 
     let (_label, op, address_string) = tokenize(line);
     match op {
         "CON" => {
-            arch::Word::from_value(_evaluate(address_string, 0, program_data).parse::<i32>().unwrap())
+            arch::Word::from_value(_evaluate(address_string, line_index, program_data).parse::<i32>().unwrap())
         },
         "ALF" => {
             _parse_alphabetic(line)
@@ -150,13 +196,15 @@ fn parse_address_string(op: &str, address_string: &str, line_index: usize, progr
         match op {
             "HLT" => (arch::HalfWord::new(), 0, 2),
             "NOP" => (arch::HalfWord::new(), 0, 0),
+            "NUM" => (arch::HalfWord::new(), 0, 0),
+            "CHAR" => (arch::HalfWord::new(), 0, 1),
             _ => (arch::HalfWord::new(), 0, 5)
         }
     }
     else {
         let address = _get_address(&spl, line_index, program_data);
         let index = _get_index(&spl);
-        let modifier = _get_modifier(op, spl);
+        let modifier = _get_modifier(op, spl, program_data);
         (address, index, modifier)
     }
 }
@@ -179,8 +227,24 @@ fn _get_address(spl: &Vec<&str>, index: usize, program_data: &ProgramData) -> ar
         program_data.symbol_table.get(&evaluated).unwrap().clone()
     }
     else {
-        evaluated.parse::<i16>()
+        if _is_local_symbol(&evaluated) {
+            let chars: Vec<char> = evaluated.chars().collect();
+            let destinations: Vec<usize> = program_data.local_symbols.get(&chars[0].to_string()).unwrap().to_vec();
+            if chars[1] == 'F' {
+                *(destinations.iter().filter(|d| **d > index).min().unwrap()) as i16
+            }
+            else if chars[1] == 'B' {
+                *(destinations.iter().filter(|d| **d < index).max().unwrap()) as i16
+            }
+            else {
+                panic!("Invalid local symbol");
+            }
+        }
+        else {
+            evaluated.parse::<i16>()
                 .unwrap_or_else(|_| *program_data.label_table.get(&evaluated).unwrap() as i16)
+
+        }
     };
     arch::HalfWord::from_value(val)
 }
@@ -228,7 +292,7 @@ fn _get_index(spl: &Vec<&str>) -> u8 {
     }
 }
 
-fn _get_modifier(op: &str, spl: Vec<&str>) -> u8 {
+fn _get_modifier(op: &str, spl: Vec<&str>, program_data: &ProgramData) -> u8 {
     match op {
         "HLT" => 2,
         "NUM" => 0,
@@ -239,9 +303,9 @@ fn _get_modifier(op: &str, spl: Vec<&str>) -> u8 {
         "SRAX" => 3,
         "SLC" => 4,
         "SRC" => 5,
-        "MOVE" => _parse_modifier(spl, 1),
-        "STJ" => _parse_modifier(spl, 2),
-        "JBUS" | "IOC" | "IN" | "OUT" | "JRED" => _parse_modifier(spl, 0),
+        "MOVE" => _parse_modifier(spl, 1, program_data),
+        "STJ" => _parse_modifier(spl, 2, program_data),
+        "JBUS" | "IOC" | "IN" | "OUT" | "JRED" => _parse_modifier(spl, 0, program_data),
         "JMP" => 0,
         "JSJ" => 1,
         "JOV" => 2,
@@ -262,11 +326,11 @@ fn _get_modifier(op: &str, spl: Vec<&str>) -> u8 {
         "DECA" | "DEC1" | "DEC2" | "DEC3" | "DEC4" | "DEC5" | "DEC6" | "DECX" => 1,
         "ENTA" | "ENT1" | "ENT2" | "ENT3" | "ENT4" | "ENT5" | "ENT6" | "ENTX" => 2,
         "ENNA" | "ENN1" | "ENN2" | "ENN3" | "ENN4" | "ENN5" | "ENN6" | "ENNX" => 3,
-        _ => _parse_modifier(spl, 5)
+        _ => _parse_modifier(spl, 5, program_data)
     }
 }
 
-fn _parse_modifier(spl: Vec<&str>, default: u8) -> u8 {
+fn _parse_modifier(spl: Vec<&str>, default: u8, program_data: &ProgramData) -> u8 {
     if spl.len() > 1 {
         if spl[1].starts_with("(") {
             let modifier: Vec<&str> = spl[1].strip_prefix('(').unwrap().strip_suffix(')').unwrap().split(':').collect();
@@ -280,7 +344,10 @@ fn _parse_modifier(spl: Vec<&str>, default: u8) -> u8 {
                     modifier[0].parse::<u8>().unwrap() * 8 + modifier[1].parse::<u8>().unwrap()
                 }
                 else {
-                    modifier[0].parse::<u8>().unwrap()
+                    match program_data.symbol_table.get(modifier[0]) {
+                        Some(val) => *val as u8,
+                        None => modifier[0].parse::<u8>().unwrap()
+                    }
                 }
             }
             else
@@ -298,7 +365,10 @@ fn _parse_modifier(spl: Vec<&str>, default: u8) -> u8 {
                 modifier[0].parse::<u8>().unwrap() * 8 + modifier[1].parse::<u8>().unwrap()
             }
             else {
-                modifier[0].parse::<u8>().unwrap()
+                match program_data.symbol_table.get(modifier[0]) {
+                    Some(val) => *val as u8,
+                    None => modifier[0].parse::<u8>().unwrap()
+                }
             }
         }
         else
@@ -309,6 +379,7 @@ fn _parse_modifier(spl: Vec<&str>, default: u8) -> u8 {
 
 }
 
+#[cfg(test)]
 mod tests {
 
     use super::*;
@@ -338,8 +409,10 @@ mod tests {
     fn test_parse_address_string_with_symbol() {
         let mut program_data = ProgramData::new();
         program_data.symbol_table.insert("X".to_string(), 1000);
+        program_data.symbol_table.insert("PRINTER".to_string(), 18);
         assert_eq!(parse_address_string("ADD", "X,1(2:5)", 0, &program_data), (arch::HalfWord::from_value(1000), 1, 21));
         assert_eq!(parse_address_string("ADD", "X+1,1(2:5)", 0, &program_data), (arch::HalfWord::from_value(1001), 1, 21));
+        assert_eq!(parse_address_string("OUT", "X,1(PRINTER)", 0, &program_data), (arch::HalfWord::from_value(1000), 1, 18));
     }
 
     #[test]
