@@ -138,7 +138,7 @@ impl Computer {
         while !self.is_halted {
             let instruction = Instruction::from_word(self.memory[self.instruction_pointer.read() as usize]);
             if self.trace {
-                println!("{:?}: {:?}", self.instruction_pointer.read(), instruction);
+                println!("{:?}: {:?}", self.instruction_pointer.read(), instruction.to_string());
             }
             self.run_command(instruction);
             if !instruction.is_jump() {

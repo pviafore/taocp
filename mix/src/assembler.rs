@@ -172,12 +172,18 @@ fn _parse_alphabetic(line: &str) -> arch::Word{
     let text: Vec<&str> = line.split("ALF ").collect();
     let letters: Vec<char> = text[1].chars().collect();
     if letters[0] == ' ' {
-        arch::Word::from_values(true, chartable::to_u8(letters[1]), chartable::to_u8(letters[2]), chartable::to_u8(letters[3]),
-                                      chartable::to_u8(letters[4]), chartable::to_u8(letters[5]))
+        arch::Word::from_values(true, chartable::to_u8(*letters.get(1).unwrap_or(&' ')),
+                                      chartable::to_u8(*letters.get(2).unwrap_or(&' ')),
+                                      chartable::to_u8(*letters.get(3).unwrap_or(&' ')),
+                                      chartable::to_u8(*letters.get(4).unwrap_or(&' ')),
+                                      chartable::to_u8(*letters.get(5).unwrap_or(&' ')))
     }
     else {
-        arch::Word::from_values(true, chartable::to_u8(letters[0]), chartable::to_u8(letters[1]), chartable::to_u8(letters[2]),
-                                      chartable::to_u8(letters[3]), chartable::to_u8(letters[4]))
+        arch::Word::from_values(true, chartable::to_u8(*letters.get(0).unwrap_or(&' ')),
+                                      chartable::to_u8(*letters.get(1).unwrap_or(&' ')),
+                                      chartable::to_u8(*letters.get(2).unwrap_or(&' ')),
+                                      chartable::to_u8(*letters.get(3).unwrap_or(&' ')),
+                                      chartable::to_u8(*letters.get(4).unwrap_or(&' ')))
     }
 }
 
@@ -255,13 +261,19 @@ fn _evaluate(text: &str, index: usize, program_data: &ProgramData) -> String {
     }
     else if text.contains('+') {
         let split: Vec<&str> = text.splitn(2, '+').collect();
-        (_evaluate(split[0], index, program_data).parse::<i16>().unwrap() +
-         _evaluate(split[1], index, program_data).parse::<i16>().unwrap()).to_string()
+        (_evaluate(split[0], index, program_data).parse::<i32>().unwrap() +
+         _evaluate(split[1], index, program_data).parse::<i32>().unwrap()).to_string()
     }
     else if text.contains('-') && !text.starts_with('-') {
         let split: Vec<&str> = text.splitn(2, '-').collect();
-        (_evaluate(split[0], index, program_data).parse::<i16>().unwrap() -
-         _evaluate(split[1], index, program_data).parse::<i16>().unwrap()).to_string()
+        (_evaluate(split[0], index, program_data).parse::<i32>().unwrap() -
+         _evaluate(split[1], index, program_data).parse::<i32>().unwrap()).to_string()
+    }
+    else if text.contains('*') {
+        let split: Vec<&str> = text.splitn(2, '*').collect();
+        (_evaluate(split[0], index, program_data).parse::<i32>().unwrap() *
+         _evaluate(split[1], index, program_data).parse::<i32>().unwrap()).to_string()
+
     }
     else {
         if program_data.label_table.contains_key(text) {
@@ -393,6 +405,7 @@ mod tests {
         assert_eq!(tokenize("LABEL  HLT"), ("LABEL", "HLT", "")); // extra spaces
         assert_eq!(tokenize("LABEL  HLT"), ("LABEL", "HLT", "")); // extra spaces
         assert_eq!(tokenize("LABEL  ADD 240,1(2:5)"), ("LABEL", "ADD", "240,1(2:5)")); // address
+        assert_eq!(tokenize("LABEL  ADD 240,1(2:5)"), ("LABEL", "ADD", "240,1(2:5)")); // extra remarks
     }
 
     #[test]
@@ -590,6 +603,8 @@ mod tests {
         program_data.symbol_table.insert("X".to_string(), 125);
         assert_eq!(to_instruction(" CON X+3", 0, &program_data), arch::Word::from_values(true, 0,0,0,2,0));
 
+        assert_eq!(to_instruction(" CON -1", 0, &program_data), arch::Word::from_values(false, 0,0,0,0,1));
+
     }
 
     #[test]
@@ -598,6 +613,11 @@ mod tests {
         assert_eq!(to_instruction(" ALF ABCDE", 0, &program_data), arch::Word::from_values(true, 1,2,3,4,5));
         assert_eq!(to_instruction(" ALF  DEFGH", 0, &program_data), arch::Word::from_values(true, 4,5,6,7,8));
         assert_eq!(to_instruction(" ALF   EFGH", 0, &program_data), arch::Word::from_values(true, 0,5,6,7,8));
+    }
+
+    #[test]
+    fn test_extra_remarks() {
+        assert_eq!(to_instruction("LABEL ADD 100,1(2:5) * Extra remarks", 0, &ProgramData::new()), arch::Word::from_values(true, 1, 36, 1, 21, 1));
     }
 
 }
