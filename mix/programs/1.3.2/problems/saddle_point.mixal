@@ -1,0 +1,176 @@
+* Check a 9x8 matrix for a saddle point (smallest point in a row is also largest value in a column)
+* Matrix is assumed to be at location 1009-1080
+MEM EQU  1000
+    ORIG 100
+    JMP FIND_SADDLE_POINT
+    ST1 MEM
+    LDA MEM
+    CHAR
+    STX SADDLE_OUT
+    OUT SDL_TEXT(18)
+    HLT
+
+* find the saddle point
+* I1 will contain the saddle point (or zero if none)
+* X will store the lowest value
+* I3 will be used to store the current loop variable
+* A is the index
+* Memory 600 - 620 will be used as storage
+TEMP_MEM          EQU  600
+FIND_SADDLE_POINT STJ  FSP_EXIT
+* initialize 602-620 with row/column values
+                  ENT3 9
+                  LDX =1073741823=      *    Max value of 5 bytes
+                  STX 602,1
+                  DEC3 1
+                  J3P *-2
+                  ENT4 8
+                  LDX =-1073741823=
+                  STX 612,4
+                  DEC4 1
+                  J4P *-2
+                  ENT3 9                *    go row by row I3 = row number
+                  ENT1 0                *    I1 = 0 (Return value)
+ROW_LOOP          ENT4 8                *    I4 = column
+                  ST3  TEMP_MEM         *    Memory 600 = 9 = row number
+CHECK_RVALUE_LOOP ENTA 8                *    Start A at 8
+                  ST4  TEMP_MEM+1       *    601 = column value
+                  MUL  TEMP_MEM         *    A = 8*row value
+                  SLAX 5
+                  ADD  TEMP_MEM+1       *    A += column value
+                  STA  TEMP_MEM+1       *    601 contains A
+                  LD2  TEMP_MEM+1       *    I2 now contains matrix cell
+                  LDX 602,3
+                  CMPX 1000,2           *    Check if X is lower (Which is current low)
+                  JLE  *+3              *    if the value of I2 is lower than memory, update I2
+                  LDX  1000,2
+                  STX  602,3            *    Save it in memory
+                  LDX  612,4             * check against column maximum
+                  CMPX 1000,2
+                  JGE *+3
+                  LDX 1000,2
+                  STX 612,4
+                  DEC4 1
+                  J4P  CHECK_RVALUE_LOOP
+
+* store the row low value in 602+row value
+                  DEC3 1
+                  J3P  ROW_LOOP
+
+* loop through every element, if its a saddle point, store in I1 and exit
+                  ENT3 9
+FIND_SADDLE_LOOP  ST3 TEMP_MEM
+                  ENT4 8
+FIND_ROW_LOOP     ENTA 8
+                  ST4  TEMP_MEM+1       *    601 = column value
+                  MUL  TEMP_MEM         *    A = 8*row value
+                  SLAX 5
+                  ADD  TEMP_MEM+1       *    A += column value
+                  STA  TEMP_MEM+1       *    601 contains A
+                  LD2  TEMP_MEM+1       *    I2 now contains matrix cell
+                  LDX 602,3
+                  CMPX 1000,2           *    X contains Row minimum
+                  JNE NOT_SADDLE_POINT
+                  LDX 612,4
+                  CMPX 1000,2           *    X contains Row minimum
+                  JNE NOT_SADDLE_POINT
+                  LD1 TEMP_MEM+1
+                  INC1 1000
+                  JMP FSP_EXIT
+
+NOT_SADDLE_POINT  DEC4 1
+                  J4P FIND_ROW_LOOP
+
+                  DEC3 1
+                  J3P FIND_SADDLE_LOOP
+
+FSP_EXIT          JMP  *
+
+           ORIG 500
+SDL_TEXT   ALF  SADDL
+           ALF  E POI
+           ALF  NT:
+SADDLE_OUT ALF  XXXX
+
+MATRIX  ORIG 1009
+        CON  55
+        CON  -55
+        CON  0
+        CON  32
+        CON  21
+        CON  -18
+        CON  69
+        CON  -101
+
+        CON  1
+        CON  -12
+        CON  2
+        CON  1
+        CON  78
+        CON  -100
+        CON  33
+        CON  -33
+
+        CON  41
+        CON  -9
+        CON  54
+        CON  55
+        CON  -13
+        CON  20
+        CON  55
+        CON  -3
+
+        CON  0
+        CON  1
+        CON  2
+        CON  -1
+        CON  -2
+        CON  -3
+        CON  11
+        CON  -11
+
+        CON  55
+        CON  44
+        CON  33
+        CON  22
+        CON  11
+        CON  66
+        CON  -53
+        CON  -8
+
+        CON  59
+        CON  55
+        CON  55
+        CON  45
+        CON  55
+        CON  56
+        CON  56
+        CON  -1
+
+        CON  -27
+        CON  80
+        CON  -23
+        CON  -55
+        CON  7
+        CON  19
+        CON  -30
+        CON  -12
+
+        CON  -12
+        CON  24
+        CON  -40
+        CON  1
+        CON  -1
+        CON  -21
+        CON  37
+        CON  -38
+
+        CON  55
+        CON  53
+        CON  51
+        CON  50
+        CON  -55
+        CON  -55
+        CON  -5
+        CON  -4
+        END
