@@ -41,6 +41,8 @@ struct Run {
     start: i16,
     #[clap(long, short='x')]
     trace: bool,
+    #[clap(long, short='d')]
+    debugger: bool,
     #[clap(long, short)]
     timing: bool
 }
@@ -140,7 +142,8 @@ fn run(cmd: Run) {
     if cmd.trace {
         comp.turn_tracing_on()
     }
-    comp.run_from_cards();
+    comp.load_card_into_memory();
+    comp.run(cmd.debugger);
     if cmd.timing {
         println!("Time to run: {:?}", comp.get_time_to_run())
     }

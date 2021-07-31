@@ -13,7 +13,7 @@ X  EQU  1000
 *  Print the values
    JMP PRINT_A
 
-   END
+   HLT
 
 MAXIMUM STJ  EXIT
 INIT    ENT3 0,1
@@ -46,3 +46,4 @@ PRINT_A    STJ PRINTA_EXT
            STX  240
            OUT  240(18)
 PRINTA_EXT JMP *
+           END

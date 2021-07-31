@@ -17,6 +17,16 @@ struct Registers {
     j: arch::HalfWord
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum DebugCommand {
+    NOOP,
+    SINGLESTEP,
+    BREAK {location: i16},
+    CONTINUE,
+    SHOWMEM {location: i16},
+    HALT
+}
+
 
 #[derive(Debug, PartialEq)]
 enum ComparisonIndicator {
@@ -49,7 +59,9 @@ pub struct Computer {
     io: io::IO,
     instruction_pointer: arch::HalfWord,
     is_halted: bool,
-    timer: timing::TimingUnit
+    timer: timing::TimingUnit,
+    last_debug_command: DebugCommand,
+    breakpoints: Vec<Box<dyn Fn(&Computer) -> bool>>
 }
 
 impl Computer {
@@ -128,26 +140,90 @@ impl Computer {
         self.timer.get_time_to_run()
     }
 
-    pub fn run_from_cards(&mut self) {
+    pub fn load_card_into_memory(&mut self) {
         let first_card = self.io.read(16,0);
         self.write_to_memory(first_card, 0);
-        self.run();
-    }
+}
 
-    fn run(&mut self){
+    pub fn run(&mut self, use_debugger: bool){
         while !self.is_halted {
-            let instruction = Instruction::from_word(self.memory[self.instruction_pointer.read() as usize]);
-            if self.trace {
-                println!("{:?}: {:?}", self.instruction_pointer.read(), instruction.to_string());
+            if !use_debugger {
+                // keep running blindly without a debugger
+                self.run_single_instruction()
             }
-            self.run_command(instruction);
-            if !instruction.is_jump() {
-                self.instruction_pointer = arch::HalfWord::from_value(
-                    self.instruction_pointer.read() + 1
-                );
+            else {
+                match self.get_debug_command() {
+                    DebugCommand::SINGLESTEP => self.run_single_instruction(),
+                    DebugCommand::HALT => self.is_halted = true,
+                    DebugCommand::BREAK {location: loc} => self.add_breakpoint(loc),
+                    DebugCommand::CONTINUE => self.run_single_instruction(),
+                    DebugCommand::SHOWMEM {location: loc} => self.print_mem(loc),
+                    DebugCommand::NOOP => ()
+                };
             }
         }
     }
+
+    fn print_mem(&self, location: i16) {
+        println!("{}", self.memory[location as usize].read());
+    }
+
+    fn add_breakpoint(&mut self, location: i16) {
+        self.breakpoints.push(Box::new(move |computer| computer.instruction_pointer.read() == location));
+        println!("Breakpoint added at location {}", location);
+    }
+
+    fn get_debug_command(&mut self) -> DebugCommand {
+        if self.last_debug_command == DebugCommand::CONTINUE {
+            return if self.breakpoints.iter().any(|breakpoint| breakpoint(self)) {
+                self.last_debug_command = DebugCommand::NOOP;
+                self.last_debug_command
+            }
+            else {
+                DebugCommand::CONTINUE
+            }
+        }
+        let instruction_pointer = self.instruction_pointer.read() as usize;
+        println!();
+        println!("Instruction@{:?}: {}", instruction_pointer, Instruction::from_word(self.memory[instruction_pointer]).to_string());
+        println!("A: {:?} X {:?} I1: {:?} I2: {:?} I3: {:?} I4: {:?} I5: {:?} I6: {:?}",
+                self.registers.a.read(), self.registers.x.read(), self.registers.i1.read(),
+                self.registers.i2.read(), self.registers.i3.read(), self.registers.i4.read(),
+                self.registers.i5.read(), self.registers.i6.read());
+        println!();
+        print!(">>> ");
+        use std::io::Write;
+        std::io::stdout().flush().unwrap();
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input).expect("Needed a string");
+        let split: Vec<&str> = input.strip_suffix('\n').unwrap().split(" ").collect();
+        self.last_debug_command = match split[0] {
+            "q" => DebugCommand::HALT,
+            "n" => DebugCommand::SINGLESTEP,
+            "b" => DebugCommand::BREAK { location: split[1].parse::<i16>().unwrap()},
+            "m" => DebugCommand::SHOWMEM { location: split[1].parse::<i16>().unwrap()},
+            "c" => DebugCommand::CONTINUE,
+            "" => self.last_debug_command,
+            _ => DebugCommand::NOOP
+        };
+        self.last_debug_command
+
+    }
+
+
+    fn run_single_instruction(&mut self) {
+        let instruction = Instruction::from_word(self.memory[self.instruction_pointer.read() as usize]);
+        if self.trace {
+            println!("{:?}: {:?}", self.instruction_pointer.read(), instruction.to_string());
+        }
+        self.run_command(instruction);
+        if !instruction.is_jump() {
+            self.instruction_pointer = arch::HalfWord::from_value(
+                self.instruction_pointer.read() + 1
+            );
+        }
+    }
+
 
     pub fn write_to_memory(&mut self, data: Vec<arch::Word>, location: usize) {
         for i in 0..(data.len()) {
@@ -184,7 +260,9 @@ impl Computer {
             io: io::IO::new(),
             instruction_pointer: arch::HalfWord::new(),
             is_halted: false,
-            timer: timing::TimingUnit::new()
+            timer: timing::TimingUnit::new(),
+            last_debug_command: DebugCommand::NOOP,
+            breakpoints: Vec::new()
         }
     }
 

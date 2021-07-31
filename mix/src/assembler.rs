@@ -257,7 +257,7 @@ fn _get_address(spl: &Vec<&str>, index: usize, program_data: &ProgramData) -> ar
 
 fn _evaluate(text: &str, index: usize, program_data: &ProgramData) -> String {
     if text == "*" {
-        (program_data.start_location.unwrap() + index).to_string()
+        (program_data.start_location.unwrap() + index - program_data.get_min_address()).to_string()
     }
     else if text.contains('+') {
         let split: Vec<&str> = text.splitn(2, '+').collect();
