@@ -55,3 +55,16 @@ To get timing information (based on cycles), pass `-t` to the `run` invocation
 ### Tracing
 
 To get show every instruction that gets run, pass `-x` to the `run` invocation
+
+### Debugging
+
+You can single-step through code by passing in the --debugger option. You will see the current instruction and
+the main registers.
+
+Commands:
+
+* `n` single-step to the next instruction
+* `q` quit the program
+* `b <location>` breakpoint at the location
+* `c` run until next breakpoint or program halt
+* `m <location>` show the memory at specified location
