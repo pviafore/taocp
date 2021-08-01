@@ -1,18 +1,17 @@
 * Calculate what date EASTER is on and
 * produce a table from 1950 to 2000
           ORIG 100
-          ENTA 1950
+          LDA =9880=
 YEAR_LOOP STA Y
+          STZ ERR
           JMP FIND_EASTER
-          JMP PRINT_DATE
-          LDX Y
           LDA Y
           INCA 1
-          STA Y
-          SUB =2026=
-          SRAX 5
-          LDA Y
-          JXP YEAR_LOOP
+          LDX ERR
+          JXZ YEAR_LOOP  * if err was zero, it wasn't set
+          CMPX N
+          JE YEAR_LOOP * only  error out if they were different
+ERR_DATE  JMP PRINT_DATE
           HLT
 
 * Given a Year in Y
@@ -60,20 +59,27 @@ FIND_EASTER STJ  FE_EXIT
             SUB  X
             SRAX 5
             DIV  =30=  * X is now the Epact, but we may have to adjust
-            STX  E
+            STX E
+            LDA E
+            JANN 2F
+            JMP CALC_EASTER_BY_CEBE
+            LDA N
+            STA ERR  * if the mod was negative, save the error
             LDA  E
-            JANN *+2 * if the mod was negative, add 30
-            INCA 30
+2H          INCA 30
             CMPA =24=
             JE   1F
             CMPA =25=
             JNE  SET_E
             LDX  G
             CMPE =11=
-            JL   SET_E
+            JLE  SET_E
 1H          INCA 1
-SET_E       STA  E  * is now the adjusted Epact
+SET_E       STA  E  # is now the adjusted Epact
+            JMP CALC_EASTER_BY_CEBE
+FE_EXIT     JMP  *
 
+CALC_EASTER_BY_CEBE STJ CEBE_EXIT
             ENTA 44
             SUB  E
             CMPA =21=
@@ -89,30 +95,13 @@ SET_E       STA  E  * is now the adjusted Epact
             STX N
             SUB N
             STA N * Advance N to Sunday
-
-FE_EXIT     JMP  *
+CEBE_EXIT   JMP *
 
 PRINT_DATE  STJ  PD_EXIT
-            ENT1  APRIL
-            LDA  N
-            DECA 31
-            JAP *+3
-            ENT1  MARCH
-            INCA 31 * Load A back to a positive date
-* 1 now contains the right date and A contains the day
-            CHAR
-            STX DATE(3:4)
-            LDA 0,1
-            STA DATE+1
             LDA Y
             CHAR
-            SLAX 3
-            STA DATE+2(3:5)
-            SLAX 5
-            SRA 3
-            STA DATE+3(1:2)
+            STX DATE
             OUT DATE(18)
-
 PD_EXIT     JMP  *
 
       ORIG 500
@@ -124,15 +113,13 @@ D     CON   0
 E     CON   0
 N     CON   0
 Y     CON   0
+ERR   CON   0
 
       ORIG 520
 MARCH ALF MARCH
 APRIL ALF APRIL
 
       ORIG 530
-DATE  ALF    DD
-      ALF  MMMMM
-      ALF  , YYY
-      ALF  YY
+DATE  ALF  YYYYY
       ORIG 400
       END
