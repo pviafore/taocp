@@ -39,7 +39,7 @@ struct Run {
     from: String,
     #[clap(long, short, required=false, default_value="-1")]
     start: i16,
-    #[clap(long, short='T', required=false, default_value="")]
+    #[clap(long, short='T', required=false, default_value="invalid")]
     tape_file: String,
     #[clap(long, short='x')]
     trace: bool,
@@ -144,7 +144,7 @@ fn run(cmd: Run) {
     if cmd.trace {
         comp.turn_tracing_on()
     }
-    if !cmd.tape_file.is_empty() {
+    if cmd.tape_file != "invalid" {
         let file = File::open(cmd.tape_file).unwrap();
         let mut line = String::new();
         std::io::BufReader::new(file).read_line(&mut line).unwrap();

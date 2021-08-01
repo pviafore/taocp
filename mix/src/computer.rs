@@ -24,6 +24,7 @@ enum DebugCommand {
     BREAK {location: i16},
     CONTINUE,
     SHOWMEM {location: i16},
+    BYTES {value: i32},
     HALT
 }
 
@@ -48,6 +49,18 @@ fn compare_word(value: arch::Word, rhs: i32, instruction: Instruction) -> Compar
     else {
         if lhs == rhs { ComparisonIndicator::EQUAL } else { ComparisonIndicator::GREATER }
     }
+}
+
+fn print_bytes(value: i32) {
+    let word = arch::Word::from_value(value);
+    println!("{} {} {} {} {} {}",
+             if word.is_positive { "+" } else { "-" },
+             word.bytes[0].read(),
+             word.bytes[1].read(),
+             word.bytes[2].read(),
+             word.bytes[3].read(),
+             word.bytes[4].read())
+
 }
 
 pub struct Computer {
@@ -159,9 +172,10 @@ impl Computer {
                 match self.get_debug_command() {
                     DebugCommand::SINGLESTEP => self.run_single_instruction(),
                     DebugCommand::HALT => self.is_halted = true,
-                    DebugCommand::BREAK {location: loc} => self.add_breakpoint(loc),
+                    DebugCommand::BREAK {location} => self.add_breakpoint(location),
                     DebugCommand::CONTINUE => self.run_single_instruction(),
-                    DebugCommand::SHOWMEM {location: loc} => self.print_mem(loc),
+                    DebugCommand::SHOWMEM {location} => self.print_mem(location),
+                    DebugCommand::BYTES {value} => print_bytes(value),
                     DebugCommand::NOOP => ()
                 };
             }
@@ -202,11 +216,12 @@ impl Computer {
         std::io::stdin().read_line(&mut input).expect("Needed a string");
         let split: Vec<&str> = input.strip_suffix('\n').unwrap().split(" ").collect();
         self.last_debug_command = match split[0] {
-            "q" => DebugCommand::HALT,
-            "n" => DebugCommand::SINGLESTEP,
-            "b" => DebugCommand::BREAK { location: split[1].parse::<i16>().unwrap()},
-            "m" => DebugCommand::SHOWMEM { location: split[1].parse::<i16>().unwrap()},
-            "c" => DebugCommand::CONTINUE,
+            "q" | "quit" => DebugCommand::HALT,
+            "n" | "next" => DebugCommand::SINGLESTEP,
+            "b" | "breakpoint" => DebugCommand::BREAK { location: split[1].parse::<i16>().unwrap()},
+            "m" | "memory" => DebugCommand::SHOWMEM { location: split[1].parse::<i16>().unwrap()},
+            "c" | "continue" => DebugCommand::CONTINUE,
+            "B" | "bytes" => DebugCommand::BYTES {value: split[1].parse::<i32>().unwrap()},
             "" => self.last_debug_command,
             _ => DebugCommand::NOOP
         };
@@ -359,7 +374,7 @@ impl Computer {
     fn readmem(&self, instruction:Instruction) -> arch::Word {
         let address = instruction.address().read() + self.get_offset(instruction.index_specification());
         if address < 0 || address >= 4000 {
-            panic!("Address cannot be negative or out of range")
+            panic!("Address {} cannot be negative or out of range", address)
         }
         let (l,r) = instruction.field_modifier();
         self.memory[address as usize].read_partial_as_word(l,r)

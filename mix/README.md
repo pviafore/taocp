@@ -63,8 +63,9 @@ the main registers.
 
 Commands:
 
-* `n` single-step to the next instruction
-* `q` quit the program
-* `b <location>` breakpoint at the location
-* `c` run until next breakpoint or program halt
-* `m <location>` show the memory at specified location
+* `n` or `next` - single-step to the next instruction
+* `q` or `next` - quit the program
+* `b <location>` or `breakpoint <location>` - breakpoint at the location
+* `c` or `continue` - run until next breakpoint or program halt
+* `m <location>` or `memory <location>` - show the memory at specified location
+* `B <value>` or `bytes <value>` - Break a value out into each individual byte
