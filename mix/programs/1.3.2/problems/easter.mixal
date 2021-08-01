@@ -1,0 +1,138 @@
+* Calculate what date EASTER is on and
+* produce a table from 1950 to 2000
+          ORIG 100
+          ENTA 1950
+YEAR_LOOP STA Y
+          JMP FIND_EASTER
+          JMP PRINT_DATE
+          LDX Y
+          LDA Y
+          INCA 1
+          STA Y
+          SUB =2026=
+          SRAX 5
+          LDA Y
+          JXP YEAR_LOOP
+          HLT
+
+* Given a Year in Y
+* Calculate easter in N
+
+FIND_EASTER STJ  FE_EXIT
+            LDA Y
+            SRAX 5
+            DIV  =19=
+            INCX 1
+            STX  G * G = Y%19 + 1
+
+            LDA  Y
+            SRAX 5
+            DIV  =100=
+            INCA 1
+            STA  C * C = Y/100 + 1
+
+            MUL  =3=
+            DIV  =4=
+            SUB  =12=
+            STA  X * X = 3C/4 - 12
+
+            LDA  C
+            MUL  =8=
+            SLAX 5
+            ADD  =5=
+            SRAX 5
+            DIV  =25=
+            SUB  =5=
+            STA Z * Z = (8C+5)/25 - 5
+
+            LDA Y
+            MUL =5=
+            DIV =4=
+            SUB X
+            SUB =10=
+            STA D * D = 5Y/4 - X - 10
+
+            LDA  G
+            MUL  =11=
+            SLAX 5
+            ADD  =20=
+            ADD  Z
+            SUB  X
+            SRAX 5
+            DIV  =30=  * X is now the Epact, but we may have to adjust
+            STX E
+            LDA E
+            JAP *+2 # if the mod was negative, add 30
+            INCA 30
+            CMPA =24=
+            JE   1F
+            CMPA =25=
+            JNE  SET_E
+            LDX  G
+            CMPE =11=
+            JL   SET_E
+1H          INCA 1
+SET_E       STA  E  # is now the adjusted Epact
+
+            ENTA 44
+            SUB  E
+            CMPA =21=
+            JGE  1F
+            INCA 30
+1F          STA  N * N = 44- E (if N < 21, += 30)
+
+            ADD  D
+            SRAX 5
+            DIV =7=
+            LDA N
+            ADD =7=
+            STX N
+            SUB N
+            STA N * Advance N to Sunday
+
+FE_EXIT     JMP  *
+
+PRINT_DATE  STJ  PD_EXIT
+            ENT1  APRIL
+            LDA  N
+            DECA 31
+            JAP *+3
+            ENT1  MARCH
+            INCA 31 * Load A back to a positive date
+* 1 now contains the right date and A contains the day
+            CHAR
+            STX DATE(3:4)
+            LDA 0,1
+            STA DATE+1
+            LDA Y
+            CHAR
+            SLAX 3
+            STA DATE+2(3:5)
+            SLAX 5
+            SRA 3
+            STA DATE+3(1:2)
+            OUT DATE(18)
+
+PD_EXIT     JMP  *
+
+      ORIG 500
+G     CON   0
+C     CON   0
+X     CON   0
+Z     CON   0
+D     CON   0
+E     CON   0
+N     CON   0
+Y     CON   0
+
+      ORIG 520
+MARCH ALF MARCH
+APRIL ALF APRIL
+
+      ORIG 530
+DATE  ALF    DD
+      ALF  MMMMM
+      ALF  , YYY
+      ALF  YY
+      ORIG 400
+      END
