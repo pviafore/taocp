@@ -143,7 +143,11 @@ impl Computer {
     pub fn load_card_into_memory(&mut self) {
         let first_card = self.io.read(16,0);
         self.write_to_memory(first_card, 0);
-}
+    }
+
+    pub fn load_tape(&mut self, tape_contents: Vec<u8>) {
+        self.io.load_tape(tape_contents);
+    }
 
     pub fn run(&mut self, use_debugger: bool){
         while !self.is_halted {

@@ -39,6 +39,8 @@ struct Run {
     from: String,
     #[clap(long, short, required=false, default_value="-1")]
     start: i16,
+    #[clap(long, short='T', required=false, default_value="")]
+    tape_file: String,
     #[clap(long, short='x')]
     trace: bool,
     #[clap(long, short='d')]
@@ -141,6 +143,12 @@ fn run(cmd: Run) {
     let mut comp = get_computer(cmd.program_name, cmd.from, cmd.start);
     if cmd.trace {
         comp.turn_tracing_on()
+    }
+    if !cmd.tape_file.is_empty() {
+        let file = File::open(cmd.tape_file).unwrap();
+        let mut line = String::new();
+        std::io::BufReader::new(file).read_line(&mut line).unwrap();
+        comp.load_tape(chartable::translate(&line.strip_suffix('\n').unwrap()));
     }
     comp.load_card_into_memory();
     comp.run(cmd.debugger);

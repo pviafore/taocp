@@ -94,11 +94,32 @@ impl CardReader {
     }
 }
 
+struct PaperTape {
+    contents: Vec<arch::Word>,
+    index: usize
+}
+
+impl PaperTape {
+    pub fn new() -> PaperTape {
+        PaperTape {
+            contents: vec![],
+            index: 0
+        }
+    }
+
+    pub fn read(&mut self) -> Vec<arch::Word> {
+        let out: Vec<arch::Word> = self.contents[self.index..std::cmp::min(self.index+14, self.contents.len())].to_vec();
+        self.index += 14;
+        out
+    }
+}
+
 
 pub struct IO {
     tapes: [TapeUnit; 8],
     disks: [Disk; 8],
-    card_reader: CardReader
+    card_reader: CardReader,
+    paper_tape: PaperTape
 }
 
 impl IO {
@@ -106,7 +127,8 @@ impl IO {
         IO {
             tapes: [TapeUnit::new(), TapeUnit::new(), TapeUnit::new(), TapeUnit::new(), TapeUnit::new(), TapeUnit::new(), TapeUnit::new(), TapeUnit::new()],
             disks: [Disk::new(), Disk::new(), Disk::new(), Disk::new(), Disk::new(), Disk::new(), Disk::new(), Disk::new() ],
-            card_reader: CardReader::new()
+            card_reader: CardReader::new(),
+            paper_tape: PaperTape::new()
         }
     }
 
@@ -122,6 +144,9 @@ impl IO {
                             .chunks(5)
                             .map(|b| arch::Word::from_values(true, b[0], b[1], b[2], b[3], b[4]))
                             .collect()
+        }
+        else if unit == 20 {
+            self.paper_tape.read()
         }
         else {
             panic!("Unreadable unit");
@@ -143,6 +168,9 @@ impl IO {
             let bytes: Vec<u8> = data.into_iter().flatten().collect();
             println!("{}", chartable::to_char(bytes));
         }
+        else if unit == 20 {
+            self.paper_tape.contents.append(&mut values[0..14].to_vec())
+        }
         else {
             panic!("Unwriteable unit");
         }
@@ -158,9 +186,22 @@ impl IO {
         else if unit == 18 {
             // do nothing
         }
+        else if unit == 20 {
+            self.paper_tape.index = 0 as usize;
+        }
         else {
             panic!("Unable to ioctl unit");
         }
+    }
+
+    pub fn load_tape(&mut self, contents: Vec<u8>) {
+        self.paper_tape.contents = contents.chunks(5)
+                                           .map(|x| arch::Word::from_values(true, *x.get(0).unwrap_or(&0),
+                                                                            *x.get(1).unwrap_or(&0),
+                                                                            *x.get(2).unwrap_or(&0),
+                                                                            *x.get(3).unwrap_or(&0),
+                                                                            *x.get(4).unwrap_or(&0)))
+                                           .collect()
     }
 
     pub fn add_card(&mut self, data: Vec<u8>) {
