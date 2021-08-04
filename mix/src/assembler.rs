@@ -248,7 +248,7 @@ fn _get_address(spl: &Vec<&str>, index: usize, program_data: &ProgramData) -> ar
         }
         else {
             evaluated.parse::<i16>()
-                .unwrap_or_else(|_| *program_data.label_table.get(&evaluated).unwrap() as i16)
+                .unwrap_or_else(|_| *program_data.label_table.get(&evaluated).expect(&format!("Unknown address {}", evaluated)) as i16)
 
         }
     };

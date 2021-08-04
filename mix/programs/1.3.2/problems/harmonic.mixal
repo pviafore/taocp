@@ -1,0 +1,83 @@
+* Calculate a rounded scaled version of Harmonic sum
+              ORIG 100
+              ENT1 1
+HARMONIC_LOOP JMP  CALCULATE_ROUNDED_SUM
+              INC1 1
+              CMP1 =6=
+              JL   HARMONIC_LOOP
+              HLT
+
+* I1 will contain the number of decimal points
+CALCULATE_ROUNDED_SUM STJ  CRS_EXIT
+                      ST1  TEMP
+                      LD2  TEMP
+                      ENTA 1      * S = 1
+                      STA  S
+                      STA  MH     * MH = 1
+                      STA  FACTOR * Start multiplying by 10 until we have our scaled factor
+2H                    J2Z  1F     * if factor is zero no more multiply
+                      MUL  =10=
+                      SLAX 5
+                      DEC2 1
+                      JMP  2B
+1H                    STA  FACTOR
+                      LDA  S
+                      MUL  FACTOR
+                      SLAX 5
+                      STA  S
+                      LDA  MH
+SUM_LOOP              INCA 1   * Me = Mh+1
+                      STA  MH
+                      STA  TEMP
+                      LDA  FACTOR
+                      MUL  =10=
+                      DIV  TEMP         *    A=1 * 10^n+1 / Me
+                      ADD  =5=          *    round the value
+                      SRAX 5
+                      DIV  =10=
+                      JANP PRINT_NUM    *     if we start getting zeroes, exit out
+                      MUL  =10=
+                      SLAX 5
+                      STA  ORIGINAL
+                      SUB  =5=           * Determine what average will give us the factor
+                      STA  TEMP
+                      LDA  FACTOR
+                      MUL  =10=
+                      DIV  TEMP          * A is upper bound of MH
+                      STA  TEMP
+
+                      SUB  MH
+                      INCA 1
+                      MUL  ORIGINAL
+                      DIV  =10=
+                      ADD  S
+                      STA  S
+                      LDA  TEMP          * Temp is the max bound of MH, next iteration will go to the next value
+                      JMP  SUM_LOOP
+PRINT_NUM             ENTA 5
+                      ST1 TEMP
+                      SUB TEMP
+                      STA TEXT_SHIFT(1:2)  * Ugly self-modifying code to dictate how much to shift
+                      LDA  S
+                      CHAR
+TEXT_SHIFT            SLAX 0             * 5 - I1
+                      SLA  1
+                      STA  BUFFER
+                      LDA  PERIOD
+                      STA  BUFFER(5:5)
+                      STX  BUFFER+1
+                      OUT  BUFFER(18)
+CRS_EXIT              JMP  *
+
+
+
+            ORIG 200
+PERIOD      ALF      .
+BUFFER      CON 0
+            ORIG 300
+S           CON 0   * The sum of rounded - scaled values
+MH          CON 0   * The denominator
+FACTOR      CON 1   * 10 ^ n
+TEMP        CON 0   * Used for various
+ORIGINAL    CON 0   * stores the current RH
+            END
