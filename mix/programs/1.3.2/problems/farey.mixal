@@ -1,0 +1,76 @@
+* Calculate the FAREY Sequence
+     ORIG 100
+     ENT1 12        * N for FAREY series
+     ENT2 0        * BUFFER
+     ENTA 0        * numerator
+     ENTX 1        * denominator
+     JMP STORE_NUM
+     ENTA 1        * numerator
+     ST1  N
+     LDX  N
+     JMP STORE_NUM
+* TEMP is N
+     ENT3 0           * loop for as long as A and X are not 1/1 (numerator/denominator = Xn/Yn)
+     ENT4 1
+LOOP LDA  YBUFFER,3     * A = Yk
+     ADD  N             * A = Yk + n
+     SRAX 5
+     DIV  YBUFFER,4     * A = (Yk + n)/Y(k+1)
+     STA  YBUFFER,2
+     MUL  XBUFFER,4     * A = A*X(k+1)
+     SLAX 5
+     SUB  XBUFFER,3     * A = A - Xk
+     STA  XBUFFER,2
+     LDA  YBUFFER,2     * A = (Yk + n)/Y(k+1) A
+     MUL  YBUFFER,4     * A = A * YK+1
+     SLAX 5
+     SUB  YBUFFER,3     * A = A - Yk
+     SRAX 5             * X = Yk+2
+     LDA  XBUFFER,2      * A = xk+2
+     INC3 1
+     INC4 1
+     JMP STORE_NUM
+     CMPA =1=
+     JNE  LOOP
+     CMPX =1=
+     JNE  LOOP
+
+     JMP PRINT_NUMS
+     HLT
+
+* Assume that A is the numerator and X is the denominator
+* I2 is the index into the buffer
+STORE_NUM  STJ  SN_EXIT
+           STA  XBUFFER,2
+           STX  YBUFFER,2
+           INC2 1
+SN_EXIT    JMP  *
+
+*I2 is the index into the buffer
+PRINT_NUMS STJ  PN_EXIT
+           ST2  TEMP
+           ENT2 0
+PN_LOOP    LDA XBUFFER,2
+           CHAR
+           STX BUFFER(1:2)
+           ENTA 47            * slash
+           STA BUFFER(3:3)
+           LDA YBUFFER,2
+           CHAR
+           STX BUFFER(4:5)
+           OUT BUFFER(18)
+           INC2 1
+           CMP2 TEMP
+           JL   PN_LOOP
+PN_EXIT    JMP  *
+
+        ORIG 200
+BUFFER  ALF    /
+        ORIG 300
+XBUFFER CON 0
+        ORIG 400
+YBUFFER CON 0
+        ORIG 500
+TEMP    CON 0
+N       CON 0
+        END
