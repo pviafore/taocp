@@ -81,6 +81,7 @@ fn get_program_data(lines: Vec<String>) -> ProgramData {
         let (label, op, address) = tokenize(&line);
         if op == "EQU" {
             let val = _evaluate(address, 0, &program_data);
+            println!("{:?} {}", val, address);
             program_data.symbol_table.insert(String::from(label), val.parse::<i16>().unwrap());
         }
         else if op == "ORIG" {

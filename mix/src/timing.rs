@@ -40,6 +40,7 @@ fn get_time_to_run(instruction: Instruction) -> u32{
     }
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct TimingUnit {
     time_to_run: u32
 }

@@ -25,6 +25,9 @@ enum DebugCommand {
     CONTINUE,
     SHOWMEM {location: i16},
     BYTES {value: i32},
+    LIST,
+    RESETTIMING,
+    SHOWTIME,
     HALT
 }
 
@@ -176,6 +179,9 @@ impl Computer {
                     DebugCommand::CONTINUE => self.run_single_instruction(),
                     DebugCommand::SHOWMEM {location} => self.print_mem(location),
                     DebugCommand::BYTES {value} => print_bytes(value),
+                    DebugCommand::RESETTIMING => self.timer = timing::TimingUnit::new(),
+                    DebugCommand::SHOWTIME => println!("{}", self.timer.get_time_to_run()),
+                    DebugCommand::LIST => self.print_source(),
                     DebugCommand::NOOP => ()
                 };
             }
@@ -184,6 +190,17 @@ impl Computer {
 
     fn print_mem(&self, location: i16) {
         println!("{}", self.memory[location as usize].read());
+    }
+
+    fn print_source(&self) {
+        let min_index = std::cmp::max(0, self.instruction_pointer.read() as i16 - 5);
+        for n in min_index..std::cmp::min(409, min_index+10) {
+            println!("{}{:0>width$}: {}",
+                     if n == self.instruction_pointer.read() { "-> " } else { "   " },
+                     n as usize,
+                     Instruction::from_word(self.memory[n as usize]).to_string(),
+                     width=4);
+        }
     }
 
     fn add_breakpoint(&mut self, location: i16) {
@@ -222,6 +239,9 @@ impl Computer {
             "m" | "memory" => DebugCommand::SHOWMEM { location: split[1].parse::<i16>().unwrap()},
             "c" | "continue" => DebugCommand::CONTINUE,
             "B" | "bytes" => DebugCommand::BYTES {value: split[1].parse::<i32>().unwrap()},
+            "l" | "list" => DebugCommand::LIST,
+            "r" | "reset" => DebugCommand::RESETTIMING,
+            "x" | "time"  => DebugCommand::SHOWTIME,
             "" => self.last_debug_command,
             _ => DebugCommand::NOOP
         };

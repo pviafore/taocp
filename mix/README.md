@@ -58,7 +58,7 @@ To get show every instruction that gets run, pass `-x` to the `run` invocation
 
 ### Debugging
 
-You can single-step through code by passing in the --debugger option. You will see the current instruction and
+You can single-step through code by passing in the `--debugger` option. You will see the current instruction and
 the main registers.
 
 Commands:
@@ -69,3 +69,6 @@ Commands:
 * `c` or `continue` - run until next breakpoint or program halt
 * `m <location>` or `memory <location>` - show the memory at specified location
 * `B <value>` or `bytes <value>` - Break a value out into each individual byte
+* `r` or `reset timing` - Set the timer to zero (useful for profiling specific parts of code)
+* `x` or `time` - show the current timer
+* `l` or `list` - show the source code around your current location
