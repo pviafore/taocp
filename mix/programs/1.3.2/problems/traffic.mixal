@@ -1,0 +1,85 @@
+* Traffic simulation
+      ORIG 100
+      ENTX 0
+      LDX  DELMAR_WALKGREEN
+      ADD  =1073741823=
+      ADD  1                  * Triggers overflow
+* Wait 18 seconds for del mar to be green
+START         LDX DELMAR_WALKGREEN
+              LDA =899994=
+* it takes 5 cycles of overhead to get to overflow toggle
+              JMP DELAY
+              ENT1 8
+              JNOV *        * Wait on overflow to toggle
+
+* Flash DONT WALK for 12 seconds
+FLASH_DELMAR  LDX  DELMAR_DONTGREEN
+              LDA  =24996=
+              JMP  DELAY
+              LDX  DELMAR_OFFGREEN
+              LDA  =24995=
+              JMP  DELAY
+              DEC1 1
+              J1P  FLASH_DELMAR
+
+              LDX  DELMAR_DONTGREEN
+              LDA  =199996=
+              JMP  DELAY
+
+
+* Turn to Amber for 8 seconds
+              LDX  DELMAR_DONTAMBER
+              LDA  =399996=
+              JMP  DELAY
+* Turn to red
+* wait 8 seconds for berkley to be green
+              LDX  BERKLEY_WALKGREEN
+              LDA  =399995=
+              JMP  DELAY
+
+* Flash DONT WALK For 12 seconds
+              ENT1 8
+              NOOP * to even out the timing
+FLASH_BERKLEY LDX  BERKLEY_DONTGREEN
+              LDA  =24996=
+              JMP  DELAY
+              LDX  BERKLEY_OFFGREEN
+              LDA  =24995=
+              JMP  DELAY
+              DEC1 1
+              J1P  FLASH_BERKLEY
+
+              LDX  BERKLEY_DONTGREEN
+              LDA  =199996=
+              JMP  DELAY
+
+* amber for 5 seconds
+              LDX  BERKLEY_DONTAMBER
+              JOV 2F         * cancel anything that was tripped while berkley was already on
+              NOOP
+              LDA  =249994=
+              JMP  DELAY
+
+* back to green for delmar
+              NOOP
+2H            JMP START
+
+* A should be (intended cycles - 3) / 2
+DELAY      STJ DELAY_EXIT
+1H         DECA 1
+           JAP  1B
+DELAY_EXIT JMP *
+
+
+                 ORIG 200
+
+BERKLEY_WALKGREEN    CON 1+4096+128+786432                    *BERKLEY_WALK+BERKLEYGREEN+DELMAR_DONTWALK+DELMAR_RED
+BERKLEY_DONTGREEN    CON 2+4096+128+786432                    *BERKLEY_DONTWALK+BERKLEYGREEN+DELMAR_DONTWALK+DELMAR_RED
+BERKLEY_OFFGREEN     CON 0+4096+128+786432                    *OFF+BERKLEYGREEN+DELMAR_DONTWALK+DELMAR_RED
+BERKLEY_DONTAMBER    CON 2+8192+128+786432                    *BERKLEY_DONTWALK+BERKLEYAMBER+DELMAR_DONTWALK+DELMAR_RED
+
+DELMAR_WALKGREEN     CON 2+12288+64+262144                    *BERKLEY_DONTWALK+BERKLEYRED+DELMAR_WALK+DELMAR_GREEN
+DELMAR_DONTGREEN     CON 2+12288+128+262144                   *BERKLEY_DONTWALK+BERKLEYRED+DELMAR_DONTWALK+DELMAR_GREEN
+DELMAR_OFFGREEN      CON 2+12288+0+262144                     *BERKLEY_DONTWAL+BERKLEYRED+OFF+DELMAR_GREEN
+DELMAR_DONTAMBER     CON 2+12288+128+524288                   *BERKLEY_DONTWALK+BERKLEYRED+DELMAR_DONTWALK+DELMAR_AMBER
+                     END
