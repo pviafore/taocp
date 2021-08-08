@@ -1,0 +1,56 @@
+* print out the josephus sequence
+* this stores an array of people where index is the index of person
+* and the value is the next person in line
+N      EQU  24
+M      EQU  11
+       ORIG 100
+       JMP INITIALIZE
+       JMP JOSEPHUS
+       OUT BUFFER(18)
+       HALT
+
+INITIALIZE  STJ  INIT_EXIT
+            ENT1 0
+            ENT2 1
+INIT_LOOP   ST2  NUMBERS,1
+            INC1 1
+            INC2 1
+            CMP1 =N=
+            JL   INIT_LOOP
+            ENT2 0         * make it a circularly linked list
+            DEC1 1
+            ST2  NUMBERS,1
+INIT_EXIT   JMP  *
+
+JOSEPHUS    STJ JOS_EXIT
+            ENT2 0
+            ENT4 1
+START       ENT1 M
+JOS_LOOP    ENT3  0,2      * 3 is the previous index
+            LD2  NUMBERS,2 * move to next link
+            DEC1 1
+            J1P JOS_LOOP
+
+            ENTA 0,4
+            CHAR
+            LD5 NUMBERS,3
+            J5P 1F
+            INC5 N
+1H          STX BUFFER-1,5(2:3)
+
+            LDA  NUMBERS,2 * this is what removes it from the list prev->next = curr->next
+            STA  NUMBERS,3
+
+            INC4 1  * Advance the buffer
+            CMP4 =N=
+            JLE  START
+
+JOS_EXIT    JMP *
+
+            ORIG 200
+BUFFER      CON  0
+            ORIG 300
+NUMBERS     CON  0
+            ORIG 400
+TEMP        CON  0
+            END
