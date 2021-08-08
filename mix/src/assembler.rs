@@ -81,7 +81,6 @@ fn get_program_data(lines: Vec<String>) -> ProgramData {
         let (label, op, address) = tokenize(&line);
         if op == "EQU" {
             let val = _evaluate(address, 0, &program_data);
-            println!("{:?} {}", val, address);
             program_data.symbol_table.insert(String::from(label), val.parse::<i16>().unwrap());
         }
         else if op == "ORIG" {
@@ -224,7 +223,7 @@ fn _get_address(spl: &Vec<&str>, index: usize, program_data: &ProgramData) -> ar
     else {
         spl[0]
     };
-    let evaluated = if text.chars().any(|c| c == '+' || c == '*' || c == '-') {
+    let evaluated = if text.chars().any(|c| c == '+' || c == '*' || c == '-' || c == '/') {
         _evaluate(text, index, program_data)
     }
     else {
@@ -268,6 +267,11 @@ fn _evaluate(text: &str, index: usize, program_data: &ProgramData) -> String {
     else if text.contains('-') && !text.starts_with('-') {
         let split: Vec<&str> = text.splitn(2, '-').collect();
         (_evaluate(split[0], index, program_data).parse::<i32>().unwrap() -
+         _evaluate(split[1], index, program_data).parse::<i32>().unwrap()).to_string()
+    }
+    else if text.contains('/') {
+        let split: Vec<&str> = text.splitn(2, '/').collect();
+        (_evaluate(split[0], index, program_data).parse::<i32>().unwrap() /
          _evaluate(split[1], index, program_data).parse::<i32>().unwrap()).to_string()
     }
     else if text.contains('*') {

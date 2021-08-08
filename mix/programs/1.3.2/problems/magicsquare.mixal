@@ -1,0 +1,111 @@
+* Calculate a 23x23 magic square
+N        EQU  23
+NSQUARED EQU  N*N
+HALFN    EQU  N/2
+         ORIG 100
+         ENTA HALFN
+         ENT1 1
+         MUL  =N=
+         SLAX 5
+         ADD  =HALFN=  * A is now the middle square
+         INCA N        * A is now the square below
+ENTER_SQ STA TEMP
+         LD2 TEMP
+         LDX SQUARE,2
+         JXZ 1F      * square is empty
+
+         INCA N
+         SRAX 5
+         DIV  =N= * A is correct Row
+         CMPA =N=
+         JL   2F
+         ENTA 0
+
+2H       DECX 1
+         JXNN 2F
+         ENTX N-1
+2H       STX TEMP
+         MUL  =N=
+         SLAX 5
+         ADD  TEMP
+
+1H       STA TEMP
+         LD2 TEMP
+         ST1  SQUARE,2  * set the square
+         INC1 1
+
+         INCA N
+         SRAX 5
+         DIV  =N= * A is correct Row
+         CMPA =N=
+         JL   2F
+         ENTA 0
+
+2H       INCX 1
+         CMPX =N=
+         JL   2F
+         ENTX 0
+2H       STX TEMP
+         MUL  =N=
+         SLAX 5
+         ADD  TEMP
+
+3H       CMP1 =NSQUARED=
+         JLE  ENTER_SQ
+
+         JMP PRINT_SQUARE
+         HLT
+
+PRINT_SQUARE STJ PS_EXIT
+             ENT1 0
+             ENTX 0
+             ENT4 0
+PS_LOOP      JMP PRINT_SEPARATOR
+             ENT2 0
+             ENT3 0
+
+INNER_LOOP   LDA SQUARE,1
+             CHAR
+             STX BUFFER,3(3:5)
+             LDA SEP
+             STA BUFFER,3(1:1)
+             INC2 1
+             INC3 1
+             INC1 1
+             CMP3 =N=
+             JL   INNER_LOOP
+
+             INC4 1
+             STA  BUFFER,2(1:1)
+             OUT  BUFFER(18)
+             CMP4 =N=
+             JL   PS_LOOP
+
+             JMP PRINT_SEPARATOR
+PS_EXIT      JMP *
+
+PRINT_SEPARATOR STJ PRINT_SEP_EXIT
+                ENT3 0
+SEP_LOOP        LDA  SEP
+                STA  BUFFER,3
+                INC3 1
+                CMP3 =N=
+                JL   SEP_LOOP
+                STA  BUFFER,3(1:1)
+                OUT  BUFFER(18)
+                ENT3 0
+CLEAR_LOOP      STZ BUFFER,3
+                INC3 1
+                CMP3 =N=
+                JLE  CLEAR_LOOP
+PRINT_SEP_EXIT  JMP  *
+
+       ORIG 1000
+SQUARE CON  0
+       ORIG 2000
+BUFFER CON  0
+
+        ORIG 2100
+TEMP    CON  0
+SEP     ALF  *****
+        END
