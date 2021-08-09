@@ -12,7 +12,7 @@ pub fn convert_to_punch_cards(vec: Vec<u8>, start_location: usize) -> String {
 }
 
 
-pub fn translate_data_card(text: &str) -> Vec<u8> {
+pub fn translate_program_card(text: &str) -> Vec<u8> {
     let data: Vec<u8> = chartable::translate(text);
     let mut output_data: Vec<u8> = vec![];
     for i in 0..(data.len()/11) {

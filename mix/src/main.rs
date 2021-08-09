@@ -41,6 +41,8 @@ struct Run {
     start: i16,
     #[clap(long, short='T', required=false, default_value="invalid")]
     tape_file: String,
+    #[clap(long, short='D', required=false, default_value="invalid")]
+    data_cards_file: String,
     #[clap(long, short='x')]
     trace: bool,
     #[clap(long, short='d')]
@@ -89,7 +91,7 @@ fn load_cards_into_computer(cardpack_bytes: Vec<u8>) -> computer::Computer{
     comp.add_card(chartable::translate(contents[0]));
     comp.add_card(chartable::translate(contents[1]));
     for i in 2..(contents.len()) {
-        comp.add_card(cards::translate_data_card(contents[i]))
+        comp.add_card(cards::translate_program_card(contents[i]))
     }
     comp
 }
@@ -141,6 +143,14 @@ fn get_computer(program_filename: String, from: String, start: i16) -> computer:
 
 fn run(cmd: Run) {
     let mut comp = get_computer(cmd.program_name, cmd.from, cmd.start);
+    if cmd.data_cards_file != "invalid" {
+        use std::str;
+        let bytes = fs::read(cmd.data_cards_file).unwrap();
+        let contents: Vec<&str> = str::from_utf8(&bytes).unwrap().split("\n").collect();
+        for i in 0..(contents.len()) {
+            comp.add_card(chartable::translate(contents[i]))
+        }
+    }
     if cmd.trace {
         comp.turn_tracing_on()
     }

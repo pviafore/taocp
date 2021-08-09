@@ -72,3 +72,9 @@ Commands:
 * `r` or `reset timing` - Set the timer to zero (useful for profiling specific parts of code)
 * `x` or `time` - show the current timer
 * `l` or `list` - show the source code around your current location
+
+### Populating input devices
+
+You can supply additional cards (newline separated card per line) with `--data-cards-file`.
+
+You can supply a tape device with `--tape-file`.
