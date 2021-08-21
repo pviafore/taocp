@@ -2,7 +2,7 @@
 * Matrix is assumed to be at location 1009-1080
 MEM EQU  1000
     ORIG 100
-    JMP FIND_SADDLE_POINT
+MAIN JMP FIND_SADDLE_POINT
     ST1 MEM
     LDA MEM
     CHAR
@@ -173,4 +173,4 @@ MATRIX  ORIG 1009
         CON  -55
         CON  -5
         CON  -4
-        END
+        END  MAIN

@@ -3,7 +3,7 @@ N        EQU  23
 NSQUARED EQU  N*N
 HALFN    EQU  N/2
          ORIG 100
-         ENTA HALFN
+MAIN     ENTA HALFN
          ENT1 1
          MUL  =N=
          SLAX 5
@@ -108,4 +108,4 @@ BUFFER CON  0
         ORIG 2100
 TEMP    CON  0
 SEP     ALF  *****
-        END
+        END MAIN

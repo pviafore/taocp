@@ -1,6 +1,6 @@
 * Calculate the FAREY Sequence
      ORIG 100
-     ENT1 12        * N for FAREY series
+START ENT1 12        * N for FAREY series
      ENT2 0        * BUFFER
      ENTA 0        * numerator
      ENTX 1        * denominator
@@ -73,4 +73,4 @@ YBUFFER CON 0
         ORIG 500
 TEMP    CON 0
 N       CON 0
-        END
+        END START

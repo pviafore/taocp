@@ -1,7 +1,7 @@
 * Calculate what date EASTER is on and
 * produce a table from 1950 to 2000
           ORIG 100
-          ENTA 1950
+MAIN      ENTA 1950
 YEAR_LOOP STA Y
           JMP FIND_EASTER
           JMP PRINT_DATE
@@ -135,4 +135,4 @@ DATE  ALF    DD
       ALF  , YYY
       ALF  YY
       ORIG 400
-      END
+      END MAIN

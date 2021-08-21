@@ -2,7 +2,7 @@
 * Used for 23x23 crossword
 DIMENSION  EQU  6
            ORIG 100
-           JMP INPUT_DATA
+MAIN       JMP INPUT_DATA
            JMP FILL_OUT_EXT
            JMP DRAW_CROSSWORD
            HLT
@@ -192,4 +192,4 @@ CROSSWORD  CON 0
            ORIG 2000
 OUT_BUFFER CON 0
            ORIG 3000
-           END
+           END MAIN

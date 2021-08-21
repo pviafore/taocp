@@ -1,7 +1,7 @@
 * Calculate what date EASTER is on and
 * produce a table from 1950 to 2000
           ORIG 100
-          LDA =9880=
+MAIN      LDA =9880=
 YEAR_LOOP STA Y
           STZ ERR
           JMP FIND_EASTER
@@ -122,4 +122,4 @@ APRIL ALF APRIL
       ORIG 530
 DATE  ALF  YYYYY
       ORIG 400
-      END
+      END MAIN

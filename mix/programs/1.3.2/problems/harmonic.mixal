@@ -1,6 +1,6 @@
 * Calculate a rounded scaled version of Harmonic sum
               ORIG 100
-              ENT1 1
+MAIN          ENT1 1
 HARMONIC_LOOP JMP  CALCULATE_ROUNDED_SUM
               INC1 1
               CMP1 =6=
@@ -80,4 +80,4 @@ MH          CON 0   * The denominator
 FACTOR      CON 1   * 10 ^ n
 TEMP        CON 0   * Used for various
 ORIGINAL    CON 0   * stores the current RH
-            END
+            END MAIN

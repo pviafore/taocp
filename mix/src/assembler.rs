@@ -48,7 +48,7 @@ impl ProgramData {
     }
 
     pub fn get_min_address(&self) -> usize {
-        return *self.location_lookup.keys().min().unwrap()
+        return *self.location_lookup.keys().min().unwrap_or(&100)
     }
 }
 
@@ -80,13 +80,14 @@ fn get_program_data(lines: Vec<String>) -> ProgramData {
         }
         let (label, op, address) = tokenize(&line);
         if op == "EQU" {
-            let val = _evaluate(address, 0, &program_data);
+            let val = _evaluate(address, last_location.unwrap_or(100)+relative_index, &program_data);
             program_data.symbol_table.insert(String::from(label), val.parse::<i16>().unwrap());
         }
         else if op == "ORIG" {
-            let location = _evaluate(address, 0, &program_data).parse::<usize>().ok();
+            let location = _evaluate(address, last_location.unwrap_or(100)+relative_index, &program_data).parse::<usize>().ok();
+            program_data.symbol_table.insert(String::from(label), last_location.unwrap_or(100) as i16);
 
-            match last_location {
+            match program_data.start_location {
                 None => {
                     program_data.start_location = location
                 }
@@ -96,6 +97,7 @@ fn get_program_data(lines: Vec<String>) -> ProgramData {
             last_location = location;
         }
         else if op == "END" {
+            program_data.start_location = Some(*program_data.label_table.get(address).unwrap());
             for (idx, symbolic_constant) in program_data.symbolic_constants.iter().enumerate() {
                 program_data.instruction_lines.push(format!("con{} CON {}", idx, symbolic_constant));
                 program_data.location_lookup.insert(last_location.unwrap()+relative_index, index);
@@ -121,7 +123,7 @@ fn get_program_data(lines: Vec<String>) -> ProgramData {
                     program_data.label_table.insert(label.to_string(), last_location.unwrap() + relative_index);
                 }
             }
-            if address.starts_with('=') && address.ends_with('=') {
+            if address.starts_with('=') && address.ends_with('=') && address.len() > 1 {
                 let spl: Vec<&str> = address.split('=').collect();
                 let symbolic_constant = program_data.add_symbolic_constant(spl[1]);
                 program_data.instruction_lines.push(format!("{} {} {}", label, op, symbolic_constant))
@@ -257,7 +259,7 @@ fn _get_address(spl: &Vec<&str>, index: usize, program_data: &ProgramData) -> ar
 
 fn _evaluate(text: &str, index: usize, program_data: &ProgramData) -> String {
     if text == "*" {
-        (program_data.start_location.unwrap() + index - program_data.get_min_address()).to_string()
+        index.to_string()
     }
     else if text.contains('+') {
         let split: Vec<&str> = text.splitn(2, '+').collect();
@@ -436,11 +438,10 @@ mod tests {
     #[test]
     fn test_parse_address_string_with_asterisk() {
         let mut program_data = ProgramData::new();
-        program_data.start_location = Some(150);
-        assert_eq!(parse_address_string("JMP", "*", 0, &program_data), (arch::HalfWord::from_value(150), 0, 0));
-        assert_eq!(parse_address_string("JMP", "*+3", 0, &program_data), (arch::HalfWord::from_value(153), 0, 0));
-        assert_eq!(parse_address_string("JMP", "*-3", 0, &program_data), (arch::HalfWord::from_value(147), 0, 0));
-        assert_eq!(parse_address_string("JMP", "*+3", 100, &program_data), (arch::HalfWord::from_value(253), 0, 0));
+        assert_eq!(parse_address_string("JMP", "*", 150, &program_data), (arch::HalfWord::from_value(150), 0, 0));
+        assert_eq!(parse_address_string("JMP", "*+3", 150, &program_data), (arch::HalfWord::from_value(153), 0, 0));
+        assert_eq!(parse_address_string("JMP", "*-3", 150, &program_data), (arch::HalfWord::from_value(147), 0, 0));
+        assert_eq!(parse_address_string("JMP", "*+3", 250, &program_data), (arch::HalfWord::from_value(253), 0, 0));
     }
 
     #[test]

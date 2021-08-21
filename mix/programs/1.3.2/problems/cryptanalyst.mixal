@@ -8,7 +8,7 @@ BUF0      EQU  1000
 BUF1      EQU  1014
 OUT       EQU  2000
           ORIG 100
-          ENT1 0
+MAIN      ENT1 0
           IN   BUF0(TAPE)
 LOOP      JBUS *(TAPE)  * wait until buffer is ready
           J1P 1F
@@ -86,4 +86,4 @@ PC_LOOP     ST2 PRINTLINE(1:1)
 PC_EXIT     JMP  *
 
 ASTERISK    ALF *****
-            END
+            END MAIN

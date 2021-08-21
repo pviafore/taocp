@@ -43,8 +43,10 @@ Once you have a hardpack, you can do
 Some notes on the current implementation of MIXAL:
 
 * If no label is supplied, the command has to start with a space " "
-* Only + and - are allowed on pointer arithmetic for the address field
 * Can't mix'n'match operators yet, it doesn't compute left-to-right
+* You can put the text "BEGIN" anywhere you want to indicate the program should start there, otherwise it's the first address
+* If you use * as a location before an ORIG statement, it will start at location 100
+
 
 ## Running programs
 

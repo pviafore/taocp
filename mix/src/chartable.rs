@@ -69,7 +69,7 @@ pub fn translate(text: &str) -> Vec<u8> {
 
 pub fn to_u8(c: char) -> u8 {
     let char_table: HashMap<char, u8> = get_chartable().iter().cloned().collect();
-    char_table[&c] as u8
+    *char_table.get(&c).expect(&format!("Cannot get key: {}", c)) as u8
 
 }
 

@@ -4,7 +4,7 @@
 N      EQU  24
 M      EQU  11
        ORIG 100
-       JMP INITIALIZE
+MAIN   JMP INITIALIZE
        JMP JOSEPHUS
        OUT BUFFER(18)
        HALT
@@ -53,4 +53,4 @@ BUFFER      CON  0
 NUMBERS     CON  0
             ORIG 400
 TEMP        CON  0
-            END
+            END MAIN
