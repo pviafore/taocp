@@ -1,0 +1,195 @@
+* Draw a crossword grid based on a matrix of black/white squares
+* Used for 23x23 crossword
+DIMENSION  EQU  6
+           ORIG 100
+           JMP INPUT_DATA
+           JMP FILL_OUT_EXT
+           JMP DRAW_CROSSWORD
+           HLT
+
+
+INPUT_DATA STJ  ID_EXIT
+           ENT1 CROSSWORD+26     * 25 for first row plus an extra column up front
+           ENT2 23
+INPUT_LOOP IN   BUFFER(16)
+           LDA  BUFFER
+           ENT3 0
+INNER_LOOP LDA  BUFFER,3(1:1)
+           STA  0,1
+           LDA  BUFFER,3(2:2)
+           STA  1,1
+           LDA  BUFFER,3(3:3)
+           STA  2,1
+           LDA  BUFFER,3(4:4)
+           STA  3,1
+           LDA  BUFFER,3(5:5)
+           STA  4,1
+           INC1 5
+           INC3 1
+           CMP3 =5=
+           JL   INNER_LOOP
+           ENTA -1
+           STA  -26,1              * Store a -1 into crossword position - 1 (the first column)
+           STA  -2,1              * Store a -1 into last crossword position (the last column)
+           DEC2 1
+           J2P  INPUT_LOOP
+           ENT2 24                * fill out first and last row
+ROW_LOOP   STA  CROSSWORD,2
+           STA  CROSSWORD+600,2
+           DEC2 1
+           J2NN ROW_LOOP
+ID_EXIT    JMP  *
+
+FILL_OUT_EXT STJ FOE_EXIT
+             ENT4 0
+             ENT1 22
+FOE_OUTER    ENT2 22
+FOE_INNER    ENTA 0,1
+             MUL  =25=
+             SLAX 5
+             INCA 0,2
+             INCA 26  * A = 25*Row + Column + 1  + 1 skipped first row
+             STA  TEMP
+             LD5  TEMP
+             LDA  CROSSWORD,5  * get the crossword cell
+             CMPA =31=         * are we a black cell, then skip forward
+             JNE   2F
+             LDA CROSSWORD-1,5 * get cell to the left
+             JAN 1F            * cell is empty
+             LDA CROSSWORD+1,5 * get cell to the right
+             JAN 1F            * cell is empty
+             LDA CROSSWORD+25,5 * get cell to the lower
+             JAN 1F             * cell is empty
+             LDA CROSSWORD-25,5 * get cell to the above
+             JAN 1F             * cell is empty
+             JMP 2F
+1H           ENT4 -1
+             ST4 CROSSWORD,5
+2H           DEC2 1
+             J2NN FOE_INNER
+             DEC1 1
+             J1NN FOE_OUTER
+             J4NZ FILL_OUT_EXT+1     * keep looping until I4 is not zero (meaning we changed it)
+FOE_EXIT     JMP *
+
+DRAW_CROSSWORD STJ  DC_EXIT
+               ENT4 44  *   "+"
+               ENT3 1   *   I3 is the index
+               ENT1 0
+DC_OUTER       ENT2 0
+DC_INNER       ENTA 0,1
+               MUL  =25=
+               SLAX 5
+               INCA 0,2
+               STA  TEMP
+               LD5  TEMP * I5 is index into array
+
+               LDA  CROSSWORD,5   * get the crossword cell
+               CMPA  =-1=         * blank square
+               JE DRAW_BLANK
+               CMPA  =30=         * white square
+               JE DRAW_WHITE
+* fall through to draw black
+DRAW_BLACK     ST4 OUT_BUFFER,2(1:1) * black square
+               ST4 OUT_BUFFER,2(2:2) * black square
+               ST4 OUT_BUFFER,2(3:3) * black square
+               ST4 OUT_BUFFER,2(4:4) * black square
+               ST4 OUT_BUFFER,2(5:5) * black square
+               ST4 OUT_BUFFER+120,2(1:1) * black square
+               ST4 OUT_BUFFER+120,2(2:2) * black square
+               ST4 OUT_BUFFER+120,2(3:3) * black square
+               ST4 OUT_BUFFER+120,2(4:4) * black square
+               ST4 OUT_BUFFER+120,2(5:5) * black square
+               ST4 OUT_BUFFER+240,2(1:1) * black square
+               ST4 OUT_BUFFER+240,2(2:2) * black square
+               ST4 OUT_BUFFER+240,2(3:3) * black square
+               ST4 OUT_BUFFER+240,2(4:4) * black square
+               ST4 OUT_BUFFER+240,2(5:5) * black square
+               JMP 1F
+DRAW_WHITE     STZ OUT_BUFFER,2(1:1) * blank square
+               STZ OUT_BUFFER,2(2:2) * blank square
+               STZ OUT_BUFFER,2(3:3) * blank square
+               STZ OUT_BUFFER,2(4:4) * blank square
+               ST4 OUT_BUFFER,2(5:5) * edge
+               STZ OUT_BUFFER+120,2(1:1) * blank square
+               STZ OUT_BUFFER+120,2(2:2) * blank square
+               STZ OUT_BUFFER+120,2(3:3) * blank square
+               STZ OUT_BUFFER+120,2(4:4) * blank square
+               ST4 OUT_BUFFER+120,2(5:5) * edge
+               ST4 OUT_BUFFER+240,2(1:1) * edge
+               ST4 OUT_BUFFER+240,2(2:2) * edge
+               ST4 OUT_BUFFER+240,2(3:3) * edge
+               ST4 OUT_BUFFER+240,2(4:4) * edge
+               ST4 OUT_BUFFER+240,2(5:5) * edge
+* Draw the number
+               LDA CROSSWORD+1,5         * cell to the right
+               CMPA =30=
+               JNE   2F                   * cell to right is white
+               LDA CROSSWORD-1,5
+               CMPA =30=
+               JNE 3F
+2F             LDA CROSSWORD+25,5        * cell below
+               CMPA =30=
+               JNE 1F
+               LDA CROSSWORD-25,5
+               CMPA =30=
+               JNE 3F
+               JMP 1F
+3H             ST3 TEMP
+               LDA TEMP
+               CHAR
+               STX OUT_BUFFER,2(2:3)
+               INC3 1
+               JMP 1F
+DRAW_BLANK     STZ OUT_BUFFER,2(1:1) * blank square
+               STZ OUT_BUFFER,2(2:2) * blank square
+               STZ OUT_BUFFER,2(3:3) * blank square
+               STZ OUT_BUFFER,2(4:4) * blank square
+               STZ OUT_BUFFER,2(5:5) * blank square
+               STZ OUT_BUFFER+120,2(1:1) * blank square
+               STZ OUT_BUFFER+120,2(2:2) * blank square
+               STZ OUT_BUFFER+120,2(3:3) * blank square
+               STZ OUT_BUFFER+120,2(4:4) * blank square
+               STZ OUT_BUFFER+120,2(5:5) * blank square
+               STZ OUT_BUFFER+240,2(1:1) * blank square
+               STZ OUT_BUFFER+240,2(2:2) * blank square
+               STZ OUT_BUFFER+240,2(3:3) * blank square
+               STZ OUT_BUFFER+240,2(4:4) * blank square
+               STZ OUT_BUFFER+240,2(5:5) * blank square
+* draw the bottom edge
+               LDA CROSSWORD+25,5    * cell below
+               JAN 3F
+               ST4 OUT_BUFFER+240,2(1:1) * edge
+               ST4 OUT_BUFFER+240,2(2:2) * edge
+               ST4 OUT_BUFFER+240,2(3:3) * edge
+               ST4 OUT_BUFFER+240,2(4:4) * edge
+               ST4 OUT_BUFFER+240,2(5:5) * edge
+3H             LDA CROSSWORD+1,5    * cell to the right
+               JAN 3F
+               ST4 OUT_BUFFER,2(5:5)     * edge
+               ST4 OUT_BUFFER+120,2(5:5) * edge
+               ST4 OUT_BUFFER+240,2(5:5) * edge
+3H             LDA CROSSWORD+26,5   * cell down to the right
+               JAN 1F
+               ST4 OUT_BUFFER+240,2(5:5) * edge
+1H             INC2 1
+               CMP2 =23=
+               JL DC_INNER
+               OUT OUT_BUFFER(18)
+               OUT OUT_BUFFER+120(18)
+               OUT OUT_BUFFER+240(18)
+               INC1 1
+               CMP1 =24=
+               JL DC_OUTER
+
+DC_EXIT        JMP  *
+
+           ORIG 1000
+TEMP       CON 0
+BUFFER     CON 0
+           ORIG 1100
+CROSSWORD  CON 0
+           ORIG 2000
+OUT_BUFFER CON 0
+           ORIG 3000
+           END
