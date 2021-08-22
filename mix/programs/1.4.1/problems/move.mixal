@@ -1,0 +1,58 @@
+* Write a MOVE operator
+* Problem 6
+         ORIG 100
+
+BEGIN    ENT1 BUF
+         JMP  MOVE
+         NOP  IN(1)
+         OUT  BUF(18)
+
+         ENT1 BUF
+         JMP  MOVE
+         NOP  IN(2)
+         OUT  BUF(18)
+
+         ENT1 BUF
+         ENT2 1
+         JMP  MOVE
+         NOP  IN,2(2)
+         OUT  BUF(18)
+         HLT
+
+
+MOVE     STJ  WRITEJMP
+         STA  RESTOREA(1:2)
+WRITEJMP ENTA *
+         STA  LOADI(1:2)
+         STA  LOADF(1:2)
+         STA  LOADADDR(1:2)
+         INCA 1
+         STA EXIT(1:2)
+
+         STX RESTOREX(1:2)
+LOADADDR LDX *(1:2) * X = address
+         STX LOOP(1:2)
+LOADI    LDX *(3:3) * X = I
+         STX LOOP(3:3)
+LOADF    LDX *(4:4) * X = F
+
+LOOP      LDA  *
+          STA  0,1
+          DECX 1
+          INC1 1
+          LDA LOOP(1:2)
+          INCA 1
+          STA LOOP(1:2)
+          JXP LOOP
+
+RESTOREA ENTA *
+RESTOREX ENTX *
+EXIT     JMP *
+
+IN       ALF ABCDE
+         ALF FGHIJ
+         ALF KLMNO
+         ALF PQRST
+         ALF UVWXY
+         ALF Z
+BUF      CON 0
