@@ -3,7 +3,7 @@
 X  EQU  1000
    ORIG 100
 
-mAIN    JMP  ENTER_DATA
+MAIN    JMP  ENTER_DATA
 
 *  Calculate maximum
    ENTA 1000

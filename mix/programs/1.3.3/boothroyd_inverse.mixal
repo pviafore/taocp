@@ -1,4 +1,4 @@
-* Inverse in place from Program I (1.3.3)
+* Inverse in place from 1.3.3 (Program J)
 N     EQU  6
 BUF   ORIG *+120
 BEGIN JMP INVERT
@@ -21,18 +21,19 @@ X     CON 0
       CON 3
 
 INVERT      STJ  INVERT_EXIT
+            ENN1 N
+            ST1  X+N+1,1(0:0)
+            INC1 1
+            J1N  *-2
             ENT1 N
-            ENT3 -1
-2H          LD2N X,1
-            J2P  5F
-3H          ST3  X,1
-            ENN3 0,1
-            ENN1 0,2
-            LD2N X,1
-4H          J2N  3B
+2H          ENN3 0,1
             ENN2 0,3
-5H          ST2  X,1
-6H          DEC1 1
+            LD3N X,2
+            J3N  *-2
+            LDA  X,3
+            STA  X,2
+            ST1  X,3
+            DEC1 1
             J1P  2B
 INVERT_EXIT JMP  *
 
