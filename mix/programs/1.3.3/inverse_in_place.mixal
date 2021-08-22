@@ -1,0 +1,39 @@
+* Inverse in place
+N     EQU  6
+BUF   ORIG *+120
+BEGIN JMP INVERT
+
+      ENT4 1
+LOOP  LDA  X,4
+      CHAR
+      STX BUF-1,4(2:3)
+      INC4 1
+      CMP4 =N=
+      JLE LOOP
+      OUT BUF(18)
+      HLT
+X     CON 0
+      CON 6
+      CON 2
+      CON 1
+      CON 5
+      CON 4
+      CON 3
+
+INVERT      STJ  INVERT_EXIT
+            ENT1 N
+            ENT3 -1
+2H          LD2N X,1
+            J2P  5F
+3H          ST3  X,1
+            ENN3 0,1
+            ENN1 0,2
+            LD2N X,1
+4H          J2N  3B
+            ENN2 0,3
+5H          ST2  X,1
+6H          DEC1 1
+            J1P  2B
+INVERT_EXIT JMP  *
+
+            END  BEGIN
