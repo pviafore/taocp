@@ -1,0 +1,71 @@
+* SUBROUTINE FOR CHARACTER INPUT
+
+* Taken from chapter 1.4.2
+READER   EQU  16
+INPUT    ORIG *+16
+NEXTCHAR STJ  9F
+         JXNZ 3F  * if rX still has data, keep shifting into rA
+1H       J6N  2F
+         IN   INPUT(READER)
+         JBUS *(READER)
+         ENN6 16  * Loop var to get 16 words per card
+2H       LDX  INPUT+16,6
+         INC6 1
+3H       ENTA 0
+         SLAX 1
+9H       JANZ *
+         JMP NEXTCHAR+1
+
+* First coroutine
+2H       INCA 30
+         JMP  OUT
+IN1      JMP  NEXTCHAR
+         DECA 30      * check if its a letter
+         JAN  2B
+         CMPA =10=
+         JGE  2B
+         STA  *+1(0:2)
+         ENT5 *       * number of times to repeat
+         JMP NEXTCHAR
+         JMP OUT
+         DEC5 1
+         J5NN *-2
+         JMP  IN1
+
+* Second coroutine
+         ALF             * blank space
+OUTPUT   ORIG *+16
+PUNCH    EQU  17
+OUT1     ENT4 -16
+         ENT1 OUTPUT
+         MOVE -1,1(16)
+1H       JMP  IN
+         STA  OUTPUT+16,4(1:1)
+         CMPA PERIOD
+         JE   9F
+         JMP  IN
+         STA  OUTPUT+16,4(2:2)
+         CMPA PERIOD
+         JE   9F
+         JMP  IN
+         STA  OUTPUT+16,4(3:3)
+         CMPA PERIOD
+         JE   9F
+         INC4 1
+         J4N  1B
+9H       OUT  OUTPUT(PUNCH)
+         JBUS *(PUNCH)
+         JNE OUT1
+         HLT
+PERIOD   ALF      .
+
+
+* INITIALIZATION AND LINKAGE
+START    ENT6 0
+         ENTX 0
+         JMP  OUT1
+OUT      STJ  INX
+OUTX     JMP  OUT1
+IN       STJ  OUTX
+INX      JMP  IN1
+         END  START
