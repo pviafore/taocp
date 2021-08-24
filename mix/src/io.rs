@@ -1,6 +1,8 @@
 use crate::arch;
 use crate::chartable;
 
+use std::io::Write;
+
 struct TapeUnit {
     tape: Vec<arch::Word>,
     position: u16
@@ -159,6 +161,16 @@ impl IO {
         }
         else if unit <= 15 {
             self.disks[(unit - 8) as usize].write(position_if_disk, values)
+        }
+        else if unit == 17 {
+            let data: Vec<Vec<u8>> = values[0..16]
+                                    .iter()
+                                    .map(|x| x.as_u8s())
+                                    .collect();
+            let bytes: Vec<u8> = data.into_iter().flatten().collect();
+            let text: String = chartable::to_char(bytes) + "\n";
+            let mut output_file = std::fs::File::create("output.cards").expect("create failed");
+            output_file.write_all(&text.as_bytes()).unwrap();
         }
         else if unit == 18 {
             let data: Vec<Vec<u8>> = values[0..24]

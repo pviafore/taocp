@@ -85,7 +85,7 @@ fn get_program_data(lines: Vec<String>) -> ProgramData {
         }
         else if op == "ORIG" {
             let location = _evaluate(address, last_location.unwrap_or(100)+relative_index, &program_data).parse::<usize>().ok();
-            program_data.label_table.insert(String::from(label), last_location.unwrap_or(100));
+            program_data.label_table.insert(String::from(label), last_location.unwrap_or(100)+relative_index);
 
             match program_data.start_location {
                 None => {
