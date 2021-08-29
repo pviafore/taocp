@@ -126,6 +126,8 @@ pub struct IO {
 
 impl IO {
     pub fn new() -> IO {
+        // blank out cards file
+        std::fs::File::create("output.cards").expect("create failed");
         IO {
             tapes: [TapeUnit::new(), TapeUnit::new(), TapeUnit::new(), TapeUnit::new(), TapeUnit::new(), TapeUnit::new(), TapeUnit::new(), TapeUnit::new()],
             disks: [Disk::new(), Disk::new(), Disk::new(), Disk::new(), Disk::new(), Disk::new(), Disk::new(), Disk::new() ],
@@ -168,9 +170,14 @@ impl IO {
                                     .map(|x| x.as_u8s())
                                     .collect();
             let bytes: Vec<u8> = data.into_iter().flatten().collect();
-            let text: String = chartable::to_char(bytes) + "\n";
-            let mut output_file = std::fs::File::create("output.cards").expect("create failed");
-            output_file.write_all(&text.as_bytes()).unwrap();
+            let text: String = chartable::to_char(bytes);
+
+            use std::fs::OpenOptions;
+            let mut output_file = OpenOptions::new()
+                                        .append(true)
+                                        .open("output.cards")
+                                        .expect("failed ot open output.cards");
+            writeln!(output_file, "{}", text).expect("Could not write");
         }
         else if unit == 18 {
             let data: Vec<Vec<u8>> = values[0..24]
