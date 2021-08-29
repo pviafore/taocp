@@ -1,0 +1,140 @@
+* Reverse the format from the earlier coroutines example
+
+TAPEIN   EQU  16
+TAPEOUT  EQU  17
+         ORIG 100
+BUFFER   ORIG *+16
+
+* Uses I6 to track the position in the buffer
+* Uses I1 to track how many of the current char is
+* The memory address Temp will specify what letter to print
+IN       J6N  LOADED
+READCARD IN   BUFFER(TAPEIN)
+         JBUS *(TAPEIN)
+         ENT6 -16
+LOADED   LDA  BUFFER+16,6(1:1)
+         CMPA TEMP
+         JNE  OUTX   * if we're something different, print the previous character
+         INC1 1         * We've seen another character, increment 1
+         STA  TEMP
+         CMPA PERIOD
+         JE   OUTX      * if it's a period, go to print it
+
+         LDA  BUFFER+16,6(2:2)
+         CMPA TEMP
+         JNE  OUTX   * if we're something different, print the previous character
+         INC1 1         * We've seen another character, increment 1
+         STA  TEMP
+         CMPA PERIOD
+         JE   OUTX   * if it's a period, go to print it
+
+         LDA  BUFFER+16,6(3:3)
+         CMPA TEMP
+         JNE  OUTX   * if we're something different, print the previous character
+         INC1 1         * We've seen another character, increment 1
+         STA  TEMP
+         CMPA PERIOD
+         JE   OUTX   * if it's a period, go to print it
+
+         INC6 1
+         J6Z  READCARD
+         JMP  LOADED
+
+* I5 indicates the current location of the buffer
+OUTBUF   ORIG *+16
+OUT      LD4  TEMP
+         CMP4 PERIOD
+         JE   DONE
+
+5H       ENT2 0,1 *
+         CMP2 =10= * if the number is greater than ten, print out 9 and do it all over again
+         JLE 6F
+         ENT1 10
+
+6H       STA RESTOREA(1:2)
+         JMP PUTNUMCHAR
+RESTOREA ENTA *
+
+3H       CMP2 =10=
+         JLE   4F
+         ENT1 0,2 * restore I1 to the full number
+         DEC1 10   * 9X means 10 X's
+         JMP 5B  * go back to printing out the pair of letters
+
+4H       ENT1 0
+         JMP INX
+         JMP OUT
+DONE     LD4 PERIOD
+         JMP PUTCHAR
+
+         ENT4 0  * pad out last word
+         ENT1 1
+         CMP3 =5=
+         JE  1F
+         JMP PUTCHAR
+         JMP *-3
+
+1F       OUT OUTBUF(TAPEOUT)
+         HLT
+COUNT    CON 0
+
+PUTNUMCHAR  STJ  PNC_EXIT
+
+            ST4 RESTORE4(1:2)
+            J1Z PNC_EXIT   * If the number is zero, don't print
+
+            CMP1 =1=
+            JE   RESTORE4  * if there is only one number, print the char
+
+            ENTA 0,1
+            DECA 1
+            CHAR
+
+            STX *+1(1:2)  * store A into I4
+            ENT4 *
+
+            JMP  PUTCHAR
+RESTORE4    ENT4 *
+            JMP  PUTCHAR  * print letter
+PNC_EXIT    JMP  *
+
+* It's assumed that I4 is the character we want printed
+PUTCHAR  STJ PC_EXIT
+         LDA OUTBUF+16,5
+         SLA 1
+         STA OUTBUF+16,5
+         ST4 OUTBUF+16,5(5:5)
+         DEC3 1
+
+         J3P  1F * only go to next word if we have written 5 characters
+         INC5 1
+         ENT3 5
+
+1H       J5N  PC_EXIT
+         OUT OUTBUF(TAPEOUT)
+         ST1 RESTORE1(1:2)
+         ENT1 OUTBUF
+         MOVE BLANKS(16)
+RESTORE1 ENT1 *
+
+         JBUS *(TAPEOUT)
+         ENT5 -16
+PC_EXIT  JMP  *
+
+
+
+TEMP     CON  0
+PERIOD   ALF      .
+BLANKS   ORIG *+16
+
+BEGIN ENT6 0
+      ENT1 0
+      ENT3 5
+      ENT5 -16
+      JMP  IN
+OUTX  STJ  IN_RET * when you jump to the out routine, set the call back to in so that when jumping to in we return where we left off
+OUT_RET JMP OUT
+INX   STJ OUT_RET
+IN_RET JMP  IN
+HALT  HLT
+      END  BEGIN
