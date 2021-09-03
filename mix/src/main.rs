@@ -48,7 +48,9 @@ struct Run {
     #[clap(long, short='d')]
     debugger: bool,
     #[clap(long, short)]
-    timing: bool
+    timing: bool,
+    #[clap(long, short)]
+    verbose: bool
 }
 
 #[derive(Clap)]
@@ -96,7 +98,7 @@ fn load_cards_into_computer(cardpack_bytes: Vec<u8>) -> computer::Computer{
     comp
 }
 
-fn get_computer(program_filename: String, from: String, start: i16) -> computer::Computer {
+fn get_computer(program_filename: String, from: String, start: i16, verbose: bool) -> computer::Computer {
     if from == "cardpack" {
         let bytes = fs::read(program_filename).unwrap();
         if start != -1 {
@@ -115,7 +117,7 @@ fn get_computer(program_filename: String, from: String, start: i16) -> computer:
     else if from == "mixal"{
         let file = File::open(program_filename).unwrap();
         let lines: Vec<String> = std::io::BufReader::new(file).lines().map(|x| x.unwrap()).collect();
-        let (assembled, load_address, start_location) = assembler::assemble(lines);
+        let (assembled, load_address, start_location) = assembler::assemble(lines, verbose);
         let program_start = match start_location {
             Some(loc) => if start != -1 {
                 panic!("Program start already lives inside program")
@@ -142,7 +144,7 @@ fn get_computer(program_filename: String, from: String, start: i16) -> computer:
 }
 
 fn run(cmd: Run) {
-    let mut comp = get_computer(cmd.program_name, cmd.from, cmd.start);
+    let mut comp = get_computer(cmd.program_name, cmd.from, cmd.start, cmd.verbose);
     if cmd.data_cards_file != "invalid" {
         use std::str;
         let bytes = fs::read(cmd.data_cards_file).unwrap();
@@ -170,7 +172,7 @@ fn run(cmd: Run) {
 fn assemble(cmd: Assemble) {
     let file = File::open(cmd.input_filename).unwrap();
     let lines: Vec<String> = std::io::BufReader::new(file).lines().map(|x| x.unwrap()).collect();
-    let (assembled, _load_address, _start_location) = assembler::assemble(lines);
+    let (assembled, _load_address, _start_location) = assembler::assemble(lines, false);
     let mut output_file = std::fs::File::create(cmd.output_filename).expect("create failed");
     output_file.write_all(&assembled).unwrap();
 }

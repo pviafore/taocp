@@ -27,6 +27,10 @@ impl ProgramData {
         }
     }
 
+    pub fn get_debug_data(&self) -> String {
+        format!("Start Location: {:?}\n\nSymbol Table: {:?}\n\nLabel Table: {:?}", self.start_location.unwrap(), self.symbol_table, self.label_table)
+    }
+
     pub fn add_symbolic_constant(&mut self, text: &str) -> String {
         let name = format!("con{}", self.symbolic_constants.len());
         self.symbolic_constants.push(text.to_string());
@@ -57,8 +61,11 @@ fn _is_local_symbol(text: &str) -> bool {
     chars.len() == 2 && chars[0].is_digit(10) && (chars[1] == 'H' || chars[1] == 'F' || chars[1] == 'B')
 }
 
-pub fn assemble(lines: Vec<String>) -> (Vec<u8>, usize, Option<usize>) {
+pub fn assemble(lines: Vec<String>, verbose: bool) -> (Vec<u8>, usize, Option<usize>) {
     let program_data = get_program_data(lines);
+    if verbose {
+        println!("{}", program_data.get_debug_data());
+    }
     let words: Vec<arch::Word> = program_data.get_instructions().iter()
                                              .filter(|x| !x.is_empty())
                                              .enumerate()
@@ -312,7 +319,7 @@ fn _get_index(spl: &Vec<&str>) -> u8 {
 }
 
 fn _get_modifier(op: &str, spl: Vec<&str>, program_data: &ProgramData) -> u8 {
-    match op {
+   let default = match op {
         "HLT" => 2,
         "NUM" => 0,
         "CHAR" => 1,
@@ -322,9 +329,9 @@ fn _get_modifier(op: &str, spl: Vec<&str>, program_data: &ProgramData) -> u8 {
         "SRAX" => 3,
         "SLC" => 4,
         "SRC" => 5,
-        "MOVE" => _parse_modifier(spl, 1, program_data),
-        "STJ" => _parse_modifier(spl, 2, program_data),
-        "JBUS" | "IOC" | "IN" | "OUT" | "JRED" => _parse_modifier(spl, 0, program_data),
+        "MOVE" => 1,
+        "STJ" => 2,
+        "JBUS" | "IOC" | "IN" | "OUT" | "JRED" => 0,
         "JMP" => 0,
         "JSJ" => 1,
         "JOV" => 2,
@@ -345,8 +352,9 @@ fn _get_modifier(op: &str, spl: Vec<&str>, program_data: &ProgramData) -> u8 {
         "DECA" | "DEC1" | "DEC2" | "DEC3" | "DEC4" | "DEC5" | "DEC6" | "DECX" => 1,
         "ENTA" | "ENT1" | "ENT2" | "ENT3" | "ENT4" | "ENT5" | "ENT6" | "ENTX" => 2,
         "ENNA" | "ENN1" | "ENN2" | "ENN3" | "ENN4" | "ENN5" | "ENN6" | "ENNX" => 3,
-        _ => _parse_modifier(spl, 5, program_data)
-    }
+        _ => 5
+    };
+    _parse_modifier(spl, default, program_data)
 }
 
 fn _parse_modifier(spl: Vec<&str>, default: u8, program_data: &ProgramData) -> u8 {

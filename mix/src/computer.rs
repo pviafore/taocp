@@ -194,7 +194,7 @@ impl Computer {
 
     fn print_source(&self) {
         let min_index = std::cmp::max(0, self.instruction_pointer.read() as i16 - 5);
-        for n in min_index..std::cmp::min(409, min_index+10) {
+        for n in min_index..std::cmp::min(4096, min_index+10) {
             println!("{}{:0>width$}: {}",
                      if n == self.instruction_pointer.read() { "-> " } else { "   " },
                      n as usize,
@@ -719,8 +719,9 @@ impl Computer {
             for index in (bytes_to_shift..10).rev() {
                 let amount_to_shift = 6 * (index - bytes_to_shift);
                 let target_value = arch::Byte::new((dword >> amount_to_shift) as u8);
-                let reg: &mut arch::Word = if 9 - index < 5 { &mut self.registers.a } else { &mut self.registers.x };
-                reg.bytes[((9 - index) % 5) as usize] = target_value;
+                let new_index = 9-index;
+                let reg: &mut arch::Word = if new_index < 5 { &mut self.registers.a } else { &mut self.registers.x };
+                reg.bytes[(new_index % 5) as usize] = target_value;
             }
             for index in (10 - bytes_to_shift)..10 {
                 let reg: &mut arch::Word = if index < 5 { &mut self.registers.a } else { &mut self.registers.x };
@@ -736,8 +737,9 @@ impl Computer {
             for index in (bytes_to_shift..10).rev() {
                 let amount_to_shift = 6 * index;
                 let target_value = arch::Byte::new((dword >> amount_to_shift) as u8);
-                let reg: &mut arch::Word = if index < 5 { &mut self.registers.a } else { &mut self.registers.x };
-                reg.bytes[((9 - (index - bytes_to_shift))  % 5) as usize] = target_value;
+                let new_index = 9-(index-bytes_to_shift);
+                let reg: &mut arch::Word = if new_index < 5 { &mut self.registers.a } else { &mut self.registers.x };
+                reg.bytes[(new_index % 5) as usize] = target_value;
             }
             for index in 0..bytes_to_shift {
                 let reg: &mut arch::Word = if index < 5 { &mut self.registers.a } else { &mut self.registers.x };
@@ -1966,6 +1968,15 @@ mod tests {
     }
 
     #[test]
+    fn test_sla_indexed() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 1, 2, 3, 4, 5);
+        c.registers.i1 = arch::HalfWord::from_value(1);
+        c.run_command(Instruction::new(instructions::OpCode::Shift, 0, 1, arch::HalfWord::from_value(-1)));
+        assert_eq!(c.registers.a, arch::Word::from_values(true, 1, 2, 3, 4, 5));
+    }
+
+    #[test]
     fn test_sra() {
         let mut c = Computer::new();
         c.registers.a = arch::Word::from_values(true, 1, 2, 3, 4, 5);
@@ -1992,6 +2003,17 @@ mod tests {
         assert_eq!(c.registers.a, arch::Word::from_values(true, 0, 0, 0, 0, 0));
         assert_eq!(c.registers.x, arch::Word::from_values(true, 0, 1, 2, 3, 4));
     }
+
+    #[test]
+    fn test_srax_zero() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_values(true, 1, 2, 3, 4, 5);
+        c.registers.x = arch::Word::from_values(true, 6, 7, 8, 9, 10);
+        c.run_command(Instruction::new(instructions::OpCode::Shift, 3, 0, arch::HalfWord::from_value(0)));
+        assert_eq!(c.registers.a, arch::Word::from_values(true, 1, 2, 3, 4, 5));
+        assert_eq!(c.registers.x, arch::Word::from_values(true, 6, 7, 8, 9, 10));
+    }
+
 
     #[test]
     fn test_slc() {
