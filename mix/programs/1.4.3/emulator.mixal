@@ -1,0 +1,352 @@
+* Mix Simulator (Program M in 1.4.3.1)
+        ORIG 3500
+BEGIN   STZ  TIME(0:2)
+        STZ  OVTOG  * overflow toggle
+        STZ  COMPI
+        ENT6 100      * used to give location of next instruction (note - I changed this to 100 to not mess up loading routine)
+CYCLE   LDA  CLOCK
+TIME    INCA 0
+        STA  CLOCK
+        LDA  0,6
+        STA  INST     * Save instruction
+        INC6 1
+        LDX  INST(1:2) * X is the address
+        SLAX 5
+        STA  M
+        LD2  INST(3:3)   * index field
+        J2Z  1F
+        DEC2 6
+        J2P  INDEXERROR
+        LDA  SIGN6,2
+        LDX  I6REG,2
+        SLAX 5
+        ADD  M   * add the index to the address
+        CMPA ZERO(1:3)
+        JNE  ADDRERROR
+        STA  M   * rewrite address field
+1H      LD3  INST(4:4)
+        LD5  M
+        LD4  INST(5:5)
+        DEC4 63
+        J4P  OPERROR * invalid opcode
+        LDA  OPTABLE,4(4:4)
+        STA  TIME(0:2)
+        LD2  OPTABLE,4(0:2)
+        JNOV 0,2
+        JMP  0,2   * Pat's note - why protect for overflow? just to clear it?
+
+
+* Op table (indexing into this is -63 to zero)
+        NOP  CYCLE(1)
+        ADD  ADD(2)
+        SUB  SUB(2)
+        MUL  MUL(10)
+        DIV  DIV(12)
+        HLT  SPEC(10)
+        SLA  SHIFT(2)
+        MOVE MOVE(1)
+        LDA  LOAD(2)
+        LD1  LOAD,1(2)
+        LD2  LOAD,1(2)
+        LD3  LOAD,1(2)
+        LD4  LOAD,1(2)
+        LD5  LOAD,1(2)
+        LD6  LOAD,1(2)
+        LDX  LOAD(2)
+        LDAN LOADN(2)
+        LD1N LOADN,1(2)
+        LD2N LOADN,1(2)
+        LD3N LOADN,1(2)
+        LD4N LOADN,1(2)
+        LD5N LOADN,1(2)
+        LD6N LOADN,1(2)
+        LDXN LOADN(2)
+        STA  STORE(2)
+        ST1  STORE(2)
+        ST2  STORE(2)
+        ST3  STORE(2)
+        ST4  STORE(2)
+        ST5  STORE(2)
+        ST6  STORE(2)
+        STX  STORE(2)
+        STJ  STORE(2)
+        STZ  STORE(2)
+        JBUS JBUS(1)
+        IOC  IOC(1)
+        IN   IN(1)
+        OUT  OUT(1)
+        JRED JRED(1)
+        JMP  JUMP(1)
+        JAP  REGJUMP(1)
+        J1P  REGJUMP(1)
+        J2P  REGJUMP(1)
+        J3P  REGJUMP(1)
+        J4P  REGJUMP(1)
+        J5P  REGJUMP(1)
+        J6P  REGJUMP(1)
+        JXP  REGJUMP(1)
+        INCA ADDROP(1)
+        INC1 ADDROP,1(1)
+        INC2 ADDROP,1(1)
+        INC3 ADDROP,1(1)
+        INC4 ADDROP,1(1)
+        INCA ADDROP,1(1)
+        INC6 ADDROP,1(1)
+        INCX ADDROP(1)
+        CMPA COMPARE(2)
+        CMP1 COMPARE(2)
+        CMP2 COMPARE(2)
+        CMP3 COMPARE(2)
+        CMP4 COMPARE(2)
+        CMP5 COMPARE(2)
+        CMP6 COMPARE(2)
+OPTABLE CMPX COMPARE(2)
+
+* Register location
+AREG    CON  0
+I1REG   CON  0
+I2REG   CON  0
+I3REG   CON  0
+I4REG   CON  0
+I5REG   CON  0
+I6REG   CON  0
+XREG    CON  0
+JREG    CON  0
+ZERO    CON  0
+SIGNA   CON  1
+SIGNA   CON  1
+SIGN1   CON  1
+SIGN2   CON  1
+SIGN3   CON  1
+SIGN4   CON  1
+SIGN5   CON  1
+SIGN6   CON  1
+SIGNJ   CON  1
+SIGNX   CON  1
+INST    CON  0
+COMPI   CON  0
+OVTOG   CON  0
+CLOCK   CON  0
+
+* get memory cell (sign in x, magnitude in A)
+MEMORY STJ  9F
+       J5N  MEMERROR
+       CMP5 =BEGIN=
+       JGE  MEMERROR * don't allow memory from simulator
+       LDX  0,5
+       ENTA 1
+       SRAX 5
+       LDA  0,5(1:5)
+9H     JMP  *
+
+FCHECK STJ  9F
+       ENTA 0
+       ENTX 0,3  * I3 is assuming to have F field
+       DIV =8=
+       CMPX =5=
+       JG   FERROR
+       STX  R
+       STA  L
+       LD1  L
+       CMPA R
+9H     JLE  *
+       JMP FERROR
+
+* get memory (a = value, x = sign)
+GETAV  STJ  9F
+       JMP  1F
+GETV   STJ  9F
+       JMP  FCHECK
+       JMP  MEMORY
+1H     J1Z  2F
+       ENTX 1
+       SLA  -1,1
+       SRA  -1,1
+2H     LD2N R
+       SRA  5,2
+9H     JMP  *
+
+
+ADD    JMP  GETV
+       ENT1 0
+       JMP  INC
+SUB    JMP  GETV
+       ENT1 0
+       JMP  DEC
+MUL    JMP  GETV
+       CMPX SIGNA
+       ENTX 1
+       JE   *+2
+       ENNX 1
+       STX  SIGNA
+       STX  SIGNX
+       MUL  AREG
+       JMP  STOREAX
+DIV    LDA  SIGNA
+       STA  SIGNX
+       JMP  GETV
+       CMPX SIGNA
+       ENTX 1
+       JE   *+2
+       ENNX 1
+       STX  SIGNA
+       STA  TEMP
+       LDA  AREG
+       LDX  XREG
+       DIV  TEMP
+STOREAX STA AREG
+       STX  XREG
+OVCHECK JNOV CYCLE
+       ENTX 1
+       STX  OVTOG
+       JMP  CYCLE
+LOADN  JMP  GETV
+       ENT1 47,4 * figure out register
+LOADN1 STX  TEMP
+       LDXN TEMP
+       JMP  LOAD1
+LOAD   JMP  GETV
+       ENT1 55,4
+LOAD1  STA  AREG,1
+       STX  SIGNA,1
+       JMP  SIZECHK
+STORE  JMP  FCHECK
+       JMP  MEMORY
+       J1P  1F
+       ENT1 1
+       LDX  SIGNA+39,4
+1H     LD2N R
+       SRAX 5,2
+       LDA  AREG+39,4
+       SLAX 5,2
+       ENN2 0,1
+       SRAX 6,2
+       LDA  0,5
+       SRA  6,2
+       SRAX -1,1
+       STX  0,5
+       JMP  CYCLE
+JUMP   DEC3 9
+       J3P  FERROR
+       LDA  COMPI
+       JMP  JTABLE,3
+JMP    ST6  JREG
+       JMP  JSJ
+       JMP  JOV
+       JMP  JNOV
+       JMP  LS
+       JMP  EQ
+       JMP  GR
+       JMP  GE
+       JMP  NE
+JTABLE JMP  LE
+JOV    LDX  OVTOG
+       JMP  *+3
+JNOV   LDX  OVTOG
+       DECX 1
+       STX  OVTOG
+       JXNZ JMP
+       JMP  CYCLE
+LE     JAZ  JMP
+LS     JAN  JMP
+       JMP  CYCLE
+NE     JAN  JMP
+GR     JAP  JMP
+       JMP  CYCLE
+GE     JAP  JMP
+EQ     JAZ  JMP
+       JMP  CYCLE
+JSJ    JMP  MEMORY
+       ENT6 0,5
+       JMP  CYCLE
+REGJUMP LDA AREG+23,4
+       JAZ  *+2
+       LDA  SIGNA+23,4
+       DEC3 5
+       J3NP JTABLE,3
+       JMP  FERROR
+
+ADDROP DEC3 3
+       J3P  FERROR
+       ENTX 0,5
+       JXNZ *+2
+       LDX  INST
+       ENTA 1
+       SRAX 5
+       LDA  M(1:5)
+       ENT1 15,4
+       JMP  1F,3
+       JMP  INC
+       JMP  DEC
+       JMP  LOAD1
+1H     JMP  LOADN1
+DEC    STX  TEMP
+       LDXN TEMP
+INC    CMPX SIGNA,1
+       JE   1F
+       SUB  AREG,1
+       JANP 2F
+       STX  SIGNA,1
+       JMP  2F
+1H     ADD  AREG,1
+2H     STA  AREG,1(1:5)
+SIZECHK LD1 OPTABLE,4(3:3)
+        J1Z OVCHECK
+        CMPA ZERO(1:3) * check first three bytes
+        JE CYCLE
+        JMP SIZEERROR
+
+COMPARE JMP  GETV
+        SRAX 5
+        STX  V
+        LDA  XREG,4
+        LDX  SIGNX,4
+        JMP  GETAV
+        SRAX 5
+        CMPX V
+        STZ  COMPI
+        JE   CYCLE
+        ENTA 1
+        ENTA 1
+        JG   *+2
+        ENNA 1
+        STA  COMPI
+        JMP  CYCLE
+* the remainder need to be written
+SPEC    CMP3 =2=                    * SPEC implemented by Pat Viafore
+        JL   CYCLE
+        HLT
+SHIFT   JMP  CYCLE
+MOVE    JMP  CYCLE
+JBUS    JMP  CYCLE
+IOC     JMP  CYCLE
+IN      JMP  CYCLE
+OUT     JMP  CYCLE
+JRED    JMP  CYCLE
+
+INDEXERROR JMP CYCLE
+ADDRERROR  JMP CYCLE
+MEMERROR   JMP CYCLE
+OPERROR    JMP CYCLE
+FERROR     JMP CYCLE
+SIZEERROR  JMP CYCLE
+
+
+*     This version of mix does not allow undefined constants
+R      CON 0
+L      CON 0
+M      CON 0
+V      CON 0
+TEMP   CON 0
+       END BEGIN
+
+
+       ORIG  100   * actual program
+       INCA 1
+       STA 240
+       ADD 240
+       STA 240
+       CHAR 0
+       STX 240
+       OUT 240(18)
+       HLT
