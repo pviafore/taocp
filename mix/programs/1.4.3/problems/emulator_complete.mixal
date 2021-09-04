@@ -195,7 +195,7 @@ DIV    LDA  SIGNA
        LDX  XREG
        DIV  TEMP
 STOREAX STA AREG
-       STX  XREG
+        STX  XREG
 OVCHECK JNOV CYCLE
        ENTX 1
        STX  OVTOG
@@ -312,33 +312,38 @@ COMPARE JMP  GETV
         STA  COMPI
         JMP  CYCLE
 * the remainder need to be written
-SPEC    CMP3 =1=                    * SPEC implemented by Pat Viafore
-        JE   CHAR
-        JL   NUM
+SPEC    CMP3 =2=                    * SPEC implemented by Pat Viafore
+        JNE  AXOP
         HLT
-CHAR    LDA  AREG
-        LDX  XREG
-        CHAR
-        STA  AREG
-        STX  XREG
-        JMP  CYCLE
-NUM     LDA  AREG
-        LDX  XREG
-        NUM
-        STA  AREG
-        STX  XREG
-        JMP  CYCLE
-SHIFT   JMP  CYCLE
+SHIFT   CMP3 =5=                    * SHIFT implemented by Pat Viafore
+        JG   FERROR
+        J5N  ADDRERROR
+        JMP  AXOP
 MOVE    JMP  CYCLE
 JBUS    JMP  CYCLE
 IOC     JMP  CYCLE
 IN      JMP  CYCLE
 OUT     CMP3 =18=       * OUT implemented by Pat Viafore
         JNE  FERROR
-        ST5  *+1(1:2)     * Store A as the memory address of the out value
+        LDA  CLOCK      * custom timing (assumes it operates quickly)
+        ADD  =7500=
+        STA  CLOCK
+        STA  TIME(0:2)
+        ST5  *+1(1:2)     * Store 5 as the memory address of the out value
         OUT  *(18)
         JMP  CYCLE
 JRED    JMP  CYCLE
+
+AXOP      ST5  USEROP(0:2) * perform an operation on A and X exclusively
+          INC4 63
+          ST4  USEROP(5:5)
+          DEC4 63
+          ST3  USEROP(4:4)
+          LDA  AREG
+          LDX  XREG
+USEROP    NOP  *
+          JMP  STOREAX
+
 
 INDEXERROR JMP CYCLE
 ADDRERROR  JMP CYCLE
@@ -359,10 +364,14 @@ TEMP   CON 0
 
        ORIG  100   * actual program
        INCA 1
-       STA 240
-       ADD 240
-       STA 240
+       SLA  1
+
+       STA  240
+       ADD  240
+       STA  240
        CHAR 0
-       STX 240
-       OUT 240(18)
+       SRC  2
+       STA  240
+       STX  241
+       OUT  240(18)
        HLT
