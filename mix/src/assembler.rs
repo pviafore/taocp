@@ -28,7 +28,8 @@ impl ProgramData {
     }
 
     pub fn get_debug_data(&self) -> String {
-        format!("Start Location: {:?}\n\nSymbol Table: {:?}\n\nLabel Table: {:?}", self.start_location.unwrap(), self.symbol_table, self.label_table)
+        format!("Start Location: {:?}\n\nSymbol Table: {:?}\n\nLabel Table: {:?}\n\n Local Symbol Table {:?}",
+                 self.start_location.unwrap(), self.symbol_table, self.label_table, self.local_symbols)
     }
 
     pub fn add_symbolic_constant(&mut self, text: &str) -> String {
