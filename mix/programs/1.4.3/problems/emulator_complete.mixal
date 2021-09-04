@@ -319,7 +319,33 @@ SHIFT   CMP3 =5=                    * SHIFT implemented by Pat Viafore
         JG   FERROR
         J5N  ADDRERROR
         JMP  AXOP
-MOVE    JMP  CYCLE
+MOVE    J3Z  CYCLE
+        LD1  SIGN1
+        LDA  I1REG
+
+        J1N  ADDRERROR
+        LD1  I1REG                  * load I1 reg, and check for validity
+
+        ENTA 0,1                    * Get A the correct value for error message
+        J13N ADDRERROR
+        CMP1 =BEGIN=
+        JGE  ADDRERROR
+
+        JMP  MEMORY                 * this gets us A and X
+        STA  0,1(1:5)             * rather than call move, do it one at a time in case of overwrite of simulator
+        STX  0,1(0:0)
+
+        LDA  CLOCK
+        INCA 2
+        STA  CLOCK
+
+        INC1 1
+        ST1  I1REG
+        DEC3 1
+        INC5 1
+        JMP  MOVE                * move one byte at a time
+
+        JMP  CYCLE
 JBUS    JMP  CYCLE
 IOC     JMP  CYCLE
 IN      JMP  CYCLE
@@ -345,14 +371,51 @@ USEROP    NOP  *
           JMP  STOREAX
 
 
-INDEXERROR JMP CYCLE
-ADDRERROR  JMP CYCLE
-MEMERROR   JMP CYCLE
-OPERROR    JMP CYCLE
-FERROR     JMP CYCLE
-SIZEERROR  JMP CYCLE
+INDEXERROR ENTA 0,2
+           INCA 6
+           CHAR
+           LDA ERRTYPE+1
+           JMP PRINT_ERR
+ADDRERROR  CHAR
+           LDA ERRTYPE
+           JMP PRINT_ERR
+MEMERROR   ENTA 0,5
+           CHAR
+           LDA ERRTYPE+2
+           JMP PRINT_ERR
+OPERROR    ENTA 0,4
+           INCA 63
+           CHAR
+           LDA ERRTYPE+3
+           JMP PRINT_ERR
+FERROR     ENTA 0,3
+           CHAR
+           LDA ERRTYPE+4
+           JMP PRINT_ERR
+SIZEERROR  CHAR
+           LDA ERRTYPE+5
+           JMP PRINT_ERR
 
+ERRTYPE    ALF   ADDR
+           ALF  INDEX
+           ALF    MEM
+           ALF     OP
+           ALF      F
+           ALF   SIZE
 
+PRINT_ERR  STA ERRT
+           STX ERRVAL
+           OUT ERROR_MSG(18)
+           HLT
+
+ERROR_MSG  ALF  ERROR
+           ALF  : INV
+           ALF  ALID
+ERRT       CON  0
+           ALF   ->
+ERRVAL     CON  0
+
+           ORIG *+24
 *     This version of mix does not allow undefined constants
 R      CON 0
 L      CON 0
@@ -373,5 +436,10 @@ TEMP   CON 0
        SRC  2
        STA  240
        STX  241
+       ENT1 243
+       MOVE 240(2)
+       ENTA 0,1
+       CHAR
+       STX  246
        OUT  240(18)
        HLT
