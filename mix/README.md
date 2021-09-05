@@ -89,6 +89,5 @@ In the `mix/1.4.3/problems`, you will find `emulator_complete.mixal`. Despite it
 there are a few restrictions:
 
 * You must pass cards in as "program style" to simulate a program
-* Leave off the two lines of loading routines if this is done from a cardpack
 * No floating point numbers
 * Not all IO operations are available (only units 16 and 18)

@@ -1,10 +1,11 @@
 * Mix Simulator (Program M in 1.4.3.1)
         ORIG 3500
-BEGIN   JMP  LDCARDS
-        STZ  TIME(0:2)
+BEGIN   STZ  TIME(0:2)
+        IN   0(16)
+        JBUS *(16)
         STZ  OVTOG  * overflow toggle
         STZ  COMPI
-        ENT6 100      * used to give location of next instruction (note - I changed this to 100 to not mess up loading routine)
+        ENT6 0      * used to give location of next instruction (note - I changed this to 100 to not mess up loading routine)
 CYCLE   LDA  CLOCK
 TIME    INCA 0
         STA  CLOCK
@@ -347,19 +348,33 @@ MOVE    J3Z  CYCLE
         JMP  MOVE                * move one byte at a time
 
         JMP  CYCLE
-JBUS    JMP  CYCLE
-IOC     JMP  CYCLE
-IN      JMP  CYCLE
+JBUS    JRED 1F
+        ENT6 0,5
+1F      JMP  CYCLE
+
+IOC     J5NZ ADDRERROR
+        CMP3 =18=
+        JNE  FERROR
+        IOC 0(18)
+IN      CMP3 =16=
+        JNE  FERROR
+        LDA  CLOCK
+        ADD  =10000=
+        STA  CLOCK
+        ST5  *+1(1:2)
+        IN   *(16)
+        JMP  CYCLE
 OUT     CMP3 =18=       * OUT implemented by Pat Viafore
         JNE  FERROR
         LDA  CLOCK      * custom timing (assumes it operates quickly)
         ADD  =7500=
         STA  CLOCK
-        STA  TIME(0:2)
         ST5  *+1(1:2)     * Store 5 as the memory address of the out value
         OUT  *(18)
         JMP  CYCLE
-JRED    JMP  CYCLE
+JRED    JBUS 1F
+        ENT6 0,5
+1H      JMP  CYCLE
 
 AXOP      ST5  USEROP(0:2) * perform an operation on A and X exclusively
           INC4 63
@@ -417,38 +432,6 @@ ERRT       CON  0
 ERRVAL     CON  0
 
         ORIG *+24
-LDCARDS STJ  LDC_EXIT
-        ENT1 0          *  write zero in I1, I1 contains buffer offset
-        IN 32(16)        *  Read card into memory address 32
-        JBUS *(16)      *  wait for card to be read
-        LDA 33          *  get the second byte from the card into A
-        SLA 1           *  push the 1st bit out (the number of words)
-        SRAX 6          *  AX contains the starting location
-        NUM             *  A is now a number
-        STA TEMP        *  write starting location to temp
-        LDA 33(1:1)     *  read number of words into A
-        DECA 30         *  subtract 30 (from line 8) to make A into a number
-        STA TEMP2       *  write number of words into TEMP2
-2H      LD3 TEMP        *  I3 = write location
-        JAZ 1F          *  jump to location on transfer card
-        LDA 35,1(5:5)   *  read last character
-        DECA 22         *  subtract 22
-        STA 0,3(0:0)    *  just store a sign (if this was positive the number was 30,31,...,39 and not overpunched, if it was overpunched, it was 10,11,...19, and subtracting 22 makes it negative)
-        LDA TEMP        *  Load write_loc to A
-        INCA 1          *  write_loc = write_loc + 1
-        STA TEMP        *  48 = write_loc + 1
-        LDA 34,1        *  load into A buffer (+ offset)
-        LDX 35,1        *  load into X buffer (+ offset)
-        INC1 2          *  Move to next 2 bytes
-        NUM             *  convert to number in A
-        STA 0,3(1:5)    *  store A into indirect I2 (which should be the write location), but just magnitude (sign was written earlier)
-        LDA TEMP2       *  get number of words into 49
-        DECA 1          *  subtract 1 from A
-        STA TEMP2       *  write num words - 1 into 49
-        JAP 2B          *  jump back to loading I3 with write location
-        JMP LDCARDS+1   *  go to reading the next card
-1H      ENT6 0,3
-LDC_EXIT JMP  *
 *     This version of mix does not allow undefined constants
 R      CON 0
 L      CON 0

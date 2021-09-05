@@ -151,15 +151,17 @@ fn run(cmd: Run) {
         use std::str;
         let bytes = fs::read(cmd.data_cards_file).unwrap();
         let contents: Vec<&str> = str::from_utf8(&bytes).unwrap().split("\n").collect();
-
-        for i in 0..(contents.len()) {
-            let card = if cmd.as_program_cards {
-                cards::translate_program_card(contents[i])
+        if cmd.as_program_cards {
+            comp.add_card(chartable::translate(contents[0]));
+            comp.add_card(chartable::translate(contents[1]));
+            for i in 2..(contents.len()) {
+                comp.add_card(cards::translate_program_card(contents[i]));
             }
-            else {
-                chartable::translate(contents[i])
-            };
-            comp.add_card(card);
+        }
+        else {
+            for i in 0..(contents.len()) {
+                comp.add_card(chartable::translate(contents[i]));
+            }
         }
     }
     if cmd.trace {
