@@ -33,9 +33,15 @@ impl ProgramData {
     }
 
     pub fn add_symbolic_constant(&mut self, text: &str) -> String {
-        let name = format!("con{}", self.symbolic_constants.len());
-        self.symbolic_constants.push(text.to_string());
-        name
+        let index = self.symbolic_constants.iter().position(|x| *x == text.to_string());
+        match index {
+            Some(idx) => format!("con{}", idx),
+            None => {
+                let name = format!("con{}", self.symbolic_constants.len());
+                self.symbolic_constants.push(text.to_string());
+                name
+            }
+        }
     }
 
     pub fn get_instructions(&self) -> Vec<String> {

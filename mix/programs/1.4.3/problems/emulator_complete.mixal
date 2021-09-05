@@ -7,6 +7,18 @@ BEGIN   STZ  TIME(0:2)
         STZ  COMPI
         ENT6 0      * used to give location of next instruction (note - I changed this to 100 to not mess up loading routine)
 CYCLE   LDA  CLOCK
+        LDX  IN_TARGET
+        JXZ  1F
+        CMPA IN_TARGET
+        JGE  REAL_IN
+        ENTX 0
+        STX  IN_TARGET
+1H      LDX  OUT_TARGET
+        JXZ  TIME
+        CMPA OUT_TARGET
+        JGE  REAL_OUT
+        ENTX 0
+        STX  OUT_TARGET
 TIME    INCA 0
         STA  CLOCK
         LDA  0,6
@@ -316,6 +328,13 @@ COMPARE JMP  GETV
 * the remainder need to be written
 SPEC    CMP3 =2=                    * SPEC implemented by Pat Viafore
         JNE  AXOP
+        LDA  CLOCK
+        CMPA IN_TARGET
+        JL   REAL_IN
+        CMPA OUT_TARGET
+        JL   REAL_OUT
+        JBUS *(16)
+        JBUS *(18)
         HLT
 SHIFT   CMP3 =5=                    * SHIFT implemented by Pat Viafore
         JG   FERROR
@@ -348,33 +367,80 @@ MOVE    J3Z  CYCLE
         JMP  MOVE                * move one byte at a time
 
         JMP  CYCLE
-JBUS    JRED 1F
-        ENT6 0,5
-1F      JMP  CYCLE
+JBUS    LDA  CLOCK
+        CMP3 =18=
+        JE   1F
+        CMP3 =16=
+        JE   2F
+        JMP  FERROR
+1H      CMPA OUT_READY
+        JGE  4F
+        JMP  3F
+2H      CMPA IN_READY
+        JGE  4F
+3H      ENT6 0,5
+4H      JMP  CYCLE
 
 IOC     J5NZ ADDRERROR
         CMP3 =18=
         JNE  FERROR
-        IOC 0(18)
+        LDA  OUT_READY
+        CMP3 CLOCK
+        JL   1F
+        STA  CLOCK
+        JMP  REAL_OUT
+1H      IOC 0(18)
 IN      CMP3 =16=
         JNE  FERROR
         LDA  CLOCK
-        ADD  =10000=
+        CMPA IN_READY    * Wait until we're ready from the last one
+        JGE  2F
+        LDA  IN_TARGET
+        JAZ  4F
+        JMP  REAL_IN
+4H      LDA  IN_READY
         STA  CLOCK
-        ST5  *+1(1:2)
-        IN   *(16)
+2H      ADD  =5000=
+        STA  IN_TARGET
+        ADD  =5000=
+        STA  IN_READY
+        ST5  REAL_IN+1(1:2)
         JMP  CYCLE
+REAL_IN STJ  RI_EXIT
+        IN   *(16)
+RI_EXIT JMP  *
 OUT     CMP3 =18=       * OUT implemented by Pat Viafore
         JNE  FERROR
         LDA  CLOCK      * custom timing (assumes it operates quickly)
-        ADD  =7500=
+        CMPA OUT_READY
+        JGE  2F
+        LDA  OUT_TARGET
+        JAZ  4F
+        JMP  REAL_OUT
+4H      LDA  OUT_READY   * wait until we're ready for the last one
         STA  CLOCK
-        ST5  *+1(1:2)     * Store 5 as the memory address of the out value
+2H      INCA 3750
+        STA  OUT_TARGET
+        INCA 3750
+        STA  OUT_READY
+        ST5  REAL_OUT+1(1:2)     * Store 5 as the memory address of the out value
+        JMP CYCLE
+REAL_OUT STJ RO_EXIT
         OUT  *(18)
-        JMP  CYCLE
-JRED    JBUS 1F
-        ENT6 0,5
-1H      JMP  CYCLE
+RO_EXIT JMP  *
+JRED    LDA  CLOCK
+        CMP3 =18=
+        JE   1F
+        CMP3 =16=
+        JE   2F
+        JMP  FERROR
+1H      CMPA IN_READY
+        JL   4F
+        JMP  3F
+2H      CMPA OUT_READY
+        JL   4F
+3H      ENT6 0,5
+4H      JMP  CYCLE
 
 AXOP      ST5  USEROP(0:2) * perform an operation on A and X exclusively
           INC4 63
@@ -402,21 +468,20 @@ MEMERROR   ENTA 0,5
 OPERROR    ENTA 0,4
            INCA 63
            CHAR
-           LDA ERRTYPE+3
+           LDA ERRTYPE+3(3:4)
            JMP PRINT_ERR
 FERROR     ENTA 0,3
            CHAR
-           LDA ERRTYPE+4
+           LDA ERRTYPE+3(5:5)
            JMP PRINT_ERR
 SIZEERROR  CHAR
-           LDA ERRTYPE+5
+           LDA ERRTYPE+4
            JMP PRINT_ERR
 
 ERRTYPE    ALF   ADDR
            ALF  INDEX
            ALF    MEM
-           ALF     OP
-           ALF      F
+           ALF    OPF
            ALF   SIZE
 
 PRINT_ERR  STA ERRT
@@ -425,18 +490,19 @@ PRINT_ERR  STA ERRT
            HLT
 
 ERROR_MSG  ALF  ERROR
-           ALF  : INV
-           ALF  ALID
 ERRT       CON  0
            ALF   ->
 ERRVAL     CON  0
 
-        ORIG *+24
+        ORIG *+18
 *     This version of mix does not allow undefined constants
 R      CON 0
 L      CON 0
 M      CON 0
 V      CON 0
 TEMP   CON 0
-TEMP2  CON 0
+IN_TARGET  CON 0
+OUT_TARGET CON 0
+IN_READY   CON 0
+OUT_READY  CON 0
        END BEGIN
