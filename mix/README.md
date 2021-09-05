@@ -78,5 +78,17 @@ Commands:
 ### Populating input devices
 
 You can supply additional cards (newline separated card per line) with `--data-cards-file`.
+If this file is a program, also pass in `--as-program-cards`
 
 You can supply a tape device with `--tape-file`.
+
+## Emulating
+
+Section 1.4.3 in the book provided an incomplete MIX emulator written in MIX
+In the `mix/1.4.3/problems`, you will find `emulator_complete.mixal`. Despite its name,
+there are a few restrictions:
+
+* You must pass cards in as "program style" to simulate a program
+* Leave off the two lines of loading routines if this is done from a cardpack
+* No floating point numbers
+* Not all IO operations are available (only units 16 and 18)

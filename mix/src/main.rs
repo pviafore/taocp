@@ -43,6 +43,8 @@ struct Run {
     tape_file: String,
     #[clap(long, short='D', required=false, default_value="invalid")]
     data_cards_file: String,
+    #[clap(long, short='p')]
+    as_program_cards: bool,
     #[clap(long, short='x')]
     trace: bool,
     #[clap(long, short='d')]
@@ -149,8 +151,15 @@ fn run(cmd: Run) {
         use std::str;
         let bytes = fs::read(cmd.data_cards_file).unwrap();
         let contents: Vec<&str> = str::from_utf8(&bytes).unwrap().split("\n").collect();
+
         for i in 0..(contents.len()) {
-            comp.add_card(chartable::translate(contents[i]))
+            let card = if cmd.as_program_cards {
+                cards::translate_program_card(contents[i])
+            }
+            else {
+                chartable::translate(contents[i])
+            };
+            comp.add_card(card);
         }
     }
     if cmd.trace {
