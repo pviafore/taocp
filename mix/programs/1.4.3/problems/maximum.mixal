@@ -1,0 +1,51 @@
+* This is a program to calculate the maximum number of elements
+*
+X  EQU  1000
+   ORIG 100
+
+MAIN    JMP  ENTER_DATA
+
+*  Calculate maximum
+   ENTA 1000
+   ENT1 =6=
+   JMP  MAXIMUM
+
+*  Print the values
+   JMP PRINT_A
+
+   HLT
+
+MAXIMUM STJ  EXIT
+INIT    ENT3 0,1
+        JMP  CHANGEM
+LOOP    CMPA X,3
+        JGE  *+3
+CHANGEM ENT2 0,3
+        LDA  X,3
+        DEC3 1
+        J3P  LOOP
+EXIT    JMP  *
+
+ENTER_DATA  STJ ED_EXIT
+            ENTA 1000
+            STA  X
+            ENTA 450
+            STA  X+1
+            ENTA 1233
+            STA  X+2
+            ENTA 1200
+            STA  X+3
+            ENTA 1050
+            STA  X+4
+            ENTA 3050
+            STA  X+5
+ED_EXIT     JMP *
+
+PRINT_A    STJ PRINTA_EXT
+           CHAR 0
+           STX  240
+           JBUS *(18)
+           OUT  240(18)
+           JRED *+1(18)
+PRINTA_EXT JMP *
+           END MAIN
