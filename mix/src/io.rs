@@ -4,13 +4,15 @@ use crate::chartable;
 use std::io::Write;
 
 struct TapeUnit {
+    unit: u8,
     tape: Vec<arch::Word>,
     position: u16
 }
 
 impl TapeUnit {
-    pub fn new() -> TapeUnit{
+    pub fn new(unit: u8) -> TapeUnit{
         TapeUnit {
+            unit: unit,
             tape: vec![],
             position: 0
         }
@@ -33,6 +35,12 @@ impl TapeUnit {
             }
             self.position += 1;
         }
+        let data: Vec<String> =    self.tape
+                                        .iter()
+                                        .map(|x| format!("{}{:0>10}", if x.is_positive { '+' } else { '-' }, x.read().abs()))
+                                        .collect();
+            let mut output_file = std::fs::File::create(format!("tape{}.tape", self.unit)).expect("create failed");
+            output_file.write_all(data.join("").as_bytes()).unwrap();
     }
     pub fn advance(&mut self, value: i16) {
         use std::cmp::max;
@@ -129,7 +137,9 @@ impl IO {
         // blank out cards file
         std::fs::File::create("output.cards").expect("create failed");
         IO {
-            tapes: [TapeUnit::new(), TapeUnit::new(), TapeUnit::new(), TapeUnit::new(), TapeUnit::new(), TapeUnit::new(), TapeUnit::new(), TapeUnit::new()],
+            tapes: [TapeUnit::new(0), TapeUnit::new(1), TapeUnit::new(2),
+                    TapeUnit::new(3), TapeUnit::new(4), TapeUnit::new(5),
+                    TapeUnit::new(6), TapeUnit::new(7)],
             disks: [Disk::new(), Disk::new(), Disk::new(), Disk::new(), Disk::new(), Disk::new(), Disk::new(), Disk::new() ],
             card_reader: CardReader::new(),
             paper_tape: PaperTape::new()

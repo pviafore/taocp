@@ -221,10 +221,11 @@ impl Computer {
         let instruction_pointer = self.instruction_pointer.read() as usize;
         println!();
         println!("Instruction@{:?}: {}", instruction_pointer, Instruction::from_word(self.memory[instruction_pointer]).to_string());
-        println!("A: {:?} X {:?} I1: {:?} I2: {:?} I3: {:?} I4: {:?} I5: {:?} I6: {:?}",
+        println!("A: {:?} X: {:?} I1: {:?} I2: {:?} I3: {:?} I4: {:?} I5: {:?} I6: {:?}",
                 self.registers.a.read(), self.registers.x.read(), self.registers.i1.read(),
                 self.registers.i2.read(), self.registers.i3.read(), self.registers.i4.read(),
                 self.registers.i5.read(), self.registers.i6.read());
+        println!("J: {:?} Comparison Indicator: {:?} Overflow: {:?}", self.registers.j.read(), self.comparison, self.overflow);
         println!();
         print!(">>> ");
         use std::io::Write;
@@ -704,7 +705,7 @@ impl Computer {
 
         }
         else if instruction.modification() == 1 {
-            for index in bytes_to_shift..5 {
+            for index in (bytes_to_shift..5).rev() {
                 self.registers.a.bytes[index as usize] = self.registers.a.bytes[(index - bytes_to_shift) as usize];
             }
             for index in 0..bytes_to_shift {
@@ -1982,6 +1983,10 @@ mod tests {
         c.registers.a = arch::Word::from_values(true, 1, 2, 3, 4, 5);
         c.run_command(Instruction::new(instructions::OpCode::Shift, 1, 0, arch::HalfWord::from_value(3)));
         assert_eq!(c.registers.a, arch::Word::from_values(true, 0, 0, 0, 1, 2));
+
+        c.registers.a = arch::Word::from_values(true, 7, 54, 0, 0, 39);
+        c.run_command(Instruction::new(instructions::OpCode::Shift, 1, 0, arch::HalfWord::from_value(2)));
+        assert_eq!(c.registers.a, arch::Word::from_values(true, 0, 0, 7, 54, 0));
     }
 
     #[test]
