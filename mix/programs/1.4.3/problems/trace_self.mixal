@@ -1,0 +1,144 @@
+ ORIG 100
+START ENT1 12        * N for FAREY series
+     ENTX STOP
+     JMP  ENTER
+     ENT2 0        * BUFFER
+     ENTA 0        * numerator
+     ENTX 1        * denominator
+     JMP STORE_NUM
+     ENTA 1        * numerator
+     ST1  N
+     LDX  N
+     JMP STORE_NUM
+* TEMP is N
+     ENT3 0           * loop for as long as A and X are not 1/1 (numerator/denominator = Xn/Yn)
+STOP ENT4 1
+LOOP LDA  YBUFFER,3     * A = Yk
+     ADD  N             * A = Yk + n
+     SRAX 5
+     DIV  YBUFFER,4     * A = (Yk + n)/Y(k+1)
+     STA  YBUFFER,2
+     MUL  XBUFFER,4     * A = A*X(k+1)
+     SLAX 5
+     SUB  XBUFFER,3     * A = A - Xk
+     STA  XBUFFER,2
+     LDA  YBUFFER,2     * A = (Yk + n)/Y(k+1) A
+     MUL  YBUFFER,4     * A = A * YK+1
+     SLAX 5
+     SUB  YBUFFER,3     * A = A - Yk
+     SRAX 5             * X = Yk+2
+     LDA  XBUFFER,2      * A = xk+2
+     INC3 1
+     INC4 1
+     JMP STORE_NUM
+     CMPA =1=
+     JNE  LOOP
+     CMPX =1=
+     JNE  LOOP
+
+     JMP PRINT_NUMS
+     HLT
+
+* Assume that A is the numerator and X is the denominator
+* I2 is the index into the buffer
+STORE_NUM  STJ  SN_EXIT
+           STA  XBUFFER,2
+           STX  YBUFFER,2
+           INC2 1
+SN_EXIT    JMP  *
+
+*I2 is the index into the buffer
+PRINT_NUMS STJ  PN_EXIT
+           ST2  TEMP
+           ENT2 0
+PN_LOOP    LDA XBUFFER,2
+           CHAR
+           STX BUFFER(1:2)
+           ENTA 47            * slash
+           STA BUFFER(3:3)
+           LDA YBUFFER,2
+           CHAR
+           STX BUFFER(4:5)
+           OUT BUFFER(18)
+           INC2 1
+           CMP2 TEMP
+           JL   PN_LOOP
+PN_EXIT    JMP  *
+
+BUFFER  ALF    /
+        ORIG *+24
+XBUFFER ORIG *+100
+YBUFFER ORIG *+100
+TEMP    CON 0
+N       CON 0
+
+* Trace routine (from 1.4.3.2)
+ENTER      STX  VALUE_EXITLOC
+           STX  VALUE_XREG
+           ST1  VALUE_I1REG
+           STA  VALUE_AREG   * save for later
+           STJ  VALUE_JREG   * save for later
+           LDA  VALUE_JREG(0:2)
+CYCLE      STA  VALUE_PREG
+           SUB  VALUE_EXITLOC
+           JAZ  LEAVE  * if we're zero, it means we are exactly the exit condition
+           LD1  VALUE_PREG
+           LDA  0,1
+           STA  VALUE_INST
+           SRA  2
+           STA  INST1(0:3)
+           LDA  VALUE_INST(5:5)
+           DECA 38    * check if its a jump instruction
+           JANN 1F
+           INCA 6
+           JANZ 2F
+           LDA  VALUE_INST(0:4) * is a jump instruction
+           STA  *+2(0:4)
+JREG       LDA  VALUE_JREG
+           STA  *
+           JMP  INCP
+2H         DECA 2
+           JANZ 2F
+           JMP  3F
+1H         DECA 9
+           JAP  2F
+3H         LDA  8F(0:3)
+           STA  VALUE_INST(0:3)
+2H         LDA  VALUE_AREG
+           LD1  VALUE_I1REG
+
+INST       JMP  VALUE_INST
+           ST1  VALUE_I1REG
+           STA  VALUE_AREG
+
+INCP       LDA  VALUE_PREG
+           INCA 1
+           JMP  CYCLE
+8H         JSJ  JUMP
+JUMP       LDA  8B(4:5)
+           SUB  VALUE_INST(4:5)
+           JAZ  *+4
+           LDA  VALUE_PREG
+           INCA 1
+           STA  VALUE_JREG
+INST1      ENTA *
+           JMP  CYCLE
+LEAVE      LDX  VALUE_XREG
+           STX  LEAVEX(0:2)
+           LDA  VALUE_AREG
+LEAVE1     LD1  VALUE_I1REG
+
+LEAVEX     JMP  *
+AREG       CON  0
+
+           END START
+           ORIG 1000
+VALUE_AREG    CON  0
+VALUE_XREG    CON  0
+VALUE_I1REG   CON  0
+VALUE_PREG    CON  0
+VALUE_JREG    CON  0
+VALUE_EXITLOC CON  0
+VALUE_INST1   CON  0
+VALUE_INST    CON  0
+VALUE_JMPBACK JMP  INST+1
