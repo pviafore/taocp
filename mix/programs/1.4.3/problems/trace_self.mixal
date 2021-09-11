@@ -76,6 +76,7 @@ N       CON 0
 ENTER      STX  VALUE_EXITLOC
            STX  VALUE_XREG
            ST1  VALUE_I1REG
+           ST2  VALUE_I2REG
            STA  VALUE_AREG   * save for later
            STJ  VALUE_JREG   * save for later
            LDA  VALUE_JREG(0:2)
@@ -86,7 +87,7 @@ CYCLE      STA  VALUE_PREG
            LDA  0,1
            STA  VALUE_INST
            SRA  2
-           STA  INST1(0:3)
+           STA  VALUE_INST1(0:3)
            LDA  VALUE_INST(5:5)
            DECA 38    * check if its a jump instruction
            JANN 1F
@@ -107,8 +108,8 @@ STJBACK    JMP  INCP * skip running intruction, we do the store jump manually
 2H         LDA  VALUE_AREG
            LD1  VALUE_I1REG
 
-INST       JMP  VALUE_INST
-           ST1  VALUE_I1REG
+           JMP  VALUE_INST
+INSTBACK   ST1  VALUE_I1REG
            STA  VALUE_AREG
 
 INCP       LDA  VALUE_PREG
@@ -121,12 +122,14 @@ JUMP       LDA  8B(4:5)
            LDA  VALUE_PREG
            INCA 1
            STA  VALUE_JREG
-INST1      ENTA *
-           JMP  CYCLE
+INST1      JMP  VALUE_INST1
+INST1BACK  JMP  CYCLE
 LEAVE      LDX  VALUE_XREG
            STX  LEAVEX(0:2)
            LDA  VALUE_AREG
-LEAVE1     LD1  VALUE_I1REG
+
+           LD1  VALUE_I1REG
+
 
 LEAVEX     JMP  *
 AREG       CON  0
@@ -136,11 +139,13 @@ AREG       CON  0
 VALUE_AREG    CON  0
 VALUE_XREG    CON  0
 VALUE_I1REG   CON  0
+VALUE_I2REG   CON  0
 VALUE_PREG    CON  0
 VALUE_JREG    CON  0
 VALUE_EXITLOC CON  0
-VALUE_INST1   CON  0
+VALUE_INST1   ENTA *
+VALUE_INST1BK JMP  INST1BACK
 VALUE_STJ     STA  *
 VALUE_STJBCK  JMP  STJBACK
 VALUE_INST    CON  0
-VALUE_JMPBACK JMP  INST+1
+VALUE_JMPBACK JMP  INSTBACK
