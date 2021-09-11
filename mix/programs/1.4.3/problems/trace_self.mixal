@@ -92,11 +92,11 @@ CYCLE      STA  VALUE_PREG
            JANN 1F
            INCA 6
            JANZ 2F
-           LDA  VALUE_INST(0:4) * is a jump instruction
-           STA  *+2(0:4)
-JREG       LDA  VALUE_JREG
-           STA  *
-           JMP  INCP
+           LDA  VALUE_INST(0:4) * is a stj instruction
+           STA  VALUE_STJ(0:4)
+           LDA  VALUE_JREG
+           JMP  VALUE_STJ
+STJBACK    JMP  INCP * skip running intruction, we do the store jump manually
 2H         DECA 2
            JANZ 2F
            JMP  3F
@@ -140,5 +140,7 @@ VALUE_PREG    CON  0
 VALUE_JREG    CON  0
 VALUE_EXITLOC CON  0
 VALUE_INST1   CON  0
+VALUE_STJ     STA  *
+VALUE_STJBCK  JMP  STJBACK
 VALUE_INST    CON  0
 VALUE_JMPBACK JMP  INST+1
