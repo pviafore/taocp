@@ -277,8 +277,8 @@ fn _evaluate(text: &str, index: usize, program_data: &ProgramData) -> String {
     }
     else if text.contains('+') {
         let split: Vec<&str> = text.splitn(2, '+').collect();
-        (_evaluate(split[0], index, program_data).parse::<i32>().unwrap() +
-         _evaluate(split[1], index, program_data).parse::<i32>().unwrap()).to_string()
+        (_evaluate(split[0], index, program_data).parse::<i32>().expect(&format!("Invalid Digit: {}", split[0])) +
+         _evaluate(split[1], index, program_data).parse::<i32>().expect(&format!("Invalid Digit: {}", split[1]))).to_string()
     }
     else if text.contains('-') && !text.starts_with('-') {
         let split: Vec<&str> = text.splitn(2, '-').collect();

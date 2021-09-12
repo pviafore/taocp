@@ -87,7 +87,7 @@ CYCLE      STA  VALUE_PREG,2
            JAZ  LEAVE  * if we're zero, it means we are exactly the exit condition
            LD1  VALUE_PREG,2
            LDA  0,1
-           STA  VALUE_INST,2
+           STA  VALUE_INST+1,2
            SRA  2
 
 
@@ -103,12 +103,22 @@ CYCLE      STA  VALUE_PREG,2
            LDA  INST1_TMPL+1
            STA  VALUE_INST1+1,2
 
-           LDA INST_TMPL+1
-           STA VALUE_INST+1,2
+*          check if in trace routine
+           LDA  VALUE_PREG,2
+           DECA LEAVEX
+           JAP  5F     * we're after the trace routine
+           INCA ENTER
+           JAN  5F
+
+
+5H         LDA INST_TMPL
+           STA VALUE_INST,2
            LDA INST_TMPL+2
            STA VALUE_INST+2,2
            LDA INST_TMPL+3
            STA VALUE_INST+3,2
+           LDA INST_TMPL+4
+           STA VALUE_INST+4,2
 
            LDA JUMP_TMPL
            STA VALUE_JMP,2
@@ -117,12 +127,12 @@ CYCLE      STA  VALUE_PREG,2
 
 
 
-           LDA  VALUE_INST,2(5:5)
+6H         LDA  VALUE_INST+1,2(5:5)
            DECA 38    * check if its a jump instruction
            JANN 1F
            INCA 6
            JANZ 2F
-           LDA  VALUE_INST,2(0:4) * is a stj instruction
+           LDA  VALUE_INST+1,2(0:4) * is a stj instruction
 
 * write out STJ instruction
            STA  VALUE_STJ,2(0:4)
@@ -140,16 +150,15 @@ STJBACK    JMP  INCP * skip running intruction, we do the store jump manually
 1H         DECA 9
            JAP  2F
 3H         LDA  8F(0:3)
-           STA  VALUE_INST,2(0:3)
+           STA  VALUE_INST+1,2(0:3)
 2H         ST2  VALUE_I2SAVED,2
            LDA  VALUE_AREG,2
            LD1  VALUE_I1REG,2
-           LD2  VALUE_I2REG,2
 
-           JMP  VALUE_INST   * jump to instruction
+           JMP  VALUE_INST,2   * jump to instruction
 
-INSTBACK   ST1  VALUE_I1REG
-           STA  VALUE_AREG
+INSTBACK   ST1  VALUE_I1REG,2
+           STA  VALUE_AREG,2
 
 INCP       LDA  VALUE_PREG,2   * move to next instruction
            INCA 1
@@ -159,7 +168,7 @@ INCP       LDA  VALUE_PREG,2   * move to next instruction
 
 JUMP       JMP  VALUE_JMP
            LDA  8B(4:5)
-           SUB  VALUE_INST,2(4:5)
+           SUB  VALUE_INST+1,2(4:5)
            JAZ  *+4
            LDA  VALUE_PREG,2
            INCA 1
@@ -184,9 +193,10 @@ LEAVEX     JMP  *
 STJ_TMPL      STA  *
               JMP  STJBACK
 
-INST_TMPL     CON  *
+INST_TMPL     LD2  VALUE_I2REG,2
+              CON  *
               ST2  VALUE_I2REG
-              LD2  VALUE_I2SAVED
+              LD2  VALUE_I2SAVED   * at this point I2 is right
               JMP  INSTBACK
 
 JUMP_TMPL     LD2  VALUE_I2SAVED
@@ -213,6 +223,7 @@ VALUE_STJBCK  CON  0
 
 * meant to represent an instruction call
 VALUE_INST    CON  0
+              CON  0
               CON  0
               CON  0
               CON  0
