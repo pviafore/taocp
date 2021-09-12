@@ -73,6 +73,8 @@ TEMP    CON 0
 N       CON 0
 
 * Trace routine (from 1.4.3.2)
+* X is leave location
+* I2 must be zero
 ENTER      STX  VALUE_EXITLOC,2
            STX  VALUE_XREG,2
            ST1  VALUE_I1REG,2
@@ -88,6 +90,22 @@ CYCLE      STA  VALUE_PREG,2
            STA  VALUE_INST,2
            SRA  2
            STA  VALUE_INST1,2(0:3)
+
+*  save off instruction writing
+           LDA INST_TMPL+1
+           STA VALUE_INST+1
+           LDA INST_TMPL+2
+           STA VALUE_INST+2
+           LDA INST_TMPL+3
+           STA VALUE_INST+3
+
+          LDA JUMP_TMPL
+          STA VALUE_JMP
+          LDA JUMP_TMPL+1
+          STA VALUE_JMP+1
+
+
+
            LDA  VALUE_INST,2(5:5)
            DECA 38    * check if its a jump instruction
            JANN 1F
@@ -109,17 +127,17 @@ STJBACK    JMP  INCP * skip running intruction, we do the store jump manually
            LDA  VALUE_AREG,2
            LD1  VALUE_I1REG,2
            LD2  VALUE_I2REG,2
-           JMP  VALUE_INST
+
+           JMP  VALUE_INST   * jump to instruction
+
 INSTBACK   ST1  VALUE_I1REG
            STA  VALUE_AREG
-           ST2  VALUE_I2REG
-           LD2  VALUE_I2SAVED
 
 INCP       LDA  VALUE_PREG,2
            INCA 1
            JMP  CYCLE
 8H         JSJ  JUMP
-JUMP       LD2  VALUE_I2SAVED
+JUMP       JMP  VALUE_JMP
            LDA  8B(4:5)
            SUB  VALUE_INST,2(4:5)
            JAZ  *+4
@@ -139,6 +157,15 @@ LEAVEX     JMP  *
 
            END START
            ORIG 1000
+
+INST_TMPL     CON  *
+              ST2  VALUE_I2REG
+              LD2  VALUE_I2SAVED
+              JMP  INSTBACK
+
+JUMP_TMPL     LD2  VALUE_I2SAVED
+              JMP  JUMP+1
+
 VALUE_AREG    CON  0
 VALUE_XREG    CON  0
 VALUE_I1REG   CON  0
@@ -147,9 +174,20 @@ VALUE_I2SAVED CON  0
 VALUE_PREG    CON  0
 VALUE_JREG    CON  0
 VALUE_EXITLOC CON  0
+
 VALUE_INST1   ENTA *
 VALUE_INST1BK JMP  INST1BACK
+
 VALUE_STJ     STA  *
 VALUE_STJBCK  JMP  STJBACK
+
+* meant to represent an instruction call
 VALUE_INST    CON  0
-VALUE_JMPBACK JMP  INSTBACK
+              CON  0
+              CON  0
+              CON  0
+
+
+* mean to represent what to call with a jump
+VALUE_JMP     CON  0
+              JMP  JUMP+1
