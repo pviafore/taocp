@@ -73,30 +73,30 @@ TEMP    CON 0
 N       CON 0
 
 * Trace routine (from 1.4.3.2)
-ENTER      STX  VALUE_EXITLOC
-           STX  VALUE_XREG
-           ST1  VALUE_I1REG
-           ST2  VALUE_I2REG
-           STA  VALUE_AREG   * save for later
-           STJ  VALUE_JREG   * save for later
-           LDA  VALUE_JREG(0:2)
-CYCLE      STA  VALUE_PREG
-           SUB  VALUE_EXITLOC
+ENTER      STX  VALUE_EXITLOC,2
+           STX  VALUE_XREG,2
+           ST1  VALUE_I1REG,2
+           ST2  VALUE_I2REG,2
+           STA  VALUE_AREG,2   * save for later
+           STJ  VALUE_JREG,2   * save for later
+           LDA  VALUE_JREG,2(0:2)
+CYCLE      STA  VALUE_PREG,2
+           SUB  VALUE_EXITLOC,2
            JAZ  LEAVE  * if we're zero, it means we are exactly the exit condition
-           LD1  VALUE_PREG
+           LD1  VALUE_PREG,2
            LDA  0,1
-           STA  VALUE_INST
+           STA  VALUE_INST,2
            SRA  2
-           STA  VALUE_INST1(0:3)
-           LDA  VALUE_INST(5:5)
+           STA  VALUE_INST1,2(0:3)
+           LDA  VALUE_INST,2(5:5)
            DECA 38    * check if its a jump instruction
            JANN 1F
            INCA 6
            JANZ 2F
-           LDA  VALUE_INST(0:4) * is a stj instruction
+           LDA  VALUE_INST,2(0:4) * is a stj instruction
            STA  VALUE_STJ(0:4)
-           LDA  VALUE_JREG
-           JMP  VALUE_STJ
+           LDA  VALUE_JREG,2
+           JMP  VALUE_STJ,2
 STJBACK    JMP  INCP * skip running intruction, we do the store jump manually
 2H         DECA 2
            JANZ 2F
@@ -104,35 +104,38 @@ STJBACK    JMP  INCP * skip running intruction, we do the store jump manually
 1H         DECA 9
            JAP  2F
 3H         LDA  8F(0:3)
-           STA  VALUE_INST(0:3)
-2H         LDA  VALUE_AREG
-           LD1  VALUE_I1REG
-
+           STA  VALUE_INST,2(0:3)
+2H         ST2  VALUE_I2SAVED,2
+           LDA  VALUE_AREG,2
+           LD1  VALUE_I1REG,2
+           LD2  VALUE_I2REG,2
            JMP  VALUE_INST
 INSTBACK   ST1  VALUE_I1REG
            STA  VALUE_AREG
+           ST2  VALUE_I2REG
+           LD2  VALUE_I2SAVED
 
-INCP       LDA  VALUE_PREG
+INCP       LDA  VALUE_PREG,2
            INCA 1
            JMP  CYCLE
 8H         JSJ  JUMP
-JUMP       LDA  8B(4:5)
-           SUB  VALUE_INST(4:5)
+JUMP       LD2  VALUE_I2SAVED
+           LDA  8B(4:5)
+           SUB  VALUE_INST,2(4:5)
            JAZ  *+4
-           LDA  VALUE_PREG
+           LDA  VALUE_PREG,2
            INCA 1
-           STA  VALUE_JREG
-INST1      JMP  VALUE_INST1
+           STA  VALUE_JREG,2
+INST1      JMP  VALUE_INST1,2
 INST1BACK  JMP  CYCLE
-LEAVE      LDX  VALUE_XREG
+LEAVE      LDX  VALUE_XREG,2
            STX  LEAVEX(0:2)
-           LDA  VALUE_AREG
+           LDA  VALUE_AREG,2
 
-           LD1  VALUE_I1REG
-
+           LD1  VALUE_I1REG,2
+           LD2  VALUE_I2REG,2
 
 LEAVEX     JMP  *
-AREG       CON  0
 
            END START
            ORIG 1000
@@ -140,6 +143,7 @@ VALUE_AREG    CON  0
 VALUE_XREG    CON  0
 VALUE_I1REG   CON  0
 VALUE_I2REG   CON  0
+VALUE_I2SAVED CON  0
 VALUE_PREG    CON  0
 VALUE_JREG    CON  0
 VALUE_EXITLOC CON  0
