@@ -123,7 +123,14 @@ CYCLE      STA  VALUE_PREG,2
            INCA 6
            JANZ 2F
            LDA  VALUE_INST,2(0:4) * is a stj instruction
-           STA  VALUE_STJ(0:4)
+
+* write out STJ instruction
+           STA  VALUE_STJ,2(0:4)
+           ENTA 24
+           STA  VALUE_STJ,2(5:5)
+           LDA  STJ_TMPL+1
+           STA  VALUE_STJ+1,2
+
            LDA  VALUE_JREG,2
            JMP  VALUE_STJ,2
 STJBACK    JMP  INCP * skip running intruction, we do the store jump manually
@@ -173,6 +180,10 @@ LEAVEX     JMP  *
            END START
            ORIG 1000
 
+
+STJ_TMPL      STA  *
+              JMP  STJBACK
+
 INST_TMPL     CON  *
               ST2  VALUE_I2REG
               LD2  VALUE_I2SAVED
@@ -197,8 +208,8 @@ VALUE_EXITLOC CON  0
 VALUE_INST1   CON  0
 VALUE_INST1BK CON  0
 
-VALUE_STJ     STA  *
-VALUE_STJBCK  JMP  STJBACK
+VALUE_STJ     CON  0
+VALUE_STJBCK  CON  0
 
 * meant to represent an instruction call
 VALUE_INST    CON  0
@@ -209,4 +220,4 @@ VALUE_INST    CON  0
 
 * mean to represent what to call with a jump
 VALUE_JMP     CON  0
-              JMP  JUMP+1
+              CON  0
