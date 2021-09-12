@@ -89,20 +89,31 @@ CYCLE      STA  VALUE_PREG,2
            LDA  0,1
            STA  VALUE_INST,2
            SRA  2
-           STA  VALUE_INST1,2(0:3)
+
 
 *  save off instruction writing
-           LDA INST_TMPL+1
-           STA VALUE_INST+1
-           LDA INST_TMPL+2
-           STA VALUE_INST+2
-           LDA INST_TMPL+3
-           STA VALUE_INST+3
 
-          LDA JUMP_TMPL
-          STA VALUE_JMP
-          LDA JUMP_TMPL+1
-          STA VALUE_JMP+1
+           STA  VALUE_INST1,2(0:3)
+* set F to 2
+           ENTA 2
+           STA  VALUE_INST1,2(4:4)
+* Set C to 48 (ENTA)
+           ENTA 48
+           STA  VALUE_INST1,2(5:5)
+           LDA  INST1_TMPL+1
+           STA  VALUE_INST1+1,2
+
+           LDA INST_TMPL+1
+           STA VALUE_INST+1,2
+           LDA INST_TMPL+2
+           STA VALUE_INST+2,2
+           LDA INST_TMPL+3
+           STA VALUE_INST+3,2
+
+           LDA JUMP_TMPL
+           STA VALUE_JMP,2
+           LDA JUMP_TMPL+1
+           STA VALUE_JMP+1,2
 
 
 
@@ -133,10 +144,12 @@ STJBACK    JMP  INCP * skip running intruction, we do the store jump manually
 INSTBACK   ST1  VALUE_I1REG
            STA  VALUE_AREG
 
-INCP       LDA  VALUE_PREG,2
+INCP       LDA  VALUE_PREG,2   * move to next instruction
            INCA 1
            JMP  CYCLE
+
 8H         JSJ  JUMP
+
 JUMP       JMP  VALUE_JMP
            LDA  8B(4:5)
            SUB  VALUE_INST,2(4:5)
@@ -146,6 +159,8 @@ JUMP       JMP  VALUE_JMP
            STA  VALUE_JREG,2
 INST1      JMP  VALUE_INST1,2
 INST1BACK  JMP  CYCLE
+
+
 LEAVE      LDX  VALUE_XREG,2
            STX  LEAVEX(0:2)
            LDA  VALUE_AREG,2
@@ -166,6 +181,10 @@ INST_TMPL     CON  *
 JUMP_TMPL     LD2  VALUE_I2SAVED
               JMP  JUMP+1
 
+
+INST1_TMPL    ENTA  *
+              JMP INST1BACK
+
 VALUE_AREG    CON  0
 VALUE_XREG    CON  0
 VALUE_I1REG   CON  0
@@ -175,8 +194,8 @@ VALUE_PREG    CON  0
 VALUE_JREG    CON  0
 VALUE_EXITLOC CON  0
 
-VALUE_INST1   ENTA *
-VALUE_INST1BK JMP  INST1BACK
+VALUE_INST1   CON  0
+VALUE_INST1BK CON  0
 
 VALUE_STJ     STA  *
 VALUE_STJBCK  JMP  STJBACK

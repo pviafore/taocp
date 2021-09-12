@@ -317,7 +317,7 @@ fn _get_index(spl: &Vec<&str>) -> u8 {
         }
         else {
             let index_split: Vec<&str> = spl[1].split("(").collect();
-            index_split[0].parse::<u8>().unwrap()
+            index_split[0].parse::<u8>().expect(&format!("Invalid digit: {}", index_split[0]))
         }
     }
     else {
