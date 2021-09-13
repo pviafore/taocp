@@ -103,15 +103,8 @@ CYCLE      STA  VALUE_PREG,2
            LDA  INST1_TMPL+1
            STA  VALUE_INST1+1,2
 
-*          check if in trace routine
-           LDA  VALUE_PREG,2
-           DECA LEAVEX
-           JAP  5F     * we're after the trace routine
-           INCA ENTER
-           JAN  5F
-
-
-5H         LDA INST_TMPL
+* Write out instructions
+           LDA INST_TMPL
            STA VALUE_INST,2
            LDA INST_TMPL+2
            STA VALUE_INST+2,2
@@ -125,6 +118,12 @@ CYCLE      STA  VALUE_PREG,2
            LDA JUMP_TMPL+1
            STA VALUE_JMP+1,2
 
+*          check if in trace routine
+           LDA  VALUE_PREG,2
+           DECA LEAVEX
+           JAP  6F     * we're after the trace routine
+           INCA ENTER
+           JAN  6F
 
 
 6H         LDA  VALUE_INST+1,2(5:5)
@@ -173,7 +172,7 @@ JUMP       JMP  VALUE_JMP
            LDA  VALUE_PREG,2
            INCA 1
            STA  VALUE_JREG,2
-INST1      JMP  VALUE_INST1,2
+INST1      JMP  VALUE_INST1,2   * this sets up the next instruction into A
 INST1BACK  JMP  CYCLE
 
 
@@ -199,9 +198,9 @@ INST_TMPL     LD2  VALUE_I2REG,2
               LD2  VALUE_I2SAVED   * at this point I2 is right
               JMP  INSTBACK
 
+*             INST_TMPL may have run ,so we assume that I2 is the actual value
 JUMP_TMPL     LD2  VALUE_I2SAVED
               JMP  JUMP+1
-
 
 INST1_TMPL    ENTA  *
               JMP INST1BACK
@@ -216,6 +215,7 @@ VALUE_JREG    CON  0
 VALUE_EXITLOC CON  0
 
 VALUE_INST1   CON  0
+              CON  0
 VALUE_INST1BK CON  0
 
 VALUE_STJ     CON  0
