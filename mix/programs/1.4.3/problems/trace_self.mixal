@@ -1,4 +1,5 @@
  ORIG 100
+TBLSIZE EQU 20
 START ENT1 12        * N for FAREY series
      ENTX STOP
      JMP  ENTER
@@ -120,11 +121,19 @@ CYCLE      STA  VALUE_PREG,2
 
 *          check if in trace routine
            LDA  VALUE_PREG,2
+           DECA ENTER
+           JAN  6F     * we're after the trace routine
            DECA LEAVEX
-           JAP  6F     * we're after the trace routine
-           INCA ENTER
-           JAN  6F
+           JAP  6F
 
+*          increase/decresase I2 around the values
+           LDA SELF_INST
+           STA VALUE_INST,2
+           LDA SELF_INST+1
+           STA VALUE_INST+3,2
+
+           LDA SELF_INST+1
+           STA VALUE_JMP,2
 
 6H         LDA  VALUE_INST+1,2(5:5)
            DECA 38    * check if its a jump instruction
@@ -192,15 +201,19 @@ LEAVEX     JMP  *
 STJ_TMPL      STA  *
               JMP  STJBACK
 
-INST_TMPL     LD2  VALUE_I2REG,2
+INST_TMPL     LD2  VALUE_I2REG,2    * if in trace, add LAST - VALUE_AREG
               CON  *
-              ST2  VALUE_I2REG
+              ST2  VALUE_I2REG      * if in trace, subtract LAST - VALUE_AREG
               LD2  VALUE_I2SAVED   * at this point I2 is right
               JMP  INSTBACK
 
 *             INST_TMPL may have run ,so we assume that I2 is the actual value
-JUMP_TMPL     LD2  VALUE_I2SAVED
+JUMP_TMPL     LD2  VALUE_I2SAVED       * if in trace, subtract LAST-VALUE_AREG
               JMP  JUMP+1
+
+
+SELF_INST     INC2  TBLSIZE+1
+              DEC2  TBLSIZE+1
 
 INST1_TMPL    ENTA  *
               JMP INST1BACK
@@ -231,4 +244,4 @@ VALUE_INST    CON  0
 
 * mean to represent what to call with a jump
 VALUE_JMP     CON  0
-              CON  0
+LAST          CON  0
