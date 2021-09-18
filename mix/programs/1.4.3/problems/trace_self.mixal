@@ -1,77 +1,9 @@
  ORIG 100
-TBLSIZE EQU 20
+TBLSIZE EQU 50
 START ENT1 12        * N for FAREY series
-     ENTX STOP
+     ENTX LEAVEX
+     JMP  *+1
      JMP  ENTER
-     ENT2 0        * BUFFER
-     ENTA 0        * numerator
-     ENTX 1        * denominator
-     JMP STORE_NUM
-     ENTA 1        * numerator
-     ST1  N
-     LDX  N
-     JMP STORE_NUM
-* TEMP is N
-     ENT3 0           * loop for as long as A and X are not 1/1 (numerator/denominator = Xn/Yn)
-STOP ENT4 1
-LOOP LDA  YBUFFER,3     * A = Yk
-     ADD  N             * A = Yk + n
-     SRAX 5
-     DIV  YBUFFER,4     * A = (Yk + n)/Y(k+1)
-     STA  YBUFFER,2
-     MUL  XBUFFER,4     * A = A*X(k+1)
-     SLAX 5
-     SUB  XBUFFER,3     * A = A - Xk
-     STA  XBUFFER,2
-     LDA  YBUFFER,2     * A = (Yk + n)/Y(k+1) A
-     MUL  YBUFFER,4     * A = A * YK+1
-     SLAX 5
-     SUB  YBUFFER,3     * A = A - Yk
-     SRAX 5             * X = Yk+2
-     LDA  XBUFFER,2      * A = xk+2
-     INC3 1
-     INC4 1
-     JMP STORE_NUM
-     CMPA =1=
-     JNE  LOOP
-     CMPX =1=
-     JNE  LOOP
-
-     JMP PRINT_NUMS
-     HLT
-
-* Assume that A is the numerator and X is the denominator
-* I2 is the index into the buffer
-STORE_NUM  STJ  SN_EXIT
-           STA  XBUFFER,2
-           STX  YBUFFER,2
-           INC2 1
-SN_EXIT    JMP  *
-
-*I2 is the index into the buffer
-PRINT_NUMS STJ  PN_EXIT
-           ST2  TEMP
-           ENT2 0
-PN_LOOP    LDA XBUFFER,2
-           CHAR
-           STX BUFFER(1:2)
-           ENTA 47            * slash
-           STA BUFFER(3:3)
-           LDA YBUFFER,2
-           CHAR
-           STX BUFFER(4:5)
-           OUT BUFFER(18)
-           INC2 1
-           CMP2 TEMP
-           JL   PN_LOOP
-PN_EXIT    JMP  *
-
-BUFFER  ALF    /
-        ORIG *+24
-XBUFFER ORIG *+100
-YBUFFER ORIG *+100
-TEMP    CON 0
-N       CON 0
 
 * Trace routine (from 1.4.3.2)
 * X is leave location
@@ -93,16 +25,19 @@ CYCLE      STA  VALUE_PREG,2
 
 
 *  save off instruction writing
-
-           STA  VALUE_INST1,2(0:3)
+           STA  VALUE_INST1+1,2(0:3)
 * set F to 2
            ENTA 2
-           STA  VALUE_INST1,2(4:4)
+           STA  VALUE_INST1+1,2(4:4)
 * Set C to 48 (ENTA)
            ENTA 48
-           STA  VALUE_INST1,2(5:5)
-           LDA  INST1_TMPL+1
-           STA  VALUE_INST1+1,2
+           STA  VALUE_INST1+1,2(5:5)  * Inst 1 is saved off (A,I) so that we can jump to it later if this is a jump
+           LDA  INST1_TMPL+2
+           STA  VALUE_INST1+2,2
+           LDA  INST1_TMPL+3
+           STA  VALUE_INST1+3,2
+           LDA  INST1_TMPL
+           STA  VALUE_INST1,2
 
 * Write out instructions
            LDA INST_TMPL
@@ -114,26 +49,27 @@ CYCLE      STA  VALUE_PREG,2
            LDA INST_TMPL+4
            STA VALUE_INST+4,2
 
-           LDA JUMP_TMPL
-           STA VALUE_JMP,2
-           LDA JUMP_TMPL+1
-           STA VALUE_JMP+1,2
+* we need to change the saving of instructions I2 and
+* restoring of I2 to look at the properly indexed parts
+           ENTA VALUE_I2REG,2
+           STA  VALUE_INST+2,2(0:2)
+
+           ENTA VALUE_I2SAVED,2
+           STA  VALUE_INST+3,2(0:2)
+           STA  VALUE_INST1+2,2(0:2)
 
 *          check if in trace routine
            LDA  VALUE_PREG,2
            DECA ENTER
-           JAN  6F     * we're after the trace routine
-           DECA LEAVEX
-           JAP  6F
+           JAN  6F     * we're after the trace routine (until end of memory)
 
-*          increase/decresase I2 around the values
-           LDA SELF_INST
-           STA VALUE_INST,2
-           LDA SELF_INST+1
-           STA VALUE_INST+3,2
+           LDA VALUE_I2REG,2
+           SUB  VALUE_I2REG-TBLSIZE,2    * check if previous value is the same
+           JANZ 6F  * has not been filled out yet
 
-           LDA SELF_INST+1
-           STA VALUE_JMP,2
+           LDA VALUE_I2REG-TBLSIZE,2 * get previous value
+           INCA TBLSIZE              * add table size
+           STA VALUE_I2REG,2
 
 6H         LDA  VALUE_INST+1,2(5:5)
            DECA 38    * check if its a jump instruction
@@ -143,13 +79,17 @@ CYCLE      STA  VALUE_PREG,2
            LDA  VALUE_INST+1,2(0:4) * is a stj instruction
 
 * write out STJ instruction
-           STA  VALUE_STJ,2(0:4)
-           ENTA 24
-           STA  VALUE_STJ,2(5:5)
-           LDA  STJ_TMPL+1
-           STA  VALUE_STJ+1,2
+           STA  VALUE_STJ+1,2(0:4)
+           ENTA 24     * write out STA location
+           STA  VALUE_STJ+1,2(5:5)
+           LDA  STJ_TMPL
+           STA  VALUE_STJ,2
+           LDA  STJ_TMPL+2
+           STA  VALUE_STJ+2,2
+           LDA  STJ_TMPL+3
+           STA  VALUE_STJ+3,2
 
-           LDA  VALUE_JREG,2
+           LDA  VALUE_JREG,2(0:2)
            JMP  VALUE_STJ,2
 STJBACK    JMP  INCP * skip running intruction, we do the store jump manually
 2H         DECA 2
@@ -157,12 +97,15 @@ STJBACK    JMP  INCP * skip running intruction, we do the store jump manually
            JMP  3F
 1H         DECA 9
            JAP  2F
-3H         LDA  8F(0:3)
-           STA  VALUE_INST+1,2(0:3)
+3H         ENTA JUMPBACK
+           STA  VALUE_INST+1,2(0:2)
+* clear out the I2 register load, we don't need it if we are jumping locally
+           ENTA 0
+           STA  VALUE_INST,2
 2H         ST2  VALUE_I2SAVED,2
-           LDA  VALUE_AREG,2
            LD1  VALUE_I1REG,2
 
+           LDA  VALUE_AREG,2
            JMP  VALUE_INST,2   * jump to instruction
 
 INSTBACK   ST1  VALUE_I1REG,2
@@ -172,15 +115,13 @@ INCP       LDA  VALUE_PREG,2   * move to next instruction
            INCA 1
            JMP  CYCLE
 
-8H         JSJ  JUMP
-
-JUMP       JMP  VALUE_JMP
-           LDA  8B(4:5)
-           SUB  VALUE_INST+1,2(4:5)
+8H         JSJ  JUMPBACK
+JUMPBACK   LDA  8B(4:5) * just checking for JSJ instruction
+           SUB  VALUE_INST+1,2(4:5)  * check if the instruction was a jsj
            JAZ  *+4
            LDA  VALUE_PREG,2
            INCA 1
-           STA  VALUE_JREG,2
+           STA  VALUE_JREG,2(0:2)
 INST1      JMP  VALUE_INST1,2   * this sets up the next instruction into A
 INST1BACK  JMP  CYCLE
 
@@ -190,34 +131,39 @@ LEAVE      LDX  VALUE_XREG,2
            LDA  VALUE_AREG,2
 
            LD1  VALUE_I1REG,2
-           LD2  VALUE_I2REG,2
+           LD2  VALUE_I2SAVED,2
 
 LEAVEX     JMP  *
 
            END START
-           ORIG 1000
+           ORIG 500
 
-
-STJ_TMPL      STA  *
+STJ_TMPL      LD2 VALUE_I2REG,2
+              STA  *
+              LD2 VALUE_I2SAVED * explicitly not indexed By I2
               JMP  STJBACK
 
-INST_TMPL     LD2  VALUE_I2REG,2    * if in trace, add LAST - VALUE_AREG
-              CON  *
-              ST2  VALUE_I2REG      * if in trace, subtract LAST - VALUE_AREG
-              LD2  VALUE_I2SAVED   * at this point I2 is right
+* restore the j register, load A and I2 registers, and call the function
+* Save off I2 registerf immediately, and then jump back to trace
+INST_TMPL     LD2  VALUE_I2REG,2
+INST_CALL     CON  0
+              ST2  VALUE_I2REG  * explicitly not indexed by I2 (could be changed by inst)
+              LD2  VALUE_I2SAVED  * explicitly not indexed by I2 (could be changed by inst)
               JMP  INSTBACK
 
 *             INST_TMPL may have run ,so we assume that I2 is the actual value
-JUMP_TMPL     LD2  VALUE_I2SAVED       * if in trace, subtract LAST-VALUE_AREG
-              JMP  JUMP+1
+JUMP_TMPL     CON  0
+              LD2  VALUE_I2SAVED  * explicitly not indexed by I2 (could be changed by inst)
+              JMP  JUMPBACK
 
 
-SELF_INST     INC2  TBLSIZE+1
-              DEC2  TBLSIZE+1
+INST1_TMPL    LD2  VALUE_I2REG,2
+              ENTA  *
+              LD2  VALUE_I2SAVED * explicitly not indexed by I2 ( could be changed by inst)
+              JMP INST1BACK    * if we are top level trace, go back to original routine
 
-INST1_TMPL    ENTA  *
-              JMP INST1BACK
 
+              ORIG 1000
 VALUE_AREG    CON  0
 VALUE_XREG    CON  0
 VALUE_I1REG   CON  0
@@ -229,9 +175,12 @@ VALUE_EXITLOC CON  0
 
 VALUE_INST1   CON  0
               CON  0
+              CON  0
 VALUE_INST1BK CON  0
 
 VALUE_STJ     CON  0
+              CON  0
+              CON  0
 VALUE_STJBCK  CON  0
 
 * meant to represent an instruction call
@@ -240,8 +189,4 @@ VALUE_INST    CON  0
               CON  0
               CON  0
               CON  0
-
-
-* mean to represent what to call with a jump
-VALUE_JMP     CON  0
-LAST          CON  0
+              CON  0

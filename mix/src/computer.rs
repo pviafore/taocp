@@ -22,7 +22,7 @@ enum DebugCommand {
     NOOP,
     SINGLESTEP,
     BREAK {location: i16},
-    CONTINUE,
+    CONTINUE {number_of_breakpoints_to_skip: i16},
     SHOWMEM {location: i16},
     BYTES {value: i32},
     LIST,
@@ -77,7 +77,8 @@ pub struct Computer {
     is_halted: bool,
     timer: timing::TimingUnit,
     last_debug_command: DebugCommand,
-    breakpoints: Vec<Box<dyn Fn(&Computer) -> bool>>
+    breakpoints: Vec<Box<dyn Fn(&Computer) -> bool>>,
+    breakpoint_counter: u32
 }
 
 impl Computer {
@@ -176,7 +177,7 @@ impl Computer {
                     DebugCommand::SINGLESTEP => self.run_single_instruction(),
                     DebugCommand::HALT => self.is_halted = true,
                     DebugCommand::BREAK {location} => self.add_breakpoint(location),
-                    DebugCommand::CONTINUE => self.run_single_instruction(),
+                    DebugCommand::CONTINUE {number_of_breakpoints_to_skip: _ }=> self.run_single_instruction(),
                     DebugCommand::SHOWMEM {location} => self.print_mem(location),
                     DebugCommand::BYTES {value} => print_bytes(value),
                     DebugCommand::RESETTIMING => self.timer = timing::TimingUnit::new(),
@@ -209,52 +210,64 @@ impl Computer {
     }
 
     fn get_debug_command(&mut self) -> DebugCommand {
-        if self.last_debug_command == DebugCommand::CONTINUE {
-            return if self.breakpoints.iter().any(|breakpoint| breakpoint(self)) {
-                self.last_debug_command = DebugCommand::NOOP;
+        match self.last_debug_command {
+            DebugCommand::CONTINUE { number_of_breakpoints_to_skip } => {
+                let breakpoint_hit = self.breakpoints.iter().any(|breakpoint| breakpoint(self));
+                if breakpoint_hit {
+                    self.breakpoint_counter += 1;
+                    return if number_of_breakpoints_to_skip == 0 {
+
+                        self.last_debug_command = DebugCommand::NOOP;
+                        self.last_debug_command
+                    }
+                    else {
+                        self.last_debug_command = DebugCommand::CONTINUE { number_of_breakpoints_to_skip: number_of_breakpoints_to_skip -1};
+                        self.last_debug_command
+                    }
+                }
+                else {
+                    DebugCommand::CONTINUE { number_of_breakpoints_to_skip }
+                }
+            }
+            _ => {
+                let instruction_pointer = self.instruction_pointer.read() as usize;
+                println!();
+                println!("Instruction@{:?}: {}", instruction_pointer, Instruction::from_word(self.memory[instruction_pointer]).to_string());
+                println!("A: {:?} X: {:?} I1: {:?} I2: {:?} I3: {:?} I4: {:?} I5: {:?} I6: {:?}",
+                        self.registers.a.read(), self.registers.x.read(), self.registers.i1.read(),
+                        self.registers.i2.read(), self.registers.i3.read(), self.registers.i4.read(),
+                        self.registers.i5.read(), self.registers.i6.read());
+                println!("J: {:?} Comparison Indicator: {:?} Overflow: {:?} # Breakpoints Hit: {:?}", self.registers.j.read(), self.comparison, self.overflow, self.breakpoint_counter);
+                println!();
+                print!(">>> ");
+                use std::io::Write;
+                std::io::stdout().flush().unwrap();
+                let mut input = String::new();
+                std::io::stdin().read_line(&mut input).expect("Needed a string");
+                let split: Vec<&str> = input.strip_suffix('\n').unwrap().split(" ").collect();
+                self.last_debug_command = match split[0] {
+                    "q" | "quit" => DebugCommand::HALT,
+                    "n" | "next" => DebugCommand::SINGLESTEP,
+                    "b" | "breakpoint" => DebugCommand::BREAK { location: split[1].parse::<i16>().unwrap()},
+                    "m" | "memory" => DebugCommand::SHOWMEM { location: split[1].parse::<i16>().unwrap()},
+                    "c" | "continue" => DebugCommand::CONTINUE { number_of_breakpoints_to_skip: split.get(1).unwrap_or(&"0").parse::<i16>().unwrap()},
+                    "B" | "bytes" => DebugCommand::BYTES {value: split[1].parse::<i32>().unwrap()},
+                    "l" | "list" => DebugCommand::LIST,
+                    "r" | "reset" => DebugCommand::RESETTIMING,
+                    "x" | "time"  => DebugCommand::SHOWTIME,
+                    "" => self.last_debug_command,
+                    _ => DebugCommand::NOOP
+                };
                 self.last_debug_command
             }
-            else {
-                DebugCommand::CONTINUE
-            }
         }
-        let instruction_pointer = self.instruction_pointer.read() as usize;
-        println!();
-        println!("Instruction@{:?}: {}", instruction_pointer, Instruction::from_word(self.memory[instruction_pointer]).to_string());
-        println!("A: {:?} X: {:?} I1: {:?} I2: {:?} I3: {:?} I4: {:?} I5: {:?} I6: {:?}",
-                self.registers.a.read(), self.registers.x.read(), self.registers.i1.read(),
-                self.registers.i2.read(), self.registers.i3.read(), self.registers.i4.read(),
-                self.registers.i5.read(), self.registers.i6.read());
-        println!("J: {:?} Comparison Indicator: {:?} Overflow: {:?}", self.registers.j.read(), self.comparison, self.overflow);
-        println!();
-        print!(">>> ");
-        use std::io::Write;
-        std::io::stdout().flush().unwrap();
-        let mut input = String::new();
-        std::io::stdin().read_line(&mut input).expect("Needed a string");
-        let split: Vec<&str> = input.strip_suffix('\n').unwrap().split(" ").collect();
-        self.last_debug_command = match split[0] {
-            "q" | "quit" => DebugCommand::HALT,
-            "n" | "next" => DebugCommand::SINGLESTEP,
-            "b" | "breakpoint" => DebugCommand::BREAK { location: split[1].parse::<i16>().unwrap()},
-            "m" | "memory" => DebugCommand::SHOWMEM { location: split[1].parse::<i16>().unwrap()},
-            "c" | "continue" => DebugCommand::CONTINUE,
-            "B" | "bytes" => DebugCommand::BYTES {value: split[1].parse::<i32>().unwrap()},
-            "l" | "list" => DebugCommand::LIST,
-            "r" | "reset" => DebugCommand::RESETTIMING,
-            "x" | "time"  => DebugCommand::SHOWTIME,
-            "" => self.last_debug_command,
-            _ => DebugCommand::NOOP
-        };
-        self.last_debug_command
-
     }
 
 
     fn run_single_instruction(&mut self) {
         let instruction = Instruction::from_word(self.memory[self.instruction_pointer.read() as usize]);
         if self.trace {
-            println!("{:?}: {:?}", self.instruction_pointer.read(), instruction.to_string());
+            println!("{:?}: {:?} {:?}", self.instruction_pointer.read(), instruction.to_string(), self.registers.i2.read());
         }
         self.run_command(instruction);
         if !instruction.is_jump() {
@@ -302,7 +315,8 @@ impl Computer {
             is_halted: false,
             timer: timing::TimingUnit::new(),
             last_debug_command: DebugCommand::NOOP,
-            breakpoints: Vec::new()
+            breakpoints: Vec::new(),
+            breakpoint_counter: 0
         }
     }
 
