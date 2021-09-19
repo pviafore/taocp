@@ -68,7 +68,7 @@ Commands:
 * `n` or `next` - single-step to the next instruction
 * `q` or `next` - quit the program
 * `b <location>` or `breakpoint <location>` - breakpoint at the location
-* `c` or `continue` - run until next breakpoint or program halt
+* `c <number of breakpoints to skip>` or `continue <number of breakpoints to skip>` - run until next breakpoint or program halt. If you specify number of breakpoints, it wil skip that many breakpoints being hit before hitting again. If left off, the next breakpoint will hit
 * `m <location>` or `memory <location>` - show the memory at specified location
 * `B <value>` or `bytes <value>` - Break a value out into each individual byte
 * `r` or `reset timing` - Set the timer to zero (useful for profiling specific parts of code)
