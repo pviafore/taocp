@@ -267,7 +267,11 @@ impl Computer {
     fn run_single_instruction(&mut self) {
         let instruction = Instruction::from_word(self.memory[self.instruction_pointer.read() as usize]);
         if self.trace {
-            println!("{:?}: {:?} {:?}", self.instruction_pointer.read(), instruction.to_string(), self.registers.i2.read());
+            println!("{:?}: {:?}\tA: {:?}\tX: {:?}\tI1: {:?}\tI2: {:?}\tI3: {:?}\tI4: {:?}\tI5: {:?}\tI6: {:?}",
+                    self.instruction_pointer.read(), instruction.to_string(), self.registers.a.read(),
+                    self.registers.x.read(), self.registers.i1.read(), self.registers.i2.read(),
+                    self.registers.i3.read(), self.registers.i4.read(), self.registers.i5.read(),
+                    self.registers.i6.read());
         }
         self.run_command(instruction);
         if !instruction.is_jump() {
