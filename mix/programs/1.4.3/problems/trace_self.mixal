@@ -98,7 +98,8 @@ STJBACK    JMP  INCP * skip running intruction, we do the store jump manually
 1H         DECA 9
            JAP  2F
 3H         ENTA JUMPBACK
-           STA  VALUE_INST+1,2(0:2)
+           SLA  1
+           STA  VALUE_INST+1,2(0:3)
 * clear out the I2 register load, we don't need it if we are jumping locally
            ENTA 0
            STA  VALUE_INST,2
