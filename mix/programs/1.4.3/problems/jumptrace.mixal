@@ -1,0 +1,227 @@
+ ORIG 100
+START ENT1 12        * N for FAREY series
+     ENTX STOP
+     JMP  TRACE
+     ENT2 0        * BUFFER
+     ENTA 0        * numerator
+     ENTX 1        * denominator
+     JMP STORE_NUM
+     ENTA 1        * numerator
+     ST1  N
+     LDX  N
+     JMP STORE_NUM
+* TEMP is N
+     ENT3 0           * loop for as long as A and X are not 1/1 (numerator/denominator = Xn/Yn)
+     ENT4 1
+LOOP LDA  YBUFFER,3     * A = Yk
+     ADD  N             * A = Yk + n
+     SRAX 5
+     DIV  YBUFFER,4     * A = (Yk + n)/Y(k+1)
+     STA  YBUFFER,2
+     MUL  XBUFFER,4     * A = A*X(k+1)
+     SLAX 5
+     SUB  XBUFFER,3     * A = A - Xk
+     STA  XBUFFER,2
+     LDA  YBUFFER,2     * A = (Yk + n)/Y(k+1) A
+     MUL  YBUFFER,4     * A = A * YK+1
+     SLAX 5
+     SUB  YBUFFER,3     * A = A - Yk
+     SRAX 5             * X = Yk+2
+     LDA  XBUFFER,2      * A = xk+2
+     INC3 1
+     INC4 1
+     JMP STORE_NUM
+     CMPA =1=
+     JNE  LOOP
+     CMPX =1=
+     JNE  LOOP
+
+     JMP PRINT_NUMS
+STOP HLT
+
+* Assume that A is the numerator and X is the denominator
+* I2 is the index into the buffer
+STORE_NUM  STJ  SN_EXIT
+           STA  XBUFFER,2
+           STX  YBUFFER,2
+           INC2 1
+SN_EXIT    JMP  *
+
+*I2 is the index into the buffer
+PRINT_NUMS STJ  PN_EXIT
+           ST2  TEMP
+           ENT2 0
+PN_LOOP    LDA XBUFFER,2
+           CHAR
+           STX BUFFER(1:2)
+           ENTA 47            * slash
+           STA BUFFER(3:3)
+           LDA YBUFFER,2
+           CHAR
+           STX BUFFER(4:5)
+           OUT BUFFER(18)
+           INC2 1
+           CMP2 TEMP
+           JL   PN_LOOP
+PN_EXIT    JMP  *
+
+BUFFER  ALF    /
+        ORIG *+24
+XBUFFER ORIG *+100
+YBUFFER ORIG *+100
+TEMP    CON 0
+N       CON 0
+
+
+* Jump trace routine (tried to develop from scratch w/o looking at prev.
+* trace routines)
+
+* save off registers that are used
+TRACE       STA  AREG
+            ST1  I1REG
+            STJ  JREG
+            STX  EXITLOC
+            STJ  INST_LOC
+
+* each cycle, A is assumed to be the instruction location to run
+CYCLE       LDA  INST_LOC(0:2)
+            SUB  EXITLOC
+            JAZ  LEAVE
+* populate the instruction
+            LD1  INST_LOC(0:2)
+            LDA  0,1
+            STA  INST
+* get the address/index to save off if this is a jump
+            SRA  2
+            STA JUMPLOC(0:3)
+
+* determine if it's a jump - if it is, we need to rewrite it to go to a custom routine
+* this custom routine (JUMP) will log that a jump happened, and then modify the
+* A register to contain the location jumped to.
+* if the jump is conditional, it will only jump to JUMP if the condition is successful
+
+* read the C part of the instruction
+            LDA  INST(5:5)
+            DECA 38   * if A is bigger than 38, it may be a jump
+            JAN  1F   * it's less than 38
+            DECA 9
+            JAP  1F   * we are bigger than 47
+            JMP  IS_JUMP
+
+* can still be a JRED, so check for that
+1F          INCA 4
+            JANZ 2F  * if we are not a JRED, jump to check for stj
+            JMP  IS_JUMP
+2F          INCA 2
+            JANZ 3F  * not a STJ
+
+* at this point, we are now a STJ
+            LDA  INST(0:3)
+            STA  *+2(0:3)   * rewrite where we store the jumpreg
+            LDA  JREG(0:2)
+            STA  *(0:2)
+
+            JMP  INC_LOC
+
+IS_JUMP     ENTA JUMP  * rewrite the jump address to jump to our custom piece
+            STA  INST(0:2)
+
+3H          LDA  AREG
+            LD1  I1REG
+INST        CON  *
+            STA  AREG
+            ST1  I1REG
+
+INC_LOC     LDA  INST_LOC(0:2)
+            INCA 1
+            STA  INST_LOC(0:2)
+            JMP  CYCLE
+LEAVE       LD1  I1REG
+            LDA EXITLOC
+            STA *+4(0:2)
+            LDA AREG
+            OUT OUTBUF(CARDOUT)
+            JBUS *(CARDOUT)
+            JMP *
+* log the jump
+* and update the program register
+JUMP        JMP TRACE_JUMP
+
+            LDA INST(5:5)  * check if jsj
+            DECA 103       * subtract F=1 C = JMP (JSJ)
+            JAZ 1F
+
+* save off JREG
+            LDA INST_LOC(0:2)
+            INCA 1
+            STA JREG(0:2)
+
+* change program register to jumped location
+1H          LDA JUMPLOC(0:3)
+            STA *+1(0:3)
+            ENTA *
+            STA INST_LOC(0:2)
+            JMP CYCLE
+
+
+CARDOUT     EQU  17
+LNUM        ALF  (XXXX
+RNUM        ALF  ,YYYY
+RPAREN      ALF  )
+
+OUTBUF      ORIG *+100
+OUTBUFLOC   CON  0
+
+TRACE_JUMP  STJ  TJ_EXIT
+            STA  RESTOREA(0:2)
+            STX  RESTOREX(0:2)
+            ST1  RESTOREI1(0:2)
+            LD1  OUTBUFLOC
+            LDA  INST_LOC(0:2)
+            CHAR
+            SLAX 5
+            SLA  1
+            SRA  1   * don't do first character
+            STA  LNUM(2:5)
+            LDA  JUMPLOC(0:2)
+            CHAR
+            SLAX 5
+            SLA  1
+            SRA  1 * don't do first character
+            STA  RNUM(2:5)
+
+* write it to buffer
+            LDA  LNUM
+            STA  OUTBUF,1
+            LDA  RNUM
+            STA  OUTBUF+1,1
+            LDA  RPAREN
+            STA  OUTBUF+2,1
+            INC1 3
+            DEC1 15
+            J1NZ 2F  * still more to write on tape
+
+* output buffer and reset it
+            OUT  OUTBUF(CARDOUT)
+            ENT1 -15
+
+1H          STZ  OUTBUF+15,1   * clear out the buffer
+            INC1 1
+            J1NZ 1B
+            ENT1 0  * reset the loop
+            JMP  RESTOREA
+2H          INC1 15
+RESTOREA    ENTA *
+RESTOREX    ENTX *
+            ST1  OUTBUFLOC
+RESTOREI1   ENT1 *
+TJ_EXIT     JMP  *
+
+* variables used during trace
+AREG     CON  0
+I1REG    CON  0
+JREG     CON  0
+EXITLOC  CON  0
+INST_LOC CON  0
+JUMPLOC  CON  0
+        END START
