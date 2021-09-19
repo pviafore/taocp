@@ -1,13 +1,25 @@
  ORIG 100
-TBLSIZE EQU 50
-START ENT1 12        * N for FAREY series
-     ENTX LEAVEX
-     JMP  *+1
-     JMP  ENTER
 
-* Trace routine (from 1.4.3.2)
+* The way this program works:
+* Every enter of a trace effectively pushes state onto a stack
+* each entry with TBLSIZE words of data
+*
+* This data is things like registers, and custom code that is written
+* each loop to handle special cases
+*
+* I2 tracks the stack in memory, incrementing by TBLSIZE each time
+* we recurse into the self-trace
+TBLSIZE EQU 25
+START ENTX LEAVEX
+      JMP  *+1
+      JMP  ENTER
+
+* Trace routine (from 1.4.3.2) - modified for a self trace
 * X is leave location
 * I2 must be zero
+
+
+* Store all registers
 ENTER      STX  VALUE_EXITLOC,2
            STX  VALUE_XREG,2
            ST1  VALUE_I1REG,2
@@ -24,7 +36,8 @@ CYCLE      STA  VALUE_PREG,2
            SRA  2
 
 
-*  save off instruction writing
+*  save off instruction writing after a jump
+* this is custom code to handle the right value of A
            STA  VALUE_INST1+1,2(0:3)
 * set F to 2
            ENTA 2
@@ -39,7 +52,7 @@ CYCLE      STA  VALUE_PREG,2
            LDA  INST1_TMPL
            STA  VALUE_INST1,2
 
-* Write out instructions
+* Write out instruction handling code
            LDA INST_TMPL
            STA VALUE_INST,2
            LDA INST_TMPL+2
@@ -78,7 +91,7 @@ CYCLE      STA  VALUE_PREG,2
            JANZ 2F
            LDA  VALUE_INST+1,2(0:4) * is a stj instruction
 
-* write out STJ instruction
+* write out STJ instruction handling
            STA  VALUE_STJ+1,2(0:4)
            ENTA 24     * write out STA location
            STA  VALUE_STJ+1,2(5:5)
@@ -161,7 +174,7 @@ JUMP_TMPL     CON  0
 INST1_TMPL    LD2  VALUE_I2REG,2
               ENTA  *
               LD2  VALUE_I2SAVED * explicitly not indexed by I2 ( could be changed by inst)
-              JMP INST1BACK    * if we are top level trace, go back to original routine
+              JMP INST1BACK
 
 
               ORIG 1000
