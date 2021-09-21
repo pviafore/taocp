@@ -190,7 +190,10 @@ impl Computer {
     }
 
     fn print_mem(&self, location: i16) {
-        println!("{}", self.memory[location as usize].read());
+        let val = self.memory[location as usize];
+        println!("{}\t\t({} {} {} {} {} {})", val.read(), if val.is_positive { '+' } else { '-' },
+                 val.bytes[0].read(), val.bytes[1].read(), val.bytes[2].read(), val.bytes[3].read(),
+                 val.bytes[4].read());
     }
 
     fn print_source(&self) {

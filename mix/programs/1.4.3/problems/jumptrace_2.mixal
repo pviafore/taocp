@@ -1,0 +1,300 @@
+ ORIG 100
+START ENT1 12        * N for FAREY series
+     ENTX STOP
+     JMP  TRACE
+     ENT2 0        * BUFFER
+     ENTA 0        * numerator
+     ENTX 1        * denominator
+     JMP STORE_NUM
+     ENTA 1        * numerator
+     ST1  N
+     LDX  N
+     JMP STORE_NUM
+* TEMP is N
+     ENT3 0           * loop for as long as A and X are not 1/1 (numerator/denominator = Xn/Yn)
+     ENT4 1
+LOOP LDA  YBUFFER,3     * A = Yk
+     ADD  N             * A = Yk + n
+     SRAX 5
+     DIV  YBUFFER,4     * A = (Yk + n)/Y(k+1)
+     STA  YBUFFER,2
+     MUL  XBUFFER,4     * A = A*X(k+1)
+     SLAX 5
+     SUB  XBUFFER,3     * A = A - Xk
+     STA  XBUFFER,2
+     LDA  YBUFFER,2     * A = (Yk + n)/Y(k+1) A
+     MUL  YBUFFER,4     * A = A * YK+1
+     SLAX 5
+     SUB  YBUFFER,3     * A = A - Yk
+     SRAX 5             * X = Yk+2
+     LDA  XBUFFER,2      * A = xk+2
+     INC3 1
+     INC4 1
+     JMP STORE_NUM
+     CMPA =1=
+     JNE  LOOP
+     CMPX =1=
+     JNE  LOOP
+
+     JMP PRINT_NUMS
+STOP HLT
+
+* Assume that A is the numerator and X is the denominator
+* I2 is the index into the buffer
+STORE_NUM  STJ  SN_EXIT
+           STA  XBUFFER,2
+           STX  YBUFFER,2
+           INC2 1
+SN_EXIT    JMP  *
+
+*I2 is the index into the buffer
+PRINT_NUMS STJ  PN_EXIT
+           ST2  TEMP
+           ENT2 0
+PN_LOOP    LDA XBUFFER,2
+           CHAR
+           STX BUFFER(1:2)
+           ENTA 47            * slash
+           STA BUFFER(3:3)
+           LDA YBUFFER,2
+           CHAR
+           STX BUFFER(4:5)
+           OUT BUFFER(18)
+           INC2 1
+           CMP2 TEMP
+           JL   PN_LOOP
+PN_EXIT    JMP  *
+
+BUFFER  ALF    /
+        ORIG *+24
+XBUFFER ORIG *+100
+YBUFFER ORIG *+100
+TEMP    CON 0
+N       CON 0
+
+
+* Jump trace routine (tried to develop from scratch w/o looking at prev.
+* trace routines)
+
+* this takes knuth's ideas in the answers and tries to execute as few commands as possible
+* by just changing jumps, and flying through the rest of the instructions without executing them
+
+* the idea is to start at an instruction and go until the next stj or jump (conditional or not). when
+* one of these instructions is hit, replace it with a jump to the trace routine which does the appropriate
+* thing (modifying jump regs, tracing the jump, changing instruction pointer to the right place)
+
+* save off registers that are used
+TRACE       STA  AREG
+            ST1  I1REG
+            STX  EXITLOC
+            STJ  JREG
+            STJ  INST_LOC
+            STJ  FIRSTLOC
+
+* each cycle, A is assumed to be the instruction location to run
+CYCLE       LDA  INST_LOC(0:2)
+            SUB  EXITLOC
+            JAZ  LEAVE
+
+            LD1  INST_LOC(0:2)
+            LDA  0,1
+            STA  INST
+* get the address/index to save off if this is a jump
+            SRA  2
+            STA JUMPLOC(0:3)
+
+* determine if it's a jump - if it is, we need to rewrite it to go to a custom routine
+* this custom routine (JUMP) will log that a jump happened, and then modify the
+* A register to contain the location jumped to.
+* if the jump is conditional, it will only jump to JUMP if the condition is successful
+
+* read the C part of the instruction
+            LDA  INST(5:5)
+            DECA 38   * if A is bigger than 38, it may be a jump
+            JAN  1F   * it's less than 38
+            DECA 9
+            JAP  1F   * we are bigger than 47
+            JMP  IS_JUMP
+
+* can still be a JRED, so check for that
+1F          INCA 4
+            JANZ 2F
+            JMP  IS_JUMP
+2F          INCA 2
+            JANZ INC_LOC  * not a STJ
+
+* at this point, we are now a STJ
+* save off jump command
+            LDA  INST
+            STA  STJ_TEMP
+* rewrite stj to jump
+            LD1  INST_LOC(0:2)
+            LDA  STJ_JUMP
+            STA  0,1
+* run up until the STJ
+            LDA  FIRSTLOC(0:2)
+            STA  8F(0:2)
+            LDA AREG
+            LD1 I1REG
+8H          JMP *
+
+* always do a full jump to the jump routine, we'll check conditionals inside our jump routine
+IS_JUMP     LDA  INST
+            STA  JUMP_TEMP
+            LDA  JMP_JUMP  * rewrite the jump address to jump to our custom piece
+            LD1  INST_LOC(0:2)
+            STA  0,1      * rewrite the jump location
+5H          LDA  FIRSTLOC(0:2)
+            STA  9F(0:2)
+            LDA  AREG
+            LD1  I1REG
+9H          JMP  *          * jump back to first location
+
+INC_LOC     LDA  INST_LOC(0:2)
+            INCA 1
+            STA  INST_LOC(0:2)   * add 1 to the program register
+            JMP  CYCLE
+
+LEAVE       LD1  I1REG
+            LDA EXITLOC
+            STA *+4(0:2)
+            LDA AREG
+            OUT OUTBUF(CARDOUT)
+            JBUS *(CARDOUT)
+            JMP *
+
+
+JMP_JUMP   JMP JUMP
+JUMP_TEMP  CON 0
+* log the jump
+* and update the program register
+JUMP        STA AREG
+            ST1 I1REG
+            LDA JUMP_TEMP
+            STA 3F(4:5)
+            LDA AREG
+3H          JMP 4F  * jump to condition success, op gets rewritten
+            JMP 5F
+
+4H          JMP TRACE_JUMP
+
+            LDA INST(5:5)  * check if jsj
+            DECA 103       * subtract F=1 C = JMP (JSJ)
+            JAZ 1F
+
+* save off JREG
+            LDA INST_LOC(0:2)
+            INCA 1
+            STA JREG(0:2)
+
+* change program register to jumped location
+1H          LDA JUMPLOC(0:3)
+            STA  2F(0:3)
+            JMP  1F
+
+* change program register to jumped location
+5H          LDA  INST_LOC(0:2)
+            INCA 1
+            STA  2F(0:2)   * go to the next location (failed conditional jump)
+
+* first restore the jump at the address
+1H          LDA  JUMP_TEMP
+            LD1  INST_LOC(0:2)
+            STA  0,1
+* set the instruction location
+2H          ENTA *
+            STA  INST_LOC(0:2)
+            STA  FIRSTLOC(0:2)
+
+            JMP CYCLE
+* restore the STJ command
+STJ_JUMP    JMP STJ
+STJ_TEMP    CON 0
+STJ         STA AREG
+            ST1 I1REG
+            LDA STJ_TEMP(0:3)
+            STA 1F(0:3)
+1H          ENTA *     *  A now contains the location to write the command
+            STA  2F(0:2)
+            LDA  JREG(0:2)
+2H          STA  *(0:2)   * write the JREG to the memory location
+
+* restore the stj
+            LDA  STJ_TEMP  * contains original instruction
+            STJ  STJ_TEMP  *  location where we jumped from +1
+            LD1  STJ_TEMP(0:2)
+
+            ST1  INST_LOC(0:2)  * write next location
+            ST1  FIRSTLOC(0:2)
+
+            DEC1 1
+            STA  0,1       * write back stj instruction
+
+            JMP  CYCLE
+
+
+* variables used during trace
+AREG      CON  0
+I1REG     CON  0
+INST      CON  0
+JREG      CON  0
+EXITLOC   CON  0
+INST_LOC  CON  0
+JUMPLOC   CON  0
+FIRSTLOC  CON  0
+
+
+CARDOUT     EQU  17
+LNUM        ALF  (XXXX
+RNUM        ALF  ,YYYY
+RPAREN      ALF  )
+
+OUTBUF      ORIG *+100
+OUTBUFLOC   CON  0
+
+TRACE_JUMP  STJ  TJ_EXIT
+            STA  RESTOREA(0:2)
+            STX  RESTOREX(0:2)
+            ST1  RESTOREI1(0:2)
+            LD1  OUTBUFLOC
+            LDA  INST_LOC(0:2)
+            CHAR
+            SLAX 5
+            SLA  1
+            SRA  1   * don't do first character
+            STA  LNUM(2:5)
+            LDA  JUMPLOC(0:2)
+            CHAR
+            SLAX 5
+            SLA  1
+            SRA  1 * don't do first character
+            STA  RNUM(2:5)
+
+* write it to buffer
+            LDA  LNUM
+            STA  OUTBUF,1
+            LDA  RNUM
+            STA  OUTBUF+1,1
+            LDA  RPAREN
+            STA  OUTBUF+2,1
+            INC1 3
+            DEC1 15
+            J1NZ 2F  * still more to write on tape
+
+* output buffer and reset it
+            OUT  OUTBUF(CARDOUT)
+            ENT1 -15
+
+1H          STZ  OUTBUF+15,1   * clear out the buffer
+            INC1 1
+            J1NZ 1B
+            ENT1 0  * reset the loop
+            JMP  RESTOREA
+2H          INC1 15
+RESTOREA    ENTA *
+RESTOREX    ENTX *
+            ST1  OUTBUFLOC
+RESTOREI1   ENT1 *
+TJ_EXIT     JMP  *
+
+        END START
