@@ -46,6 +46,7 @@ impl TapeUnit {
         use std::cmp::max;
         self.position = if value == 0 { 0 } else { (self.position as i16 + max(value, -1 * self.position as i16)) as u16};
     }
+
 }
 
 struct Disk {
@@ -220,6 +221,16 @@ impl IO {
         }
         else {
             panic!("Unable to ioctl unit");
+        }
+    }
+
+    pub fn get_block_size(&mut self, unit: u8) -> usize {
+        match unit {
+            0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 => 100,
+            16 | 17 => 16,
+            18 => 24,
+            19 | 20 => 14,
+            _ => panic!("Invalid unit")
         }
     }
 

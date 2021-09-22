@@ -53,6 +53,8 @@ Some notes on the current implementation of MIXAL:
 ### Timing
 
 To get timing information (based on cycles), pass `-t` to the `run` invocation
+Note: IO operations will take 1000 cycles to complete (i/o will happen immediately, but will block
+future IO ops for 1000 cycles)
 
 ### Tracing
 
@@ -72,7 +74,7 @@ Commands:
 * `m <location>` or `memory <location>` - show the memory at specified location
 * `B <value>` or `bytes <value>` - Break a value out into each individual byte
 * `r` or `reset timing` - Set the timer to zero (useful for profiling specific parts of code)
-* `x` or `time` - show the current timer
+* `t` or `time` - show the current timer
 * `l` or `list` - show the source code around your current location
 
 ### Populating input devices
@@ -81,6 +83,7 @@ You can supply additional cards (newline separated card per line) with `--data-c
 If this file is a program, also pass in `--as-program-cards`
 
 You can supply a tape device with `--tape-file`.
+
 
 ## Emulating
 

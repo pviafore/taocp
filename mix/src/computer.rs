@@ -17,6 +17,17 @@ struct Registers {
     j: arch::HalfWord
 }
 
+enum IoType {
+    Read,
+    Write
+}
+// used to help catch "not waiting long enough" for IO
+struct IoOperation {
+    target_done_time: u32,
+    memory_range: (usize, usize),
+    io_type: IoType
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum DebugCommand {
     NOOP,
@@ -78,7 +89,8 @@ pub struct Computer {
     timer: timing::TimingUnit,
     last_debug_command: DebugCommand,
     breakpoints: Vec<Box<dyn Fn(&Computer) -> bool>>,
-    breakpoint_counter: u32
+    breakpoint_counter: u32,
+    io_ops: Vec<Option<IoOperation>>
 }
 
 impl Computer {
@@ -118,7 +130,7 @@ impl Computer {
             instructions::OpCode::STX => Computer::stx,
             instructions::OpCode::STJ => Computer::stj,
             instructions::OpCode::STZ => Computer::stz,
-            instructions::OpCode::JBUS => Computer::no_op, // we're never busy so no op
+            instructions::OpCode::JBUS => Computer::jbus,
             instructions::OpCode::IOC => Computer::ioctl,
             instructions::OpCode::IN => Computer::read,
             instructions::OpCode::OUT => Computer::write,
@@ -186,6 +198,9 @@ impl Computer {
                     DebugCommand::NOOP => ()
                 };
             }
+        }
+        for unit in 0..=20 {
+            self.add_io_time(unit);
         }
     }
 
@@ -257,7 +272,7 @@ impl Computer {
                     "B" | "bytes" => DebugCommand::BYTES {value: split[1].parse::<i32>().unwrap()},
                     "l" | "list" => DebugCommand::LIST,
                     "r" | "reset" => DebugCommand::RESETTIMING,
-                    "x" | "time"  => DebugCommand::SHOWTIME,
+                    "t" | "time"  => DebugCommand::SHOWTIME,
                     "" => self.last_debug_command,
                     _ => DebugCommand::NOOP
                 };
@@ -323,7 +338,10 @@ impl Computer {
             timer: timing::TimingUnit::new(),
             last_debug_command: DebugCommand::NOOP,
             breakpoints: Vec::new(),
-            breakpoint_counter: 0
+            breakpoint_counter: 0,
+            io_ops: vec![None, None, None, None, None, None, None, None,
+                         None, None, None, None, None, None, None, None,
+                         None, None, None, None, None]
         }
     }
 
@@ -624,8 +642,33 @@ impl Computer {
     }
 
     fn jred(&mut self, instruction: Instruction) {
-        self.jump(Instruction::new(instruction.op_code(), 0, instruction.index_specification(), instruction.address()));
+        let unit = instruction.modification();
+        let should_jump = match self.io_ops[unit as usize] {
+            Some(IoOperation{target_done_time, ..}) => self.timer.get_time_to_run() > target_done_time,
+            None => true
+        };
+        if should_jump {
+            self.jump(Instruction::new(instruction.op_code(), 0, instruction.index_specification(), instruction.address()));
+        }
+        else {
+            self.instruction_pointer = arch::HalfWord::from_value(self.instruction_pointer.read() + 1);
+        }
     }
+
+    fn jbus(&mut self, instruction: Instruction) {
+        let unit = instruction.modification();
+        let should_jump = match self.io_ops[unit as usize] {
+            Some(IoOperation{target_done_time, ..}) => self.timer.get_time_to_run() <= target_done_time,
+            None => false
+        };
+        if should_jump {
+            self.jump(Instruction::new(instruction.op_code(), 0, instruction.index_specification(), instruction.address()));
+        }
+        else {
+            self.instruction_pointer = arch::HalfWord::from_value(self.instruction_pointer.read() + 1);
+        }
+    }
+
     fn jump(&mut self, instruction: Instruction) {
         let return_address = arch::HalfWord::from_value(
             self.instruction_pointer.read() + 1
@@ -826,21 +869,47 @@ impl Computer {
         }
     }
 
+
     fn read(&mut self, instruction: Instruction) {
-        let address = instruction.address().read() + self.get_offset(instruction.index_specification());
-        let values = self.io.read(instruction.modification(), self.registers.x.read().abs() as u32);
-        self.memory.splice(address as usize..(address as usize + values.len()), values.iter().cloned());
+
+        let unit = instruction.modification();
+        let address = (instruction.address().read() + self.get_offset(instruction.index_specification())) as usize;
+        let values = self.io.read(unit, self.registers.x.read().abs() as u32);
+        self.memory.splice(address..(address + values.len()), values.iter().cloned());
+        self.add_io_time(unit as usize);
+        self.io_ops[unit as usize] = Some(IoOperation{target_done_time: self.timer.get_time_to_run()+1000,
+                                             memory_range: (address, address+values.len()),
+                                             io_type: IoType::Read});
+    }
+
+    fn add_io_time(&mut self, unit: usize) {
+        // run the timer to the busy section
+        let time_so_far = self.timer.get_time_to_run();
+        let target_done_time = self.io_ops[unit as usize].as_ref().map(|x| x.target_done_time).unwrap_or(time_so_far);
+        let time_to_add = std::cmp::max(time_so_far, target_done_time) - time_so_far;
+        self.timer.add_raw_time(time_to_add);
+
     }
 
     fn write(&mut self, instruction: Instruction) {
-        let address = instruction.address().read() + self.get_offset(instruction.index_specification());
-        self.io.write(instruction.modification(), self.registers.x.read().abs() as u32, &self.memory[address as usize..])
+        let unit = instruction.modification();
+        let address = (instruction.address().read() + self.get_offset(instruction.index_specification())) as usize;
+        self.io.write(unit, self.registers.x.read().abs() as u32, &self.memory[address..]);
+        self.add_io_time(unit as usize);
+        self.io_ops[unit as usize] = Some(IoOperation{target_done_time: self.timer.get_time_to_run()+1000,
+                                             memory_range: (address, address+self.io.get_block_size(unit)),
+                                             io_type: IoType::Write});
     }
 
     fn ioctl(&mut self, instruction: Instruction) {
-        let address = instruction.address().read() + self.get_offset(instruction.index_specification());
-        self.io.ioctl(instruction.modification(), address, self.registers.x.read().abs() as u32);
-
+        let unit = instruction.modification();
+        let address = (instruction.address().read() + self.get_offset(instruction.index_specification())) as usize;
+        self.io.ioctl(unit, address as i16, self.registers.x.read().abs() as u32);
+        self.add_io_time(unit as usize);
+        // use 0 address
+        self.io_ops[unit as usize] = Some(IoOperation{target_done_time: self.timer.get_time_to_run()+1000,
+                                             memory_range: (0, 0),
+                                             io_type: IoType::Write});
     }
 
     fn get_offset(&self, val: u8) -> i16 {

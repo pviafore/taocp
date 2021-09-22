@@ -51,6 +51,7 @@ impl Instruction {
         match self.op_code() {
             OpCode::Jump => true,
             OpCode::JRED => true,
+            OpCode::JBUS => true,
             OpCode::JumpA => true,
             OpCode::JumpX => true,
             OpCode::JumpI1 => true,

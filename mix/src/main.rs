@@ -81,7 +81,7 @@ fn create_cardpack(cmd: CreateCardpack) {
 }
 
 fn convert_mix_to_cardpack(bytes: Vec<u8>, load_address: usize, start_location: usize) -> String {
-    let loading_card_1 = " O O6 A O4    I 2 O6 C O4 3 EH A  F F CF 0  E = EU 3 IH H BB $ EU = EJ  CA. 5A-H\n";
+    let loading_card_1 = " O O6 A O4    I 2 O6 D O4 3 EH A  F F CF 0  E = EU 3 IH H BB $ EU = EJ  CA. 5A-H\n";
     let loading_card_2 = " U BB  C U = EH F BA = EU 4AEH 5AEN  ABG S  E  CLU $ EH F BB $ EU L B. B  9     \n";
     let transfer_card  = format!("+TRANS0{:04}", start_location);
     let punch_cards = cards::convert_to_punch_cards(bytes, load_address as usize);

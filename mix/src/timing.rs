@@ -53,7 +53,11 @@ impl TimingUnit {
     }
 
     pub fn add_time_to_run(&mut self, instruction: Instruction) {
-        self.time_to_run += get_time_to_run(instruction);
+        self.add_raw_time(get_time_to_run(instruction));
+    }
+
+    pub fn add_raw_time(&mut self, t: u32){
+        self.time_to_run += t;
     }
 
     pub fn get_time_to_run(self) -> u32{
