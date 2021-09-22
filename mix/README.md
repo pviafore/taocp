@@ -94,3 +94,11 @@ there are a few restrictions:
 * You must pass cards in as "program style" to simulate a program
 * No floating point numbers
 * Not all IO operations are available (only units 16 and 18)
+
+## Knuth answers
+
+I've attempted most exercises in the Knuth book (except the mathy ones - I failed at those hard).
+You can find a lot of exercises and problems in the `programs` folder, but you may also find
+markdown files containing answers for written answers. I can't promise these are correct, so don't
+take them as gospel, but they are my attempt at writing down my thinking and hopefully guiding others
+to correct answers. Please let me know of any flaws in my thinking on a written answer.

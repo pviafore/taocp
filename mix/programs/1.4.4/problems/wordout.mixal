@@ -1,0 +1,50 @@
+* Buffer swapping wordout algorithm
+        ORIG 100
+V       EQU  0      * tape unit
+START   ENT3 10
+        ENT5 BUF1   * special setup to make sure our first byte will be read
+        ENTA 0
+LOOP100 ENT2 -100
+LOOP    JMP WORDOUT
+        INCA 1
+        INC2 1
+        J2NZ LOOP
+        DEC3 1
+        J3NZ LOOP100
+        JMP  ENDOUT
+        HLT
+
+* rA should be byte to store
+* i5 is the buffer index
+WORDOUT STJ WO_EXIT
+        STA 0,5
+        INC5 1
+        CMP5 =B1_END=
+        JE  NEXT_BUF
+        CMP5 =B2_END=
+        JE  NEXT_BUF
+* wrote word, leave function
+        JMP WO_EXIT
+
+* assume we are at the end of the buffer
+NEXT_BUF OUT -100,5(V)   * output the buffer
+         LD5 0,5      * load the next buffer
+WO_EXIT  JMP *
+
+ENDOUT  STJ EO_EXIT   * special last writing code
+        CMP5 =BUF1=
+        JE   EO_EXIT
+        CMP5 =BUF2=
+        JE  EO_EXIT
+        ENTA 0
+        JMP WORDOUT
+        JMP ENDOUT+1 * go back to printing zeroes
+EO_EXIT JMP *
+
+* buffers point to each other
+BUF1    ORIG    *+100
+B1_END  CON     BUF2  * point to next buffer
+BUF2    ORIG    *+100
+B2_END  CON     BUF1 * point to first buffer
+
+        END     START
