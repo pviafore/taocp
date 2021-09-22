@@ -1,0 +1,23 @@
+* Writes out first five hundred numbers
+        ORIG 100
+        ENT3 100
+        ENTA 0
+LOOP100 ENT2 -100
+LOOP    STA  BUFFER+100,2
+        INCA 1
+        INC2 1
+        J2NZ LOOP
+        ENT1 2000
+        JBUS *(0)
+        MOVE BUFFER(50)
+        MOVE BUFFER+50(50)
+        OUT  OUTPUT(0)
+        DEC3 1
+        J3NZ LOOP100
+        HLT
+
+
+        ORIG 1000
+BUFFER  ORIG *+100
+        ORIG 2000
+OUTPUT  ORIG *+100
