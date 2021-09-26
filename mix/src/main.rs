@@ -40,7 +40,9 @@ struct Run {
     #[clap(long, short, required=false, default_value="-1")]
     start: i16,
     #[clap(long, short='T', required=false, default_value="invalid")]
-    tape_file: String,
+    paper_tape_file: String,
+    #[clap(long, required=false, default_value="invalid")]
+    tape_0_file: String,
     #[clap(long, short='D', required=false, default_value="invalid")]
     data_cards_file: String,
     #[clap(long, short='p')]
@@ -167,11 +169,17 @@ fn run(cmd: Run) {
     if cmd.trace {
         comp.turn_tracing_on()
     }
-    if cmd.tape_file != "invalid" {
-        let file = File::open(cmd.tape_file).unwrap();
+    if cmd.paper_tape_file != "invalid" {
+        let file = File::open(cmd.paper_tape_file).unwrap();
         let mut line = String::new();
         std::io::BufReader::new(file).read_line(&mut line).unwrap();
-        comp.load_tape(chartable::translate(&line.strip_suffix('\n').unwrap()));
+        comp.load_paper_tape(chartable::translate(&line.strip_suffix('\n').unwrap()));
+    }
+    if cmd.tape_0_file != "invalid" {
+        let file = File::open(cmd.tape_0_file).unwrap();
+        let mut line = String::new();
+        std::io::BufReader::new(file).read_line(&mut line).unwrap();
+        comp.load_tape(0, chartable::translate(&line.strip_suffix('\n').unwrap_or(&line)));
     }
     comp.load_card_into_memory();
     comp.run(cmd.debugger);

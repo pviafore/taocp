@@ -1,6 +1,6 @@
 * Writes out first five hundred numbers
         ORIG 100
-        ENT3 10
+        ENT3 100
         ENTA 0
 LOOP100 ENT2 -100
 LOOP    STA  BUFFER+100,2

@@ -174,8 +174,12 @@ impl Computer {
         self.write_to_memory(first_card, 0);
     }
 
-    pub fn load_tape(&mut self, tape_contents: Vec<u8>) {
-        self.io.load_tape(tape_contents);
+    pub fn load_paper_tape(&mut self, tape_contents: Vec<u8>) {
+        self.io.load_paper_tape(tape_contents);
+    }
+
+    pub fn load_tape(&mut self, unit: usize, tape_contents: Vec<u8>) {
+        self.io.load_tape(unit, tape_contents);
     }
 
     pub fn run(&mut self, use_debugger: bool){

@@ -1,0 +1,23 @@
+        ORIG 100
+START   ENT1 100
+        ENT2 BUF2
+        ENT3 BUF1
+        IN   BUF1(0)
+        DEC1 1
+        JBUS *(0)
+INPUT   LD2  100,2
+        IN   0,2
+        OUT  0,3(1)
+        LD3 100,3
+        DEC1 1
+        J1NZ INPUT
+        HLT
+        END
+
+ORIG    *+100
+BUF1    *+100
+END1    BUF2
+BUF2    *+100
+END2    BUF3
+BUF4    *+100
+END3    BUF1

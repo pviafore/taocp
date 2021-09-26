@@ -47,6 +47,15 @@ impl TapeUnit {
         self.position = if value == 0 { 0 } else { (self.position as i16 + max(value, -1 * self.position as i16)) as u16};
     }
 
+    pub fn load(&mut self, contents: Vec<u8>) {
+        use std::str;
+        self.tape = contents.chunks(11)
+                            .map(|x| chartable::to_char(x.to_vec()).parse::<i32>().unwrap())
+                            .map(arch::Word::from_value)
+                            .collect::<Vec<arch::Word>>();
+
+    }
+
 }
 
 struct Disk {
@@ -234,7 +243,7 @@ impl IO {
         }
     }
 
-    pub fn load_tape(&mut self, contents: Vec<u8>) {
+    pub fn load_paper_tape(&mut self, contents: Vec<u8>) {
         self.paper_tape.contents = contents.chunks(5)
                                            .map(|x| arch::Word::from_values(true, *x.get(0).unwrap_or(&0),
                                                                             *x.get(1).unwrap_or(&0),
@@ -243,6 +252,12 @@ impl IO {
                                                                             *x.get(4).unwrap_or(&0)))
                                            .collect()
     }
+
+    pub fn load_tape(&mut self, unit: usize, contents: Vec<u8>) {
+        self.tapes[unit as usize].load(contents);
+    }
+
+
 
     pub fn add_card(&mut self, data: Vec<u8>) {
         assert!(data.len() <= 80);

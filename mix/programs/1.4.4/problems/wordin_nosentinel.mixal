@@ -1,0 +1,43 @@
+        ORIG  100
+START   ENT1  2
+        ENT6  INBUF2+99
+        IN    INBUF1
+O_LOOP  ENT2  100
+I_LOOP  JMP   WORDIN
+        CHAR
+        STX   OUTBUF
+        OUT   OUTBUF(18)
+        DEC2  1
+        J2NZ  I_LOOP
+        DEC1  1
+        J1NZ  O_LOOP
+        HLT
+
+WORDIN  STJ  WI_EXIT
+        INC6 1
+2H      LDA  0,6
+        CMP6 =EMPTY1=
+        JE 3F
+        CMP6 =EMPTY2=
+        JE  3F
+
+        JMP WI_EXIT
+
+3H      IN   -100,6(0)   * read tape 0
+        CMP6 =EMPTY1=
+        JL   1F  * we are in buffer one
+        ENT6 INBUF1
+        JMP  2B
+1H      ENT6 INBUF2
+        JMP  2B
+
+WI_EXIT JMP  *
+
+
+OUTBUF  ORIG  *+100
+INBUF1  ORIG  *+100
+EMPTY1  CON   0
+INBUF2  ORIG  *+100
+EMPTY2  CON   0
+
+        END   START
