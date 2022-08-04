@@ -36,7 +36,7 @@ enum DebugCommand {
     CONTINUE {number_of_breakpoints_to_skip: i16},
     SHOWMEM {location: i16},
     BYTES {value: i32},
-    LIST,
+    LIST { memory_location: i16},
     RESETTIMING,
     SHOWTIME,
     HALT
@@ -198,7 +198,7 @@ impl Computer {
                     DebugCommand::BYTES {value} => print_bytes(value),
                     DebugCommand::RESETTIMING => self.timer = timing::TimingUnit::new(),
                     DebugCommand::SHOWTIME => println!("{}", self.timer.get_time_to_run()),
-                    DebugCommand::LIST => self.print_source(),
+                    DebugCommand::LIST {memory_location} => self.print_source(memory_location),
                     DebugCommand::NOOP => ()
                 };
             }
@@ -215,8 +215,8 @@ impl Computer {
                  val.bytes[4].read());
     }
 
-    fn print_source(&self) {
-        let min_index = std::cmp::max(0, self.instruction_pointer.read() as i16 - 5);
+    fn print_source(&self, location: i16) {
+        let min_index = std::cmp::max(0, location);
         for n in min_index..std::cmp::min(4096, min_index+10) {
             println!("{}{:0>width$}: {}",
                      if n == self.instruction_pointer.read() { "-> " } else { "   " },
@@ -274,7 +274,7 @@ impl Computer {
                     "m" | "memory" => DebugCommand::SHOWMEM { location: split[1].parse::<i16>().unwrap()},
                     "c" | "continue" => DebugCommand::CONTINUE { number_of_breakpoints_to_skip: split.get(1).unwrap_or(&"0").parse::<i16>().unwrap()},
                     "B" | "bytes" => DebugCommand::BYTES {value: split[1].parse::<i32>().unwrap()},
-                    "l" | "list" => DebugCommand::LIST,
+                    "l" | "list" => DebugCommand::LIST { memory_location: split.get(1).unwrap_or(&&instruction_pointer.to_string()[..]).parse::<i16>().unwrap()},
                     "r" | "reset" => DebugCommand::RESETTIMING,
                     "t" | "time"  => DebugCommand::SHOWTIME,
                     "" => self.last_debug_command,

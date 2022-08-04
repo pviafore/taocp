@@ -326,7 +326,7 @@ fn _get_index(spl: &Vec<&str>) -> u8 {
 }
 
 fn _get_modifier(op: &str, spl: Vec<&str>, program_data: &ProgramData) -> u8 {
-   let default = match op {
+    let default = match op {
         "HLT" => 2,
         "NUM" => 0,
         "CHAR" => 1,
@@ -380,7 +380,7 @@ fn _parse_modifier(spl: Vec<&str>, default: u8, program_data: &ProgramData) -> u
                 else {
                     match program_data.symbol_table.get(modifier[0]) {
                         Some(val) => *val as u8,
-                        None => modifier[0].parse::<u8>().unwrap()
+                        None => modifier[0].parse::<u8>().expect(&format!("Invalid symbol: {}", modifier[0]))
                     }
                 }
             }

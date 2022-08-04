@@ -1,0 +1,139 @@
+* this is program that doubles the numbers from input to output
+N            EQU  4
+U            EQU  0
+V            EQU  1
+             ORIG 100
+
+* the idea is that you start with all purple buffers
+* we do a read into the next purple buffer, assuming that (nextp != nextr) on ASSIGN
+* and once its read in, you turn it to green (nextg = nextp, nextp++)
+* at this point, we can go back to compute and assign the buffers
+* this turns it yellow (curent = nextg; nextg++).
+* Once its released, its assumed
+* that the buffer has output (RELEASE), and should be turned red
+* the output coroutine can check for red ( nextr != nextp)
+* and turn that red (nextr=current)
+* after it is done, turn it to purple (nextp = nextr, nextr++)
+* i4 = CURRENt, X=NEXTG, I5=NEXTR, I3 = NEXTP I1/I2 = counter registers
+MAIN         ENT1 90  * 9,000 records (90 blocks of 100)
+
+*****************
+*           ???? set up buffers ????
+*****************
+             ENTA BUF1
+             STA NEXTP * Purple is the first buffer
+             STA NEXTG  * green is the first buffer (can't use until purple moves on)
+
+             ENTA BUF4
+             STA CURRENT
+
+             ENT5 0
+             ST5 NEXTR
+
+             LDX NEXTG
+             LD3 NEXTP
+             LD4 CURRENT
+
+
+COMP1        JMP ASSIGN * grab the next green buffer (block if no green)
+             ENT2 100
+             LD6 CURRENT
+2H           ENTA 0
+             JRED CONTROL(U)
+             JRED CONTROLOUT(V)
+             ADD  0,6   * I4 = current after end of control
+             ADD  0,6   * double it
+             STA  0,6
+             INC6 1  * advance the buffer
+             DEC2 1
+             J2NZ 2B
+             LD4  CURRENT
+             JMP RELEASE * ready for output after 100 things
+
+             DEC1 1  * outer loop
+             J1NZ COMP1
+
+3H           JRED CONTROLOUT(V) * make sure we are outputting everything
+             CMP5 NEXTG
+*             JNE  3B   * let the reds catch up to the greens
+
+             HLT
+
+CONTROL      STJ COMPX
+CONTX        JMP CONT1
+COMPUTE      STJ CONTX
+COMPX        JMP COMP1
+
+CONTROLOUT   STJ COMPOX
+CONTOUTX     JMP CONTOUT1
+COMPUTEOUT   STJ CONTOUTX
+COMPOX       JMP COMP1
+
+CONT1        JMP  COMPUTE
+             CMP3 NEXTR  * if the next purple is the same as red, let's wait
+             JE   CONT1
+             CMP3 CURRENT  * if the next purple is the same as current, let's wait
+             JE   CONT1
+
+             IN   0,3(U)    * purple to green
+             JMP  COMPUTE   * don't want to advance until we have a buffer
+1H           LD3  100,3     * move next purple forward
+             ST3  NEXTP
+             JMP  CONT1
+
+
+ASSIGN       STJ  9F
+1H           JRED CONTROL(U)
+             CMPX NEXTP       * check if the next green buffer is also purple
+             JE   1B          * if so, go back to control to wait until it's good
+             STX  CURRENT     * current green buffer is now current
+             LD4  CURRENT     * I4 = nextg
+             LD6  100,4       * advance the green to next
+             ST6  NEXTG       * advance green to nextg
+             LDX  NEXTG
+9H           JMP  *
+
+RELEASE      STJ  9F
+             J5NZ 1F      * is the next R set
+             LD5  CURRENT
+             ST5  NEXTR
+             ENT6  0
+             ST6  CURRENT  * zero out current, we're now red
+1H           JRED CONTROL(U)
+             JRED CONTROLOUT(V)
+9H           JMP  *
+
+* output coroutine
+* goal is to check for red nodes, output them, and mark them as purple
+CONTOUT1     JMP COMPUTEOUT
+1H           CMP5 CURRENT    * make sure we aren't rewriting the current node
+             JE   *-2        * if we are current, move back
+             J5Z  *-3        * if no red buffer is set, move back
+
+             OUT  0,5(V)
+             JMP COMPUTEOUT   * go back and only come back to this on a jred (output done)
+
+             LD5 100,5      * advance Next R
+             CMP5 NEXTG      * if we are running into a green, remove next r, (which will stall output)
+             JNE   2F
+             ENT5 0
+
+2H           ST5 NEXTR  * actually store next r (either zero or next)
+             JMP 1B
+
+
+             ORIG 1000
+BUF1         ORIG *+100
+NEXTBUF1     CON  BUF2
+BUF2         ORIG *+100
+NEXTBUF2     CON  BUF3
+BUF3         ORIG *+100
+NEXTBUF3     CON  BUF4
+BUF4         ORIG *+100
+NEXTBUF4     CON  BUF1
+
+NEXTG        CON  0
+NEXTP        CON  0
+NEXTR        CON  0
+CURRENT      CON  0
+             END  MAIN

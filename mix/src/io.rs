@@ -48,7 +48,6 @@ impl TapeUnit {
     }
 
     pub fn load(&mut self, contents: Vec<u8>) {
-        use std::str;
         self.tape = contents.chunks(11)
                             .map(|x| chartable::to_char(x.to_vec()).parse::<i32>().unwrap())
                             .map(arch::Word::from_value)

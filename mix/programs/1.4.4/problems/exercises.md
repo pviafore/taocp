@@ -281,7 +281,7 @@ We need to make sure that every "Red" buffer is output
      HLT        * end
 ```
 
-Of course, my answer above was way less inelegant than Knuth's. His is just jump
+Of course, my answer above was way less elegant than Knuth's. His is just jump
 to control as long as 6 is not zero, which makes sense because my code above
 is pretty similar to `CONTROL`.
 
@@ -303,5 +303,4 @@ needs two buffers worth of data
 
 16) Write a green-yellow-red-purple with three coroutines  (one input, one output, one computation)
 
-    We won't be able to do a n < N check in these cases, because one of those red buffers will be purple.
-    n needs to be the number of red AND purple buffers in this case. See green_yellow_red_purple.mixal.
+    We won't be able to do a n < N check in these cases, See green_yellow_red_purple.mixal.
