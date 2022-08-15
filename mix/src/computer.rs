@@ -216,7 +216,7 @@ impl Computer {
     }
 
     fn print_source(&self, location: i16) {
-        let min_index = std::cmp::max(0, location);
+        let min_index = std::cmp::max(0, location - 5);
         for n in min_index..std::cmp::min(4096, min_index+10) {
             println!("{}{:0>width$}: {}",
                      if n == self.instruction_pointer.read() { "-> " } else { "   " },
@@ -274,7 +274,7 @@ impl Computer {
                     "m" | "memory" => DebugCommand::SHOWMEM { location: split[1].parse::<i16>().unwrap()},
                     "c" | "continue" => DebugCommand::CONTINUE { number_of_breakpoints_to_skip: split.get(1).unwrap_or(&"0").parse::<i16>().unwrap()},
                     "B" | "bytes" => DebugCommand::BYTES {value: split[1].parse::<i32>().unwrap()},
-                    "l" | "list" => DebugCommand::LIST { memory_location: split.get(1).unwrap_or(&&instruction_pointer.to_string()[..]).parse::<i16>().unwrap()},
+                    "l" | "list" => DebugCommand::LIST { memory_location: split.get(1).unwrap_or(&&(instruction_pointer).to_string()[..]).parse::<i16>().unwrap()},
                     "r" | "reset" => DebugCommand::RESETTIMING,
                     "t" | "time"  => DebugCommand::SHOWTIME,
                     "" => self.last_debug_command,

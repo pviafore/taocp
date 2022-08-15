@@ -304,3 +304,14 @@ needs two buffers worth of data
 16) Write a green-yellow-red-purple with three coroutines  (one input, one output, one computation)
 
     We won't be able to do a n < N check in these cases, See green_yellow_red_purple.mixal.
+
+17) We need to adapt code to pool multiple buffer algorithms. We will have a linked list of red buffers and
+    a linked list of green buffers to handle multiple devices. See pooled_buffers.mixal
+
+    Now, there needs to be some analysis for this too. I'll be honest, I'm not seeing a huge benefit of one or the other
+    Compared to a ringed buffer, you still are querying for a red buffer or green buffer. However, if you had input
+    devices that shared a pooled buffer, that took different amount of times, you could handle them in different orders,
+    whereas the ringed buffer probably doesn't work well with out-of-order buffers being ready. With a sufficiently sized
+    number of devices sharing the pool, the more likely you will handle data being ready in any order.
+
+    However, this does cause issues when you are trying to block on data, but that can be done with certain flags too

@@ -1,0 +1,183 @@
+* This program reads from a tape, and averages a block together
+* I1 = Head of red linked list (all red to begin with)
+* I2 = Head of Green Linked list
+* I3 = current node to be used
+* I5 = temporary - don't depend on outside a function
+
+NUMDEV       EQU  2
+U            EQU  0
+V            EQU  1
+RED          EQU  1
+GREEN        EQU  2
+             ORIG 100
+
+MAIN         ENT3 0
+             ENT1 BUF1
+* loop over input
+COMP1        ENT4 50
+* start processing red blocks
+1H           JRED CONTROL(U)
+             JRED CONTROL(V)
+* ask for green block (blocks if there is none)
+             JMP ASSIGN
+* at this point, I3 is the block we want (green)
+             ENTA 0
+             ENTX 100
+2B           ADD 0,3
+             INC3 1
+             DECX 1
+             JXNZ 2B
+* outputs sum of that block
+             CHAR
+             STA OUTBUF
+             STX OUTBUF+1
+             OUT OUTBUF(18)
+* release green block back to red
+             ENT3 -100,3  * reset increment
+             JMP RELEASE
+             DEC4 1
+             J4NZ 1B
+             HLT
+
+
+ASSIGN       STJ 9F
+1H           JRED CONTROL(U)
+             JRED CONTROL(V)
+             ENT6 0,GREEN
+             J6Z  1B      * wait until a node is in green
+
+             JMP GET_BLOCK
+             ENT2 0,6
+
+             STA TEMP
+             LD3 TEMP
+
+9H           JMP *
+
+*assumed I3 is the current block
+RELEASE      STJ 9F
+             ENTA 0,3
+             ENT6 0,RED
+             JMP STORE_BLOCK
+             ENT1 0,6
+             ENT3 0
+9H           JMP *
+
+
+* always ask for U before V to be more efficient
+CONT1        JMP COMPUTE
+1H           J1Z CONT1     * RED list is empty, keep processing
+
+* read to first block
+             JBUS 2F(U)
+             ENTX 0
+             STX MEMU
+             ENT6 0,RED
+             JMP GET_BLOCK
+             ENT1 0,6
+             JAZ 1B    * no block left, go back to beginning
+             STA MEMU
+             LD6 MEMU
+             IN 0,6(U)
+
+* read from second device
+2H           JBUS 3F(V)
+             ENTX 0
+             STX MEMV
+             ENT6 0,RED
+             JMP GET_BLOCK
+             ENT1 0,6
+             JAZ 3F
+             STA MEMV
+             LD6 MEMV
+             IN 0,6(V)
+
+* if we are here, then either U or V has finished, assign it to the buffer
+3H           JMP COMPUTE
+             JBUS 4F(U)  * if U is stil busy, then it must be v that is ready
+
+* read the A buffer from MEMU, then add A to green list
+             LDA  MEMU
+             JAZ  4F
+             ENT6 0,GREEN
+             JMP  STORE_BLOCK
+             ENT2  0,6
+
+             JMP COMPUTE
+
+4H           JBUS 1B(V) * if V is busy, go back to the beginning
+             LDA  MEMV
+             JAZ  1B
+             ENT6 0,GREEN
+             JMP  STORE_BLOCK
+             ENT2 0,6
+
+             JMP 1B
+
+
+* the buffer you want to read should be in I6
+* A will be the buffer you want
+* 6 will be the new buffer block
+GET_BLOCK    STJ 9F
+             ENTA 0,6  * set A to first buffer
+* write the first node out wherever I6 was pointing to
+             J6Z 9F
+             LD6 100,6 * move to the next buffer ( can be zero)
+
+9H           JMP *
+
+* X will be the size of the list in I6
+GET_SIZE     STJ 9F
+             ENTX 0
+             ENT5 0,6
+1H           J5Z 9F
+             LD5 100,5  * Advance to the next node
+             INCX 1
+             JMP 1B
+9H           JMP  *
+
+* A is the next buffer, 6 is the linked list to add to
+* at the end, 6 will be the beginning node of the list, 5 will be the last
+STORE_BLOCK  STJ 9F
+* the list is not empty
+1H           J6Z 2F
+             ENT5 0,6
+5H           ST5 TEMP
+             LD5 100,5   * i4 is now pointing to next
+             J5NZ 5B     * if we aren't zero yet, means we have a new buffer, go again
+             LD5 TEMP
+             STA 100,5   * writes in previous next
+             JMP 3F
+* the first node was empty
+2H           STA TEMP
+             LD6 TEMP
+* make sure last node is pointing to zero
+3H           STA TEMP
+             LD5 TEMP
+             ENTX 0
+             STX 100,5
+9H           JMP *
+
+* coroutine linkage
+
+CONTROL      STJ  COMPUTEX
+CONTROLX     JMP  CONT1
+
+COMPUTE       STJ  CONTROLX
+COMPUTEX      JMP  COMP1
+
+MEMU         CON  0
+MEMV         CON  0
+TEMP         CON  0
+RED          CON  BUF1
+GREEN        CON  0
+
+             ORIG 1000
+BUF1         ORIG *+100
+NEXT1        CON BUF2
+BUF2         ORIG *+100
+NEXT2        CON BUF3
+BUF3         ORIG *+100
+NEXT3        CON  0
+OUTBUF       ORIG *+120
+             END  MAIN

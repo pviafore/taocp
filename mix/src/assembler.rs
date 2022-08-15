@@ -225,7 +225,7 @@ fn parse_address_string(op: &str, address_string: &str, line_index: usize, progr
     }
     else {
         let address = _get_address(&spl, line_index, program_data);
-        let index = _get_index(&spl);
+        let index = _get_index(&spl, program_data);
         let modifier = _get_modifier(op, spl, program_data);
         (address, index, modifier)
     }
@@ -309,7 +309,7 @@ fn _evaluate(text: &str, index: usize, program_data: &ProgramData) -> String {
     }
 }
 
-fn _get_index(spl: &Vec<&str>) -> u8 {
+fn _get_index(spl: &Vec<&str>, program_data: &ProgramData) -> u8 {
     if spl.len() > 1 {
         if spl[1].starts_with("(") {
             // this is the modifier field
@@ -317,7 +317,11 @@ fn _get_index(spl: &Vec<&str>) -> u8 {
         }
         else {
             let index_split: Vec<&str> = spl[1].split("(").collect();
-            index_split[0].parse::<u8>().expect(&format!("Invalid digit: {}", index_split[0]))
+            match program_data.symbol_table.get(index_split[0]) {
+                Some(val) => *val as u8,
+                None => index_split[0].parse::<u8>().expect(&format!("Invalid digit: {}", index_split[0]))
+
+            }
         }
     }
     else {

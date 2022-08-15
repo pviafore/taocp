@@ -43,6 +43,8 @@ struct Run {
     paper_tape_file: String,
     #[clap(long, required=false, default_value="invalid")]
     tape_0_file: String,
+    #[clap(long, required=false, default_value="invalid")]
+    tape_1_file: String,
     #[clap(long, short='D', required=false, default_value="invalid")]
     data_cards_file: String,
     #[clap(long, short='p')]
@@ -181,6 +183,13 @@ fn run(cmd: Run) {
         std::io::BufReader::new(file).read_line(&mut line).unwrap();
         comp.load_tape(0, chartable::translate(&line.strip_suffix('\n').unwrap_or(&line)));
     }
+    if cmd.tape_1_file != "invalid" {
+        let file = File::open(cmd.tape_1_file).unwrap();
+        let mut line = String::new();
+        std::io::BufReader::new(file).read_line(&mut line).unwrap();
+        comp.load_tape(1, chartable::translate(&line.strip_suffix('\n').unwrap_or(&line)));
+    }
+
     comp.load_card_into_memory();
     comp.run(cmd.debugger);
     if cmd.timing {

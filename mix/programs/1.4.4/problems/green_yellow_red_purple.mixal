@@ -1,5 +1,4 @@
 * this is program that doubles the numbers from input to output
-N            EQU  4
 U            EQU  0
 V            EQU  1
              ORIG 100
