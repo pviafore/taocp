@@ -314,4 +314,12 @@ needs two buffers worth of data
     whereas the ringed buffer probably doesn't work well with out-of-order buffers being ready. With a sufficiently sized
     number of devices sharing the pool, the more likely you will handle data being ready in any order.
 
-    However, this does cause issues when you are trying to block on data, but that can be done with certain flags too
+    However, this does cause issues when you are trying to block on data, but that can be checked with certain flags too
+
+18) We need to change the Assign/Release/Control routines to use an interrupt based mechanism. See interrupts.mixal
+    At its heart, we need to enter a control routine with an interrupt and trigger the read, and then the interrupt
+    afterwards will occur when its done reading.
+
+    After thinking about the issue, I can't get rid of the JRED, because even in an interrupt case, I have to know when the
+    device is ready. So (and based on the answers in the back that I glanced at), it really means don't use jred for a
+    coroutine, but let any asynchrony happen in an interrupt context

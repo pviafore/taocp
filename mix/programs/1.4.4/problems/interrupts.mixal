@@ -1,0 +1,87 @@
+* Reads buffers in a ring and outputs the sum of them
+* Uses an interrupt mechanism to deal with the code
+U            EQU  0
+N            EQU  3
+REG6         EQU  -3
+REG5         EQU  -4
+REG4         EQU  -5
+
+INTERRUPT    ORIG -3999
+
+* returns back to main program
+CONTROL      INT
+             LD6  REG6
+             J6Z  *-2 * if there are no red buffers, don't process
+             ST6  REG6
+             LD5  REG5   * read I5 into register
+             IN   0,5(U) * this will interrupt at some point
+             JMP CONTROL
+
+ONINPUT      LD5  REG5    * read I5 into I5 register
+             LD5  100,5  * advance next red
+             ST5  REG5
+             LD6  REG6
+             DEC6 1    *  remove a red buffer
+             ST6  REG6
+
+*      ISV information
+
+             ORIG -20
+             JMP ONINPUT
+             ORIG -12
+             JMP CONTROL
+
+* main program
+
+             ORIG 100
+MAIN         ENT1 10
+             ENT5 BUF1
+             ENT3 BUF1
+             ENT6 N
+COMP1        ENT2 100
+             ENTA 0
+             JMP ASSIGN
+LOOP         ADD 0,4
+             DEC2 1
+             INC4 1
+             J2NZ  LOOP
+             JMP  RELEASE
+OUTPUT       CHAR
+             STA OUTBUF
+             STX OUTBUF+1
+             OUT OUTBUF(18)
+             DEC1 1
+             J1NZ COMP1
+
+1H           HLT
+
+
+
+ASSIGN       STJ  9F
+* go to control (which will come back if no input ready yet)
+1H           INT
+             CMP6 =N=
+             JE   1B
+             LD4  NEXTG  * CURRENT
+             LD3  100,4  * advance green
+             ST3  NEXTG
+9H           JMP  *
+
+RELEASE      STJ 9F
+             INC6 1
+             JRED CONTROL(U)
+9H           JMP  *
+
+             ORIG 1000
+BUF1         ORIG *+100
+NEXTBUF1     CON  BUF2
+BUF2         ORIG *+100
+NEXTBUF2     CON  BUF3
+BUF3         ORIG *+100
+NEXTBUF3     CON  BUF1
+
+NEXTG        CON  BUF1
+NEXTR        CON  BUF1
+CURRENT      CON  0
+OUTBUF       ORIG *+120
+             END  MAIN
