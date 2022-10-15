@@ -1,0 +1,91 @@
+* Draw a card from a deck
+MAIN          ORIG   100
+              JMP    CREATEDECK
+              JMP    PRINTDECK
+              JMP    DRAW
+              JMP    DRAW
+              JMP    PRINTDECK
+              HLT
+
+DRAW          STJ  9F
+* if deck is empty skip ahead
+              ENTA DECK
+              JAZ  9F
+
+* get next card in the deck, and put it into new card
+              ENT1 NEWCARD
+              MOVE DECK(2)
+* I1 is now the next link
+              LD1  DECK(4:5)
+              LDA  0,1
+              LDX  1,1
+              STA  DECK
+              STX  DECK+1
+
+9H            JMP  *
+
+
+PRINTDECK    STJ 9F
+             ENT1 DECK
+1H           J1Z 9F
+             LDA 1,1
+             STA OUTBUF
+             OUT OUTBUF(18)
+             LD1 0,1(4:5)
+             JMP 1B
+9H           JMP *
+
+CREATEDECK    STJ  9F
+              ENTA 0
+* set tag
+              STA  DECK(1:1)
+              STA  DECK+2(1:1)
+              STA  DECK+4(1:1)
+
+* set suit
+              ENT1 2
+              ST1 DECK(2:2)
+              LDA RANK,1
+              STA DECK+1(5:5)
+              ENT1 4
+              ST1 DECK+2(2:2)
+              LDA RANK,1
+              STA DECK+3(5:5)
+              ENT1 3
+              ST1 DECK+4(2:2)
+              LDA RANK,1
+              STA DECK+5(5:5)
+
+*set rank
+              ENTA 2
+              STA DECK(3:3)
+              CHAR
+              STX DECK+1(2:3)
+              ENTA 3
+              STA DECK+2(3:3)
+              CHAR
+              STX DECK+3(2:3)
+              ENTA 10
+              STA DECK+4(3:3)
+              CHAR
+              STX DECK+5(2:3)
+
+* set link
+              ENTA DECK+2
+              STA DECK(4:5)
+              ENTA DECK+4
+              STA DECK+2(4:5)
+
+9H            JMP  *
+
+
+              ORIG  1000
+DECK          ORIG  *+6     ; a deck of three cards
+NEWCARD       ORIG  *+2
+RANK          CON   0
+CLUBS         ALF      C
+DIAMONDS      ALF      D
+HEARTS        ALF      H
+SPADES        ALF      S
+OUTBUF        ORIG  *+24
+              END MAIN

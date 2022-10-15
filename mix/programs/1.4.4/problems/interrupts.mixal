@@ -8,13 +8,18 @@ REG4         EQU  -5
 
 INTERRUPT    ORIG -3999
 
-* returns back to main program
-CONTROL      INT
-             LD6  REG6
+* returns back to main program if IO is still busy
+CONTROL      LDX IOBUSY
+             JXNZ 1H
+             INT
+
+1H           LD6  REG6
              J6Z  *-2 * if there are no red buffers, don't process
              ST6  REG6
              LD5  REG5   * read I5 into register
              IN   0,5(U) * this will interrupt at some point
+             ENTX 1
+             STX  IOBUSY
              JMP CONTROL
 
 ONINPUT      LD5  REG5    * read I5 into I5 register
@@ -22,6 +27,8 @@ ONINPUT      LD5  REG5    * read I5 into I5 register
              ST5  REG5
              LD6  REG6
              DEC6 1    *  remove a red buffer
+             ENTX 0    * IO is not busy
+             STX  IOBUSY
              ST6  REG6
 
 *      ISV information
@@ -69,7 +76,8 @@ ASSIGN       STJ  9F
 
 RELEASE      STJ 9F
              INC6 1
-             JRED CONTROL(U)
+             LDX  IOBUSY
+             JXNZ CONTROL
 9H           JMP  *
 
              ORIG 1000
@@ -84,4 +92,5 @@ NEXTG        CON  BUF1
 NEXTR        CON  BUF1
 CURRENT      CON  0
 OUTBUF       ORIG *+120
+IOBUSY
              END  MAIN

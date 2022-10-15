@@ -320,6 +320,55 @@ needs two buffers worth of data
     At its heart, we need to enter a control routine with an interrupt and trigger the read, and then the interrupt
     afterwards will occur when its done reading.
 
-    After thinking about the issue, I can't get rid of the JRED, because even in an interrupt case, I have to know when the
-    device is ready. So (and based on the answers in the back that I glanced at), it really means don't use jred for a
-    coroutine, but let any asynchrony happen in an interrupt context
+    After thinking about the issue, I can get rid of the JRED if I track the IO idle through a variable
+    I know exactly when I request it, and I get interrupted when its ready
+
+    This code will not run on the machine, because it was non-trivial to get memory loaded to a card to a negative index.
+    The code would have taken a long time to create 4000 indices of negative control memory.
+
+19) A program has n >=2 consecutive blocks, K is input at time tk, and t1 = 0.
+    It is processed some time after Un = tk + T (for some value T) until some time after Vn = tk + T + C (for some value C)
+    T is the time it takes to input and assign for processing, C is compute time
+    The disk rotates every P units of time, and it reads a new block every L units. We might have to loop a few times around
+    in the case that all buffers are filled while waiting for input to happen
+
+    For instance, if there were 4 buffers, and the disk rotated completely across 8 blocks in 4 units of time (L is 1 unit),
+    but process time was 2 units
+    We read block 1 at T1 = 0
+    Block 2 is ready to read at T2 = 2, but we have to wait until 5 until we can read it (1 * 1) mod 4 = tk (5)
+
+    So, we are looking for the N so that the finishing time Vn is the earliest. In this case, we want to make sure that
+    we have enough buffers to handle any sort of computation time. The minimum is T + C + n-1 max (L, C). This means that
+    for however long all the N-1 jobs took (whether that was dominated by waiting on disk, or waiting on compute), plus an
+    additional T + C for the existing Tn.
+
+    If L >= C , then we can compute faster than it takes to get to the next block on the disk, which means once we are
+    done with processing, immediately read the next block.
+
+    I can't figure enough of the rest of the math out, but the goal is to make sure that the we are always reading from disk.
+    As soon as one is done, you are able to read the next. You need enough buffers to make sure that even when all the buffers are read,
+    by the time you get to next input. In other words, if you can read a block in L, you want to make sure that your buffers fill up the time
+    C, in (L) times. For instance, if you can read in a block in 1 unit, and it takes you 2 units to process, you should read the first block
+    at 0, second block at 1, and you'll start processing the second block at 3 (instead of waiting at 5) as long as you have that second buffer to handle it. I think you need ceil(C/(L+T)) buffers, because then in the time to compute, you'll be filling up that many buffers after T.
+    Every L units (which is when to read a block - keep that IO busy ), you need to do this throughout the entire compute time, so that by the time you've computed the first, you have a full buffer ready to rock (after T time of course). Where I'm unsure is how this happens on block 3
+
+    So in the example above, assuming T is zero (I think the T's cancel out for every read to some degree, other than the first one you have to wait), (assuming 4 blocks, C = 2, L = 1, N=2 Buffers), you can read every 2 you have 1st read at 1 (1st buffer filled), second read at 3 (2nd and 3rd buffer filled), third read at 5 (3rd, 4th, and 1st buffer filled), fourth read at 7 (4th, 1st, 2nd, 3rd buffer) could be filled
+    if needed.
+
+    Let's try this out with some values from the book, and check our answers and see if I'm right:
+
+    WARNING - The following ended up being wrong.
+
+    L=1, P = 100, T = .5, n = 100,
+
+    C= .5 -> 1 buffer  - initial T, compute for 100th element, and 99*(L) for the first 99
+    C = 1 -> 1 buffer  - same as above, just right by the wir
+    C = 1.01 ->  1 buffer
+    C = 1.5  -> 1 buffer
+    C = 2    -> 2/1.5 = 2 buffers
+    C = 2.5 -> 2.5 / 1.5 = 2 buffers
+    C= 10 -> 10 / 1.5 = 7 buffers
+    C = 50 -> 50 / 1.5 = 34 buffers
+    C = 200 -> 200/1.5 = 134 buffers
+
+    Verdict - No dice - my math wasn't up to snuff about it, oh well
