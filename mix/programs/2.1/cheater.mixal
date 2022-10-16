@@ -1,10 +1,15 @@
 * Draw a card from a deck
+TAG           EQU      9
+SUIT          EQU     18
+RANK          EQU     27
+NEXT          EQU     37
 MAIN          ORIG   100
               JMP    CREATECARDS
               ENT3   CARDS
               JMP    PUTONBOTTOM
               ENT3   CARDS+4
               JMP    PUTONBOTTOM
+              JMP    DRAWBOTTOM
               JMP    PRINTDECK
               HLT
 
@@ -23,15 +28,46 @@ PUTONBOTTOM  STJ 9F
              JMP 1B
 
 8H           ENTA 1 * set the card to facedown
-             STA  0,3(1:1)
+             STA  0,3(TAG)
 
              J2NZ 7F * need to set deck if this is the first
              ST3 DECK
              JMP 9F
 
-7H           ST3 0,2(4:5) * set the address into the link of hte card
+7H           ST3 0,2(NEXT) * set the address into the link of hte card
 
 9H           JMP *
+
+
+* loops through the deck (if not empty) and draws the last one
+* keeps track of the last card and the second to last
+DRAWBOTTOM   STJ  9F
+             ENTA 0
+             STA  NEWCARD
+* 1 is the last card, 3 is the previous card
+             LD3  DECK
+             LD2  DECK
+             LD1  DECK
+             LD1  0,1
+             LD2  0,1
+1H           J2Z  2F
+             LD3  0,1 * 3 is second to last card
+             LD1  0,1 * 1 is last
+             LD2  0,1 * 2 is next
+             JMP  1B
+
+2H           ST1 NEWCARD * copy the card's address to newcard
+* if A was still deck, that means its the last card, otherwise update link
+             CMPA DECK
+             JE   8F
+
+             ENTA 0
+             STA 0,3(NEXT) * zero out link
+
+             JMP 9F
+8H           ENTA 0
+             STA DECK
+9H           JMP  *
 
 PRINTDECK    STJ 9F
              LD1 DECK
@@ -40,7 +76,7 @@ PRINTDECK    STJ 9F
              STA OUTBUF
 
 * put in parens if face down
-             LDA 0,1(1:1)
+             LDA 0,1(TAG)
              JAZ 2F
              LDA PARENS(4:4)
              STA OUTBUF(1:1)
@@ -48,7 +84,7 @@ PRINTDECK    STJ 9F
              STA OUTBUF+1(1:1)
 
 2H           OUT OUTBUF(18)
-             LD1 0,1(4:5)
+             LD1 0,1(NEXT)
              JMP 1B
 9H           JMP *
 
@@ -56,35 +92,35 @@ PRINTDECK    STJ 9F
 CREATECARDS   STJ  9F
               ENTA 0
 * set tag
-              STA  CARDS(1:1)
-              STA  CARDS+2(1:1)
-              STA  CARDS+4(1:1)
+              STA  CARDS(TAG)
+              STA  CARDS+2(TAG)
+              STA  CARDS+4(TAG)
 
 * set suit
               ENT1 2
-              ST1 CARDS(2:2)
-              LDA RANK,1
+              ST1 CARDS(SUIT)
+              LDA SUIT_IDX,1
               STA CARDS+1(5:5)
               ENT1 4
-              ST1 CARDS+2(2:2)
-              LDA RANK,1
+              ST1 CARDS+2(SUIT)
+              LDA SUIT_IDX,1
               STA CARDS+3(5:5)
               ENT1 3
-              ST1 CARDS+4(2:2)
-              LDA RANK,1
+              ST1 CARDS+4(SUIT)
+              LDA SUIT_IDX,1
               STA CARDS+5(5:5)
 
 *set rank
               ENTA 2
-              STA CARDS(3:3)
+              STA CARDS(RANK)
               CHAR
               STX CARDS+1(2:3)
               ENTA 3
-              STA CARDS+2(3:3)
+              STA CARDS+2(RANK)
               CHAR
               STX CARDS+3(2:3)
               ENTA 10
-              STA CARDS+4(3:3)
+              STA CARDS+4(RANK)
               CHAR
               STX CARDS+5(2:3)
 
@@ -93,7 +129,7 @@ CREATECARDS   STJ  9F
 
               ORIG  1000
 CARDS         ORIG   *+6
-RANK          CON      0
+SUIT_IDX      CON      0
 CLUBS         ALF      C
 DIAMONDS      ALF      D
 HEARTS        ALF      H
@@ -101,4 +137,5 @@ SPADES        ALF      S
 PARENS        ALF     ()
 OUTBUF        ORIG  *+24
 DECK          CON      0
+NEWCARD       CON      0
               END MAIN

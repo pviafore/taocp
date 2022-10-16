@@ -13,3 +13,5 @@ not the address itself, but rather the value pointed to it.
 3) Write an algorithm to draw a card. see `draw.mixal`
 
 4) Write an algorithm to place a card on bottom face down. See `put_on_bottom.mixal`
+
+5) Give an algorithm that draws from the bottom. See `cheater.mixal`
