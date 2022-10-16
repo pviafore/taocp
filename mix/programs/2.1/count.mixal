@@ -1,0 +1,124 @@
+* Draw a card from a deck
+TAG           EQU      9
+SUIT          EQU     18
+RANK          EQU     27
+NEXT          EQU     37
+MAIN          ORIG   100
+              JMP    CREATECARDS
+              ENT3   CARDS
+              JMP    PUTONBOTTOM
+              ENT3   CARDS+4
+              JMP    PUTONBOTTOM
+              JMP    COUNT
+              CHAR
+              STX    OUTBUF
+              OUT    OUTBUF(18)
+              JMP    PRINTDECK
+              HLT
+
+* its assumed that I3 points to an address,
+*  where the values are an existing card
+* address is the current address of the card's memory
+* this loops through the deck, and assigns the card to the
+* link of the last card
+PUTONBOTTOM  STJ 9F
+             LD1 DECK
+             LD2 DECK
+1H           J1Z 8F
+
+             ENT2 0,1 * save off 2 as the last card
+             LD1 0,1
+             JMP 1B
+
+8H           ENTA 1 * set the card to facedown
+             STA  0,3(TAG)
+
+             J2NZ 7F * need to set deck if this is the first
+             ST3 DECK
+             JMP 9F
+
+7H           ST3 0,2(NEXT) * set the address into the link of hte card
+
+9H           JMP *
+
+
+* loops through the deck and counts, putting the value in A
+COUNT        STJ  9F
+             LD1  DECK
+             ENTA 0
+1H           J1Z  9F
+             INCA 1
+             LD1  0,1
+             JMP  1B
+9H           JMP  *
+
+PRINTDECK    STJ 9F
+             LD1 DECK
+1H           J1Z 9F
+             LDA 1,1
+             STA OUTBUF
+
+* put in parens if face down
+             LDA 0,1(TAG)
+             JAZ 2F
+             LDA PARENS(4:4)
+             STA OUTBUF(1:1)
+             LDA PARENS(5:5)
+             STA OUTBUF+1(1:1)
+
+2H           OUT OUTBUF(18)
+             LD1 0,1(NEXT)
+             JMP 1B
+9H           JMP *
+
+* creates the 2 of diamonds, 3 of spades and 10 of hearts, all face up
+CREATECARDS   STJ  9F
+              ENTA 0
+* set tag
+              STA  CARDS(TAG)
+              STA  CARDS+2(TAG)
+              STA  CARDS+4(TAG)
+
+* set suit
+              ENT1 2
+              ST1 CARDS(SUIT)
+              LDA SUIT_IDX,1
+              STA CARDS+1(5:5)
+              ENT1 4
+              ST1 CARDS+2(SUIT)
+              LDA SUIT_IDX,1
+              STA CARDS+3(5:5)
+              ENT1 3
+              ST1 CARDS+4(SUIT)
+              LDA SUIT_IDX,1
+              STA CARDS+5(5:5)
+
+*set rank
+              ENTA 2
+              STA CARDS(RANK)
+              CHAR
+              STX CARDS+1(2:3)
+              ENTA 3
+              STA CARDS+2(RANK)
+              CHAR
+              STX CARDS+3(2:3)
+              ENTA 10
+              STA CARDS+4(RANK)
+              CHAR
+              STX CARDS+5(2:3)
+
+9H            JMP  *
+
+
+              ORIG  1000
+CARDS         ORIG   *+6
+SUIT_IDX      CON      0
+CLUBS         ALF      C
+DIAMONDS      ALF      D
+HEARTS        ALF      H
+SPADES        ALF      S
+PARENS        ALF     ()
+OUTBUF        ORIG  *+24
+DECK          CON      0
+NEWCARD       CON      0
+              END MAIN
