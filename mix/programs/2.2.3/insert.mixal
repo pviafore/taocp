@@ -1,0 +1,71 @@
+* General Purpose Stack Insert
+
+MAIN     ORIG 100
+         JMP SETUPMEM
+         ENTA 5
+         JMP INSERT
+         NOP T
+         ST1 T
+         ENTA 3
+         JMP INSERT
+         NOP T
+         ST1 T
+         ENTA 11
+         JMP INSERT
+         NOP T
+         ST1 T
+* I1 should be the stack at this point
+         JMP PRINT
+         HLT
+
+* sets up the linked list of available memory
+SETUPMEM STJ  9F
+
+         ENT1 MEMORY
+         ENT6 1999
+         ST1  AVAIL  * available is set to the first node of memory
+
+1H       INC1 1      * next address
+         ST1 -1,1(4:5) * save the current address in the previous's next field
+         DEC6 1
+         J6P  1B
+9H       JMP  *
+
+* must JMP To this address with
+* the addres fields in rJ must contain the stack
+* and rA must contain the new information
+INSERT   STJ  9F
+         LD2  9F(0:2) * read the return address
+         LD3  9F(0:2) * top of stack
+         LD3  0,3(0:2) * read link variable
+         LD3  0,3      * read link variable
+         INC2 1       * return past the address
+         ST2  9F(0:2)
+
+         LD1  AVAIL  * I1 equals new field
+         LD2  0,1(4:5) * I2 = next available
+         ST2  AVAIL
+
+         ST3 0,1(4:5)   * in the new field, store the top of the stack
+         STA 0,1(0:3)   * set the A field
+
+9H       JMP  *
+
+PRINT    STJ  9F
+1H       LDA 0,1(0:3)
+         CHAR
+         STX OUTBUF
+         OUT OUTBUF(18)
+         LD1 0,1(4:5)
+         J1NZ 1B
+9H       JMP  *
+
+
+OUTBUF  ORIG   *+120
+AVAIL   CON    0
+        ORIG   1000
+MEMORY  ORIG   *+2000
+ENDMEM  CON    -1
+T       CON    0
+
+         END MAIN

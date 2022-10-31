@@ -294,7 +294,10 @@ fn _evaluate(text: &str, index: usize, program_data: &ProgramData) -> String {
         let split: Vec<&str> = text.splitn(2, '*').collect();
         (_evaluate(split[0], index, program_data).parse::<i32>().unwrap() *
          _evaluate(split[1], index, program_data).parse::<i32>().unwrap()).to_string()
-
+    }
+    else if text.contains(':') {
+        let modifier: Vec<&str> = text.split(':').collect();
+        (modifier[0].parse::<u8>().unwrap() * 8 + modifier[1].parse::<u8>().unwrap()).to_string()
     }
     else {
         if program_data.label_table.contains_key(text) {
