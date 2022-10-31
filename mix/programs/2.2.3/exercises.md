@@ -5,3 +5,5 @@
     getting new memory from AVAIL does the overflow check.)
 
 2. See `insert.mixal`
+
+3. See `delete.mixal`

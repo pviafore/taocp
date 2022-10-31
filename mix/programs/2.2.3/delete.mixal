@@ -1,4 +1,4 @@
-* General Purpose Stack Insert
+* General Purpose Stack Insert and delete
 
 MAIN     ORIG 100
          JMP SETUPMEM
@@ -14,6 +14,9 @@ MAIN     ORIG 100
          JMP INSERT
          NOP T
          ST1 T
+         JMP DELETE
+         NOP T
+         JMP UNDERFLOW
 * I1 should be the stack at this point
          JMP PRINT
          HLT
@@ -49,6 +52,35 @@ INSERT   STJ  9F  *  okay if we return to no-op
 
 9H       JMP  *
 
+
+* must JMP To this address with
+* the address fields in rJ must contain the stack
+* rJ +1 is underflow, rJ + 2 is succesful
+
+DELETE   STJ  9F
+         LD3  9F(0:2)
+         LD3  0,3(0:2)  * read link variable
+
+         J3Z  9F   * if we have null link, immediately jump
+         LD2  9F(0:2)
+         INC2 2
+         ST2  9F(0:2)
+         DEC2 2 * revert rJ back to stack address
+         LD3  0,3
+         LDA  0,3(0:3)  * read the info into A
+
+         LD2  0,2(0:2)  * read link variable
+         LD1  0,2
+         LD3  0,2       * 3 is the address of the top variable
+
+         LD1  0,1(4:5)   * advance the stack for I1
+
+         LD2  AVAIL
+         ST2  0,3(4:5)   * save the link to avail
+         ST3  AVAIL      * push the list on avail
+         STZ  0,3(0:3)   * zero out info
+9F       JMP  *
+
 PRINT    STJ  9F
 1H       LDA 0,1(0:3)
          CHAR
@@ -60,6 +92,7 @@ PRINT    STJ  9F
 
 * OVERFLOW ROUTINE
 OVERFLOW  HLT
+UNDERFLOW HLT
 
 
 OUTBUF  ORIG   *+120
