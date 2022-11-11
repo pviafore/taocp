@@ -1,0 +1,170 @@
+* General Purpose  DEQUE
+
+MAIN     ORIG 100
+         JMP SETUPMEM
+         ENTA 5
+         ENT4 R
+         JMP FINSERT
+         NOP T
+         ST1 T
+         ST4 R  * nothing changes at the back
+         ENTA 3
+         JMP FINSERT
+         NOP T
+         ST1 T
+         ENTA 11
+         JMP FINSERT
+         NOP T
+         ST1 T
+         JMP PRINT
+         JMP PRINTLN
+         LD1 T
+         JMP FDELETE
+         NOP T
+         JMP UNDERFLOW
+         ST1 T
+         JMP PRINT
+         JMP PRINTLN
+
+         LD1 T
+* delete the entire stack
+         JMP FDELETE
+         NOP T
+         JMP UNDERFLOW
+         ST1 T
+
+         JMP FDELETE
+         NOP T
+         JMP UNDERFLOW
+         ST1 T
+         ST4  R
+
+         JMP PRINT
+         JMP PRINTLN
+         LD1 T
+* I'm going to assume that I1 is the stack coming into the next two
+
+         ENTA 3
+         JMP FINSERT
+         NOP T
+         ST1 T
+         ST4  R
+
+         ENTA 7
+         JMP BINSERT
+         ST1  T
+         ST4  R
+
+         JMP PRINT
+         JMP PRINTLN
+
+         LD1 T
+* I1 should be the stack at this point
+         HLT
+
+PRINTLN  STJ 9F
+         LDA  LINE
+         STA  OUTBUF
+         OUT  OUTBUF(18)
+9H       JMP  *
+* sets up the linked list of available memory
+SETUPMEM STJ  9F
+
+         ENT1 MEMORY
+         ENT6 1999
+         ST1  AVAIL  * available is set to the first node of memory
+
+1H       INC1 1      * next address
+         ST1 -1,1(4:5) * save the current address in the previous's next field
+         DEC6 1
+         J6P  1B
+9H       JMP  *
+
+* must JMP To this address with
+* the addres fields in rJ must contain the stack
+* and rA must contain the new information
+* I4 will be the R
+FINSERT  STJ  9F  *  okay if we return to no-op
+         LD3  9F(0:2) * top of stack
+         LD3  0,3(0:2) * read link variable
+         LD3  0,3      * read link variable
+
+         LD1  AVAIL  * I1 equals new field
+         J1Z  OVERFLOW
+
+         J3NZ  1F  * check if we need to set R
+         ST1 0,4(4:5) * set R
+
+1H       LD2  0,1(4:5) * I2 = next available
+         ST2  AVAIL
+
+         ST3 0,1(4:5)   * in the new field, store the top of the stack
+         STA 0,1(0:3)   * set the A field
+
+         LD3  9F(0:2) * top of stack
+         LD3  0,3(0:2) * read link variable
+
+9H       JMP  *
+
+* Inserts at the back
+* entry conditions: r1 = T, A equals new value
+* exit conditions: r2, r3 get trashed
+BINSERT   STJ 9F
+
+9H        JMP *
+
+
+* must JMP To this address with
+* the address fields in rJ must contain the stack
+* rJ +1 is underflow, rJ + 2 is succesful
+* r4 is the rear pointer
+
+FDELETE  STJ  9F
+         LD3  9F(0:2)
+         LD3  0,3(0:2)  * read link variable
+
+         J3Z  9F   * if we have null link, immediately jump
+         LD2  9F(0:2)
+         INC2 2
+         ST2  9F(0:2)
+         DEC2 2 * revert rJ back to stack address
+         LD3  0,3
+         LDA  0,3(0:3)  * read the info into A
+
+         LD2  0,2(0:2)  * read link variable
+         LD1  0,2
+         LD3  0,2       * 3 is the address of the top variable
+
+         LD1  0,1(4:5)   * advance the stack for I1
+
+         LD2  AVAIL
+         ST2  0,3(4:5)   * save the link to avail
+         ST3  AVAIL      * push the list on avail
+         STZ  0,3(0:3)   * zero out info
+9F       JMP  *
+
+PRINT    STJ  9F
+         J1Z 9F
+1H       LDA 0,1(0:3)
+         CHAR
+         STX OUTBUF
+         OUT OUTBUF(18)
+         LD1 0,1(4:5)
+         J1NZ 1B
+9H       JMP  *
+
+* OVERFLOW ROUTINE
+OVERFLOW  HLT
+UNDERFLOW HLT
+
+
+OUTBUF  ORIG   *+120
+AVAIL   CON    0
+        ORIG   1000
+MEMORY  ORIG   *+2000
+ENDMEM  CON    0
+T       CON    0
+R       CON    0
+LINE    ALF  -----
+
+         END MAIN

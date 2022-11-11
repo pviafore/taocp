@@ -1,0 +1,15 @@
+OVERFLOW  STJ  9F
+          ST1  8F(0:2)
+          LD1  POOLMAX
+          CMP1 SEQMIN
+          JLE  1F
+          HLT   * nothing more we can do
+1H        ST1  AVAIL
+          STZ  AVAIL(4:5)  * clear out link
+          INC1 1  * assuming node size of 1
+          ST1  POOLMAX
+          LD1  9F(0:2)
+          DEC1 2
+          ST1  9F(0:2) * try allocaiton again
+8H        ENT1  * restore I1
+9H        JMP  *
