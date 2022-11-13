@@ -209,7 +209,7 @@ fn tokenize(line: &str) -> (&str, &str, &str) {
     let label = spl[0];
     let filtered_split: Vec<&str> = spl[1..].iter().cloned().filter(|x| *x != "").collect();
     let address = if filtered_split.len() > 1 { filtered_split[1] } else { "" };
-    (label, filtered_split[0], address)
+    (label, if filtered_split.len() > 0 { filtered_split[0] } else {""} , address)
 }
 
 fn parse_address_string(op: &str, address_string: &str, line_index: usize, program_data: &ProgramData) -> (arch::HalfWord, u8, u8) {

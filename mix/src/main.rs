@@ -7,59 +7,59 @@ mod instructions;
 mod io;
 mod timing;
 
-use clap::Clap;
+use clap::Parser;
 use std::fs::{self, File};
 use std::io::{BufRead, Write};
 
-#[derive(Clap)]
-#[clap(version = "1.0", author = "Pat V <patviafore@gmail.com>")]
+#[derive(clap::Parser)]
+#[command(version = "1.0", author = "Pat V <patviafore@gmail.com>")]
 struct Opts {
-    #[clap(subcommand)]
+    #[command(subcommand)]
     subcmd: SubCommand,
 }
 
-#[derive(Clap)]
+#[derive(Parser)]
 enum SubCommand {
     CreateCardpack(CreateCardpack),
     Run(Run),
     Assemble(Assemble)
 }
 
-#[derive(Clap)]
+#[derive(Parser)]
 struct CreateCardpack {
     cardpack_name: String,
     program_file: String,
     start_location: i16
 }
 
-#[derive(Clap)]
+#[derive(Parser)]
 struct Run {
     program_name: String,
-    #[clap(long, short, required=false, default_value="mixal")]
+    #[arg(long, short, required=false, default_value="mixal")]
     from: String,
-    #[clap(long, short, required=false, default_value="-1")]
+    #[arg(long, short, required=false, default_value="-1")]
     start: i16,
-    #[clap(long, short='T', required=false, default_value="invalid")]
+    #[arg(long, short='T', required=false, default_value="invalid")]
     paper_tape_file: String,
-    #[clap(long, required=false, default_value="invalid")]
+    #[arg(long, required=false, default_value="invalid")]
     tape_0_file: String,
-    #[clap(long, required=false, default_value="invalid")]
+    #[arg(long, required=false, default_value="invalid")]
     tape_1_file: String,
-    #[clap(long, short='D', required=false, default_value="invalid")]
+    #[arg(long, short='D', required=false, default_value="invalid")]
     data_cards_file: String,
-    #[clap(long, short='p')]
+    #[arg(long, short='p')]
     as_program_cards: bool,
-    #[clap(long, short='x')]
+    #[arg(long, short='x')]
     trace: bool,
-    #[clap(long, short='d')]
+    #[arg(long, short='d')]
     debugger: bool,
-    #[clap(long, short)]
+    #[arg(long, short)]
     timing: bool,
-    #[clap(long, short)]
+    #[arg(long, short)]
     verbose: bool
 }
 
-#[derive(Clap)]
+#[derive(Parser)]
 struct Assemble {
     input_filename: String,
     output_filename: String

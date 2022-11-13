@@ -7,7 +7,6 @@ MAIN     ORIG 100
          JMP FINSERT
          NOP T
          ST1 T
-         ST4 R  * nothing changes at the back
          ENTA 3
          JMP FINSERT
          NOP T
@@ -37,29 +36,47 @@ MAIN     ORIG 100
          NOP T
          JMP UNDERFLOW
          ST1 T
-         ST4  R
 
          JMP PRINT
          JMP PRINTLN
          LD1 T
 * I'm going to assume that I1 is the stack coming into the next two
 
+         ENTA 1
+         JMP BINSERT
+         ST1  T
+
          ENTA 3
          JMP FINSERT
          NOP T
          ST1 T
-         ST4  R
 
          ENTA 7
          JMP BINSERT
          ST1  T
-         ST4  R
 
          JMP PRINT
          JMP PRINTLN
 
          LD1 T
+
+         JMP BDELETE
+         JMP BDELETE
+
+         JMP PRINT
+         JMP PRINTLN
+         LD1 T
+         
+         JMP BDELETE
+         ENTA 4
+         JMP BINSERT
+         ST1  T
+
 * I1 should be the stack at this point
+         JMP PRINT
+         JMP PRINTLN
+         LD1 T
+
          HLT
 
 PRINTLN  STJ 9F
@@ -101,23 +118,39 @@ FINSERT  STJ  9F  *  okay if we return to no-op
          ST3 0,1(4:5)   * in the new field, store the top of the stack
          STA 0,1(0:3)   * set the A field
 
-         LD3  9F(0:2) * top of stack
-         LD3  0,3(0:2) * read link variable
-
 9H       JMP  *
 
 * Inserts at the back
-* entry conditions: r1 = T, A equals new value
-* exit conditions: r2, r3 get trashed
+* entry conditions: i1=T, i4 = R, A equals new value
+* exit conditions: i1=T, r2, r3 get trashed, i4 is new R
+* 
 BINSERT   STJ 9F
 
+* allocate a node in I2 
+          LD2  AVAIL
+          J2Z  OVERFLOW
+          STA  0,2(0:3)
+
+* if the list is empty, set the list to our new node and set R to new node
+          J1NZ 1F
+          LD1  AVAIL
+          ST1 0,4 AVAIL
+          JMP  2F
+* list is not empty
+1H        LD3  0,4(4:5)
+          ST2  0,3(4:5)
+          ST2 0,4(4:5)  *  save the link off
+2H        LD3  0,2(4:5)
+          ST3  AVAIL     * save the next available link
+
+          STZ  0,2(4:5) * zero out the link
 9H        JMP *
 
 
 * must JMP To this address with
 * the address fields in rJ must contain the stack
 * rJ +1 is underflow, rJ + 2 is succesful
-* r4 is the rear pointer
+* r4 is the rear pointer, A is the value
 
 FDELETE  STJ  9F
          LD3  9F(0:2)
@@ -142,6 +175,43 @@ FDELETE  STJ  9F
          ST3  AVAIL      * push the list on avail
          STZ  0,3(0:3)   * zero out info
 9F       JMP  *
+
+* for deleting in the back, we have to go until we are at our 
+* r node, and then delete r, push back to avail, and then 
+* link our last new r to nothing
+* entry  I1 is the stack, I4 is empty
+* exit   I2, I3 get trashed, I5 gets trashed, A is the value
+BDELETE  STJ  9F
+         J1Z  UNDERFLOW  *  empty stack
+
+         ST1 *+1(0:2)
+         ENT2 *
+         LDA  0,2(0:3)   * read A value from back
+         LD3 0,1(4:5)   * 3 points to the next value
+         LD5 0,3(4:5)
+
+         J3NZ 1F        * we only have one node
+         LD3 0,4(4:5)
+         STZ 0,4
+         ENT1 0          * we have no stack
+         JMP 2F
+         
+* more than one link, I3 is next node(to be deleted), I2 is the current node, I5 is next link (which may be zero)
+1H       LD5 0,3(4:5) 
+         ST2  0,4   * on the last loop, this sets the last node to I4
+         J5Z 2F 
+         ST3 *+1(0:2)
+         ENT2 *  * sets I2 to last current
+         LD3 0,2(4:5) * advance link
+         JMP 1B
+         
+2H       STZ 0,2(4:5) 
+         STZ 0,3(0:3)
+         LD2 AVAIL  * restore last node
+         ST2 0,3(4:5)  
+         ST3 AVAIL
+
+9H       JMP  *
 
 PRINT    STJ  9F
          J1Z 9F
