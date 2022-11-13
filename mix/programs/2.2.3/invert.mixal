@@ -86,11 +86,8 @@ INVERT    STJ  9F
           J2Z  9F
 
 
-1H        ST1  *+1(0:2)
-          ENT3  *      * I3 = I1 (I3 is node y, y = x)
-
-          ST2  *+1(0:2)
-          ENT1  *      * I1 = I3 (x = z)
+1H        ENT3  0,1      * I3 = I1 (I3 is node y, y = x)
+          ENT1  0,2      * I1 = I2 (x = z)
 
           LD2  0,2(4:5)    * z = link(z)
           ST3  0,1(4:5)    * link(x) = y
