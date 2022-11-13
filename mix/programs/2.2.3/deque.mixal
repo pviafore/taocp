@@ -134,7 +134,7 @@ BINSERT   STJ 9F
 * if the list is empty, set the list to our new node and set R to new node
           J1NZ 1F
           LD1  AVAIL
-          ST1 0,4 AVAIL
+          ST1 0,4 
           JMP  2F
 * list is not empty
 1H        LD3  0,4(4:5)

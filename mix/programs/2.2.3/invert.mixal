@@ -1,0 +1,128 @@
+* General Purpose  DEQUE
+
+MAIN     ORIG 100
+         JMP SETUPMEM
+         
+         LD1 T
+         ENT4 R
+
+         ENTA 1
+         JMP BINSERT
+
+         ENTA 3
+         JMP BINSERT
+
+         ENTA 7
+         JMP BINSERT
+
+         ENTA 4
+         JMP BINSERT
+
+         ST1  T
+
+         JMP PRINT
+         JMP PRINTLN
+
+         LD1  T
+         JMP INVERT
+         JMP PRINT
+
+         HLT
+
+PRINTLN  STJ 9F
+         LDA  LINE
+         STA  OUTBUF
+         OUT  OUTBUF(18)
+9H       JMP  *
+* sets up the linked list of available memory
+SETUPMEM STJ  9F
+
+         ENT1 MEMORY
+         ENT6 1999
+         ST1  AVAIL  * available is set to the first node of memory
+
+1H       INC1 1      * next address
+         ST1 -1,1(4:5) * save the current address in the previous's next field
+         DEC6 1
+         J6P  1B
+9H       JMP  *
+
+* Inserts at the back
+* entry conditions: i1=T, i4 = R, A equals new value
+* exit conditions: i1=T, r2, r3 get trashed, i4 is new R
+* 
+BINSERT   STJ 9F
+
+* allocate a node in I2 
+          LD2  AVAIL
+          J2Z  OVERFLOW
+          STA  0,2(0:3)
+
+* if the list is empty, set the list to our new node and set R to new node
+          J1NZ 1F
+          LD1  AVAIL
+          ST1 0,4 AVAIL
+          JMP  2F
+* list is not empty
+1H        LD3  0,4(4:5)
+          ST2  0,3(4:5)
+          ST2 0,4(4:5)  *  save the link off
+2H        LD3  0,2(4:5)
+          ST3  AVAIL     * save the next available link
+
+          STZ  0,2(4:5) * zero out the link
+9H        JMP *
+
+
+* inverts in place (See exercises.md for explanation)
+* I1 will be the list
+* I2, I3, I5 gets trashed
+INVERT    STJ  9F
+*         to begin with, I1 = X
+          J1Z  9F * no list, skip to end
+
+          LD2  0,1(4:5) * one node, skip to end (I2 = z)
+          STZ  0,1(4:5)
+          J2Z  9F
+
+
+1H        ST1  *+1(0:2)
+          ENT3  *      * I3 = I1 (I3 is node y, y = x)
+
+          ST2  *+1(0:2)
+          ENT1  *      * I1 = I3 (x = z)
+
+          LD2  0,2(4:5)    * z = link(z)
+          ST3  0,1(4:5)    * link(x) = y
+
+          J2NZ 1B
+
+9H        JMP  *
+
+
+
+PRINT    STJ  9F
+         J1Z 9F
+1H       LDA 0,1(0:3)
+         CHAR
+         STX OUTBUF
+         OUT OUTBUF(18)
+         LD1 0,1(4:5)
+         J1NZ 1B
+9H       JMP  *
+
+* OVERFLOW ROUTINE
+OVERFLOW  HLT
+UNDERFLOW HLT
+
+
+OUTBUF  ORIG   *+120
+AVAIL   CON    0
+        ORIG   1000
+MEMORY  ORIG   *+2000
+ENDMEM  CON    0
+T       CON    0
+R       CON    0
+LINE    ALF  -----
+
+         END MAIN
