@@ -2,6 +2,6 @@
 target
 *.cardpack
 out
-*.tape
+/*.tape
 *.cards
 

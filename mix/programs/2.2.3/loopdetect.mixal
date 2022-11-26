@@ -1,0 +1,179 @@
+COUNT           EQU  2:3
+QLINK           EQU  2:3
+TOP             EQU  4:5
+SUC             EQU  2:3
+NEXT            EQU  4:5
+TAPEIN          EQU  0
+TAPEOUT         EQU  1
+
+MAIN            ORIG 100
+                JMP  TOPSORT
+                J6P  LOOPDETECT
+                HLT
+
+
+* INPUT PHASE
+
+TOPSORT     STJ  9F
+            IN   BUFFER(TAPEIN)  * read a tape in
+            JBUS *(TAPEIN)
+1H          LD6  BUFFER+1         * I 6 will equal N
+            ENT4 0,6              * this will set N to 4
+            STZ  X,4              * this writes out the zero to each count/link
+            DEC4 1
+            J4NN *-2              *loop back to the next x
+            ENT2 X,6              * I2 = N
+            ENT5 BUFFER+2         * start reading the next pair
+2H          LD3  0,5              * read a pair j of j,k
+            J3P  3F               * if we have input, read the next block (or we're at the CON -11 after the buffer)
+            J3Z  4F               * we are zero - end of input
+            IN   BUFFER(TAPEIN)   * read another buffer
+            JBUS *(TAPEIN)
+            ENT5 BUFFER
+            JMP  2B
+3H          LD4  1,5              * Read k of j,k
+            LDA  X,4(COUNT)       * and update the count
+            INCA 1
+            STA  X,4(COUNT)       * store the count here (remember, count is how many parent links there are)
+            INC2 1                * take the next available block
+            LDA  X,3(TOP)         * A is the top of X based on the record
+            STA  0,2(NEXT)        * set this one to existing top
+            ST4  0,2(SUC)         * set the successor value
+            ST2  X,3(TOP)         * store it back into the TOP value
+            INC5 2                * skip over the two blocks
+            JMP 2B                * next block
+4H          IOC 0(TAPEIN)         * rewind tape
+            ENT4 0,6
+            ENT5 -100             * rewind buffer
+            ENT3 0
+4H          LDA  X,4(COUNT)       * start looking for zeroes
+            JAP  *+3              * look at next one if no zero
+            ST4  X,3(QLINK)       * create a linked list inside X (COUNT is no longer used)
+            ENT3 0,4              * save position of queue
+            DEC4 1
+            J4P  4B
+
+* Sorting Phase
+            LD1  X(QLINK)         *let's find the first zero
+5H          JBUS *(TAPEOUT)       *wait if we're still outputting
+            ST1  BUFFER+100,5     * store in the buffer
+            J1Z  8F               * if we're the end, jump to the end
+            INC5 1                * increment output buffer
+            J5N  *+3              * if we are at zero, we have a full buffer
+            OUT  BUFFER(TAPEOUT)  * output buffer
+            ENT5 -100             *reset 100
+            DEC6 1                * one less relation to output
+            LD2  X,1(TOP)         * see if there are any successor nodes
+            J2Z  7F               * if not, skip ahead
+6H          LD4  0,2(SUC)         * see what hte successor is
+            LDA  X,4(COUNT)       * Decrement
+            DECA 1                * the
+            STA  X,4(COUNT)       * count
+            JAP  *+3              * still more to count?
+            ST4  X,3(QLINK)       * reset the qlink to the next one
+            ENT3 0,4              * reset the index to the qlink
+            LD2  0,2(NEXT)        * look at the next node
+            J2P  6B
+            STZ  X,1(TOP)         * zero out successors
+7H          LD1  X,1(QLINK)        * remove from the queue by popping front
+            JMP  5B
+8H          OUT  BUFFER(TAPEOUT)   *we're all done, write out the buffer
+            IOC  0(TAPEOUT)
+9H          JMP  *
+
+LOOPDETECT  STJ  9F
+            ENT1 BUFFER 
+            MOVE EMPTY(100)
+            ENT1 BUFFER 
+            MOVE DETECTED(3)
+            OUT BUFFER(18)
+* find the first node that is in a loop (it will have a successor field)
+            ENT3 1
+1H          LD4  X,3(TOP)
+            J4NZ PRINTLOOP
+            INC3 1
+            JMP 1B
+* assumes a loop fits on one output line for now
+PRINTLOOP   ENT1 BUFFER
+            MOVE EMPTY(100)
+            ENTA 0,3
+            CHAR
+            STX  BUFFER
+            ENT1 BUFFER+1
+
+* put the first successor on the STACK
+* then peek stack, and see if there is a successor list
+* if there is, then add that element to the stack
+* if at any time, we have something that is the same 
+* as the original, we have our loop, walk through the stack and print out what we have
+* if we ever find a empty successor list in the node, we can pop the stack and move onto the parent's successor
+            ENT6 STACK
+            LD2 X,3(TOP)
+            ST2 0,6
+            ST3  TEMP
+
+LOOP        LD4  0,6
+            J4Z  POPANDRETRY
+            LD3  0,4(SUC)
+            CMP3 TEMP
+            JE   PRINTSTACK
+
+            LD4  X,3(TOP)
+
+* check if value is already on the stack (sub-loop), if so, pop and retry
+            ENT5 STACK
+            LD2  0,4(SUC)
+            ST2  TEMP2
+SUBLOOPCHECK  LD2  0,5
+              LDA  0,2(SUC)
+              CMPA TEMP2
+              JE POPANDRETRY
+              INC5 1
+              J2NZ SUBLOOPCHECK
+
+            INC6 1
+            ST4  0,6
+            JMP  LOOP
+
+POPANDRETRY STZ  0,6
+            DEC6 1
+            LD4 0,6
+            LDA 0,4(NEXT)
+            JAZ POPANDRETRY
+            STA 0,6
+            JMP LOOP
+
+
+PRINTSTACK  ENT5 STACK
+            LD4 0,5
+            LDA 0,4(SUC)
+1H          MOVE ARROW(1)
+            CHAR
+            STX  0,1
+            INC1 1
+            INC5 1
+            LD4 0,5
+            LDA 0,4(SUC)
+            J4NZ 1B
+            OUT BUFFER(18)
+            
+9H          JMP  *
+
+
+X           ORIG *+20
+MEMORY      ORIG *+1000
+COUNT       ORIG *+10
+QLINK       ORIG *-11
+DETECTED    ALF LOOP 
+            ALF DETEC
+            ALF TED
+ARROW       ALF   -->
+EMPTY       ORIG *+100
+STACK       ORIG *+100
+TEMP        CON  0
+TEMP2       CON  0
+
+* Buffer AREA and Field Definitions
+BUFFER          ORIG *+100
+                CON  -1
+            END  MAIN
