@@ -1,0 +1,259 @@
+* the idea of this program is to make a pass through functions needed
+* with a DFS and set the starting tag to 1
+* Then, starting at FIRST, we can iterate through the entire subroutine list
+* and only use ones marked with 1 or 2
+N           EQU 2
+B           EQU 0:1
+SPACE       EQU 2:3
+LINK        EQU 4:5
+            ORIG 100
+MAIN        JMP SETUPDATA
+            JMP SETUPMEM
+
+            JMP TAPEORDER
+            HLT
+
+TAPEORDER   STJ 9F
+            JMP MARKUSED
+            JMP PRINTRELOC 
+9H          JMP *
+
+MARKUSED    STJ 9F
+* check all x to see if functions are used
+* I6 is equal to index of x
+* I1 will iterate through elements
+* I3 will be a stack of elements to check
+            ENT6 N
+            ENT3 0
+
+* if we are ever at zero, then  exit
+1H          J6Z 9F
+            LD1 X,6
+2H          J1Z 8F
+
+
+* read the first link from the row
+* if it's zero then that means there's no more links
+            LD2 0,1(B)
+            ENT5 0,1   * keep record of the first row
+            J2N MARK
+4H          INC1 1
+*  get new frame from I2 and stick it onto I3 (which stores the stack)
+
+            LD4 0,1(SPACE) * read the value that's next
+
+            LD2 AVAIL
+            LDA 0,2(LINK)
+            STA AVAIL  * advance available memory
+            ST3 0,2(LINK) * new memory now points to to top of stack (I3)
+
+            ST4 0,2(SPACE) * and write value to the new memory
+
+            ENT3 0,2   * I3 now is the top of the stack (Which was the new memory)
+
+            LD4 0,1(LINK)
+            J4Z 5F  * check if the second value is there
+
+            LD2 AVAIL
+            LDA 0,2(LINK)
+            STA AVAIL  * advance available memory
+            ST3 0,2(LINK) * new memory now points to to top of stack (I3)
+
+            ST4 0,2(SPACE) * and write value to the new memory
+
+            ENT3 0,2   * I3 now is the top of the stack (Which was the new memory)
+
+5H          LD2 0,1(B)
+            J2Z 4B   * go back to the next element in the list
+
+* mark current as seen
+MARK        ENTA 1
+            STA 0,5(B)
+
+* get the next I1 from the list of things to check
+GETNEXTI1   J3Z 3F
+            LD2 AVAIL
+            LD1 0,3(SPACE)   * otherwise, save off Tape dir index into I1
+            LD4 0,3(LINK)    * I4 is the next stack frame
+            ST2 0,3(LINK) * I3's link now points to available
+            STZ 0,3(SPACE)
+            ST3 AVAIL     * update available pointer
+            
+            ENT3 0,4      * 3 is the next stack pointer
+
+
+            JMP 2B
+
+3H          ENT1 0
+            JMP 2B
+
+8H          DEC6 1
+            JMP 1B
+            
+9H          JMP *
+
+
+PRINTRELOC  STJ 9F
+* I1 will be the X index
+            ENT1 1
+* I2 will go through first
+            LD2 FIRST
+            STZ OUTBUF
+            LDA HEADER1
+            STA OUTBUF+1(2:5)
+            LDA HEADER2
+            STA OUTBUF+2(2:5)
+            OUT OUTBUF(18)
+* A will store the total relocation
+            LDA MLOC
+            ENT5 1
+
+1H          J2Z 8F
+            LD3 0,2(B)
+            J3NP 2F
+* if I2 is positive, we need to store it
+            ST2 X,1(LINK)
+            STA X,1(SPACE)
+            STZ X,1(B)
+            ADD 0,2(SPACE)  *  A adds onto the space
+
+            LDX TEMPLATE
+            STX OUTBUF
+
+            STA TEMP
+            ENTA 0,5
+            CHAR
+            STX OUTBUF(3:4)
+            INC5 1
+
+            LDA X,1(SPACE)
+            CHAR
+            STX OUTBUF+1(2:5)
+
+            LDA X,1(LINK)
+            CHAR
+            STX OUTBUF+2(2:5)
+
+            OUT OUTBUF(18)
+
+            LDA TEMP
+            INC1 1
+2H          LD2 0,2(LINK)
+            JMP 1B
+8H          STA X,1(SPACE)
+            STZ X,1(LINK)
+            STZ X,1(B)
+            
+            ENTA 0,5
+            CHAR
+            STX OUTBUF(3:4)
+            INC5 1
+
+            LDA X,1(SPACE)
+            CHAR
+            STX OUTBUF+1(2:5)
+
+            LDA X,1(LINK)
+            CHAR
+            STX OUTBUF+2(2:5)
+
+            OUT OUTBUF(18)
+
+9H          JMP *
+
+SETUPDATA   STJ 9F
+
+* setting up B 
+            ENTA 0
+            STA  TAPEDIR(B)
+            STA  TAPEDIR+3(B)
+            STA  TAPEDIR+7(B)
+            STA  TAPEDIR+8(B)
+            ENTA -1
+            STA TAPEDIR+1(B)
+            STA TAPEDIR+2(B)
+            STA TAPEDIR+4(B)
+            STA TAPEDIR+5(B)
+            STA TAPEDIR+6(B)
+            STA TAPEDIR+9(B)
+            STA TAPEDIR+10(B)
+
+* setting up space
+            ENTA 20
+            STA  TAPEDIR(SPACE)
+            STA  TAPEDIR+10(SPACE)
+            ENTA 30
+            STA  TAPEDIR+2(SPACE)
+            ENTA 60
+            STA  TAPEDIR+6(SPACE)
+            ENTA 100
+            STA  TAPEDIR+5(SPACE)
+            ENTA 200
+            STA  TAPEDIR+3(SPACE)
+            STA  TAPEDIR+7(SPACE)
+            ENTA 1000
+            STA  TAPEDIR+4(SPACE)
+            ENTA 1002
+            STA  TAPEDIR+1(SPACE)
+            ENTA 1005
+            STA  TAPEDIR+8(SPACE)
+            ENTA 1006
+            STA  TAPEDIR+9(SPACE)
+* setting up link
+            ENTA 0
+            STA TAPEDIR+1(LINK)
+            STA TAPEDIR+7(LINK)
+            STA TAPEDIR+9(LINK)
+            ENTA 1000 
+            STA TAPEDIR+6(LINK)
+            ENTA 1002 
+            STA TAPEDIR+8(LINK)
+            ENTA 1003 
+            STA TAPEDIR+5(LINK)
+            ENTA 1005 
+            STA TAPEDIR(LINK)
+            ENTA 1006 
+            STA TAPEDIR+10(LINK)
+            STA TAPEDIR+4(LINK)
+            ENTA 1007 
+            STA TAPEDIR+3(LINK)
+            ENTA 1010 
+            STA TAPEDIR+2(LINK)
+
+            ENTA 1003
+            STA  X+1
+            ENTA 1010
+            STA  X+2
+9H          JMP *
+
+SETUPMEM    STJ 9F
+            LD1 AVAIL
+1H          ENT2 0,1
+            INC2 1
+            ST2 0,1(LINK)
+            ENT1 0,2
+            CMP1 =3990=
+            JNE  1B
+
+            ENT1 23
+2H          STZ OUTBUF,1
+            DEC1 1
+            J1NN 2B
+ 
+9H          JMP *
+
+
+            ORIG 1000
+TAPEDIR     ORIG *+11
+X           ORIG *+11
+MLOC        CON 2400
+FIRST       CON 1002
+OUTBUF      ORIG *+24
+TEMP        CON  0
+TEMPLATE    ALF  X(  )
+HEADER1     ALF   BASE
+HEADER2     ALF   SUB
+
+AVAIL       CON  2000
+            ORIG 3990
+            END MAIN

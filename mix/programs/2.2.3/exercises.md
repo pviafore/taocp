@@ -140,3 +140,34 @@
     next one)
 
 24. See `loopdetect.mixal`
+
+25. Design an efficient algorithm for doing topological sort that has more nodes than memory can contain. Assume that 
+    input, output and temporary working space are all done with tape
+
+    So..., this makes it interesting (I actually had an undergrad problem that was like this but with mergesort).
+    Essentially, we have to minimize the amount of times that we are seeking around tape, and have to do memory
+    local operations as much as possible. This means that when we scan, we want to look at memory all at once.
+
+    So, first, we can do a mergesort to make sure that all the inputs are sorted, which will at least allow us to keep
+    linked lists of successors fairly close to each other in memory (means we can read a whole entire tape block, and 
+    check that memory - think of it like reading as a cache line in a modern processor)). Each time we read from tape,
+    we essentially are doing slow "page".
+
+    So, let's look at how we can improve toposort. What we want to do is lay tape as follows:
+    List of counts in linear memory (keep the queue operations in the same place) on one tape
+    Each linked list of successors in a pre-defined size of memory (we know N, so we can make sure that we have room for N relations, which means we have fixed addressing, at the cost of wasted space on tape) on another tape. Links are now links to indices on tape, not into memory. If we wanted to do less wasted space, we can collapse the 
+    free space (like we did with linear allocations in an earlier chapter) and keep a link along with the counts.
+
+    We can split our memory in half at first, one for holding some values of counts, and one for the area of tape to be written for a linked list. As we read the sorted relations, we update the count (we know its in order, so we know when we need to write new counts to tape and get to the next block.). We then keep filling out the linked list
+    of relations, knowing when we need to write to tape.
+
+    (Of course, we are using buffered input throughout all of this).
+
+    Then, when scanning from zeroes, we can scan our linear memory of counts alone and set that up.
+
+    Then, we need to update all successors, which unfortunately may go to different places in tape, but we will 
+    hope for locality in a lot of places.
+
+    Is it the most efficient? Probably not, but it's something.
+
+26. Come up with a relocating algorithm for libraries as described in the book. See `relocate.mixal`
