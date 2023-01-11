@@ -60,6 +60,7 @@ ERASE2      STJ 9F
             ST2 0,1(LINK)
             LD1 FIRST
             ST1 AVAIL
+            ST1 END
 9H          JMP *
 
 PRINT5      STJ 9F

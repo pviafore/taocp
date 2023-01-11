@@ -202,3 +202,8 @@
     See `nim.mixal`
 
 29. Do a mass erase to memory of a list given a) just FIRST, and b) just FIRST/SECOND. See list_erase.mixal
+
+30. If queues are reprsented with a front and end, but an empty queue is front = 0, r is undefined, what does insert and delete look like.
+
+Insertion: If Front is 0, Front = Rear = Node
+Deletion: If Front == Rear, Front = 0
