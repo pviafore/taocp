@@ -1,0 +1,104 @@
+LINK        EQU 4:5
+MAIN        ORIG 100
+            JMP SETUPMEM
+            JMP PRINT5
+            JMP MAKELIST
+
+            JMP PRINT5
+            JMP ERASE1
+            JMP PRINT5
+            JMP MAKELIST
+            JMP PRINT5
+            JMP ERASE2
+            JMP PRINT5
+            HLT
+
+
+MAKELIST    STJ 9F
+            LD2 AVAIL
+            LDA 0,2(LINK)
+            STA AVAIL
+            STZ 0,2(LINK)
+
+            ST2 END
+            ST2 FIRST
+
+            LD2 AVAIL
+            LDA 0,2(LINK)
+            STA AVAIL
+            LD3 FIRST
+            ST3 0,2(LINK)
+            ST2 FIRST
+
+            LD2 AVAIL
+            LDA 0,2(LINK)
+            STA AVAIL
+            LD3 FIRST
+            ST3 0,2(LINK)
+            ST2 FIRST
+
+9H          JMP *
+
+* goes until the end and then links the last node
+ERASE1      STJ 9F
+            LD2 AVAIL
+            LD3 FIRST
+            ST3 AVAIL
+            J3Z 9F
+
+1H          ENT4 0,3
+            LD3 0,3(LINK)
+            J3NZ 1B
+ 
+            ST2 0,4(LINK)
+            STZ FIRST
+9H          JMP *
+
+ERASE2      STJ 9F
+            LD1 END
+            LD2 AVAIL
+            ST2 0,1(LINK)
+            LD1 FIRST
+            ST1 AVAIL
+9H          JMP *
+
+PRINT5      STJ 9F
+            ENT1 5
+            LD2 AVAIL
+1H          ENTA 0,2
+            CHAR
+            STX OUTBUF
+            OUT OUTBUF(18)
+
+            LD2 0,2(LINK) 
+            DEC1 1
+
+            J1NZ 1B
+
+            LDA LINE
+            STA OUTBUF
+            OUT OUTBUF(18)
+            STZ OUTBUF
+            OUT OUTBUF(18)
+9H          JMP *
+
+SETUPMEM    STJ 9F
+            LD1 AVAIL
+1H          ENT2 0,1
+            INC2 1
+            ST2 0,1(LINK)
+            ENT1 0,2
+            CMP1 =3000=
+            JNE  1B
+
+9H          JMP *
+
+FIRST       0
+END         0
+OUTBUF      ORIG *+24
+LINE        ALF  -----
+
+AVAIL       CON 1000
+            ORIG 1000
+MEM         ORIG *+2000
+            END MAIN

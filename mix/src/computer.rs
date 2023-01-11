@@ -600,7 +600,6 @@ impl Computer {
 
     fn get_address_transfer_value(&mut self, instruction: Instruction, base: i32, bits: u8) -> i32 {
         let raw_value = self.get_raw_value(instruction);
-
         let value = match instruction.modification() {
             0 => base + raw_value as i32,
             1 => base - raw_value as i32,

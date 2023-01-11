@@ -171,3 +171,34 @@
     Is it the most efficient? Probably not, but it's something.
 
 26. Come up with a relocating algorithm for libraries as described in the book. See `relocate.mixal`
+
+27. See above
+
+28. Given next positions, calculate whether it's a win, loss, or not. In the text, it suggests the following
+
+    For each position we count the number of successors that have not been marked won, and a list of all predecessors.
+
+    Let's do this for Nim: So, can track in a node the following : players turn, nonwinws, score, and link to predecessors.
+    Each predecessor will point to the node address
+
+    How to tell if a position is a win:
+        If you are at zero, this means the last person took the last stone, and you lose
+        Otherwise, for all of your successors, if they are all won, you lose. If any are marked lose, you win
+
+        All winning means that you have zero nonwins listed for your current node
+
+    So, first, set up a successor, predecessor relationship for everything
+    For each S,P, you want to add P-link to the S-list. If your current position is a nonwin, increment your predecessors
+    nonwin count by 1
+
+
+    ...... A few days later ......
+
+    After thinking about it more, I changed my code to do a simple dynamic programming to figure out win loss of a position
+    linearly, so my example is not a great indication of what Knuth is going for, but was good practice anyways.
+
+    I eventually scrapped it as it was too simple (in Nim, if you can get the opponents score to a multiple of 4, you can force a win, so it really wasn't a great example of linked strategies. In  a real program, we'd go with a min-max tree with alpha-beta pruning.)
+
+    See `nim.mixal`
+
+29. Do a mass erase to memory of a list given a) just FIRST, and b) just FIRST/SECOND. See list_erase.mixal
