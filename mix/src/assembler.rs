@@ -251,7 +251,7 @@ fn _get_address(spl: &Vec<&str>, index: usize, program_data: &ProgramData) -> ar
     else {
         if _is_local_symbol(&evaluated) {
             let chars: Vec<char> = evaluated.chars().collect();
-            let destinations: Vec<usize> = program_data.local_symbols.get(&chars[0].to_string()).unwrap().to_vec();
+            let destinations: Vec<usize> = program_data.local_symbols.get(&chars[0].to_string()).expect(&format!("Could not find local symbol {}", &chars[0].to_string())).to_vec();
             if chars[1] == 'F' {
                 *(destinations.iter().filter(|d| **d > index).min().unwrap()) as i16
             }
@@ -259,7 +259,7 @@ fn _get_address(spl: &Vec<&str>, index: usize, program_data: &ProgramData) -> ar
                 *(destinations.iter().filter(|d| **d < index).max().unwrap()) as i16
             }
             else {
-                panic!("Invalid local symbol");
+                panic!("Invalid local symbol {}", chars[1]);
             }
         }
         else {
