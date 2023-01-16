@@ -90,3 +90,65 @@
     |                     ^  
     |                     |  
     -----------------------
+
+6) Draw xz-3 and 0
+                                                   
+   --------      ---------      ------------
+   |   1   | --> |  -3   |  --> |     0    |
+   --------      --------       ------------
+   | 1|0|1 |     | 0|0|0 |      |-  0|0|1  |
+   ---------     ---------      ------------
+    ^                                 |  
+    |                                 |  
+    -----------------------------------
+    
+
+       ------------
+       |     0    |
+       ------------
+       |-  0|0|1  |
+       ------------
+             ^    |  
+             |    |  
+             -----
+
+7)  Why is it useful to assume that ABC fields of a polynomial appear in a decreasing order?
+
+    We maintain a strict ordering so that we don't have to constantly loop through the circular list looking
+    for which elements are in there are not. We advance P and Q at the same time, and  we know we never have to backtrack, because a later element in Q cannot come earlier in P, since we either just checked coefficients that are the same,
+    or we just inserted a node that was larger.
+
+8) Why do we need Q1 trailing for the add algorithm
+
+   We need to be able to delete a node when we have zeroed terms out (such as adding +x and -x). You need the 
+   previous node to delete efficiently.
+
+
+9) Would Algorithm A Work if P = Q? 
+
+   Adding two coefficients seems like it would work, but what would happen if we have to insert a new term?
+   Well that couldn't happen, so yeah, it should be just fine (since we never go back to an old node in Q)
+
+   What about multiplication?
+
+   If P = M:
+
+    This should be fine as it just changes ABC(P) to 2*ABC(P) and COEF(P) to 2*COEF(P)
+
+   If P=Q:
+        This would be a problem, because we are modifying the list of q as we go on (inserting new terms), and 
+        that will affect multiplication
+
+   If Q = M this would also be troublesome, becasue M is getting modified along the way, and if we ever advance to a link that was newly inserted (I do wonder if this is possible with not having inverse powers, becasue you would only ever add before the link of M (you cannot multiply two polynomials with positive powers and get a polynomial smaller than it))
+    
+
+    Note: It seems like Q = M will work for all cases (it doesn't sound like you worry about adding previous ones), but Knuth does mention that computation blows up if P == -1.
+
+10) If the polynomial is one three byte field instead of x,y,z, what changes happen to Algorithms A and M
+
+    
+
+    I don't think you need to make any changes. You still can maintain a strict ordering, and you can still add them together
+    just fine.
+
+11) 
