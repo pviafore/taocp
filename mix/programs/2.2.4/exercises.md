@@ -34,3 +34,59 @@
 
     We'd create two disjoint lists. Assuming PTR1 is to the left of PTR2, PTR 1 would now point to the element just right of 
     ptr2 and continue all the way back to ptr1, and ptr2 would point to the element just right of ptr 1 (which could be itself). We would then lose a ptr to the second list.
+
+4)  What are the insertion and deletion operations that give the effect of a stack using representation (4)?
+
+    Insertion:
+        Add node to right, and assign pointer to that
+    Deletion:
+        If list head, underflow. Else, remove Node from right,
+
+5)  Reverse a circular linked list (see `reverse.mixal`).  
+
+                         PTR1
+   -----      -----     -----
+   | 1 | ---> | 2 | --> | 3 |
+   -----      -----     -----
+    ^                     |  
+    |                     |  
+    -----------------------
+
+    Save off PTR 1's address (3)
+    Go to next node (1) and save off ilnk (to 2)
+    For next node point its link back to prev
+
+    
+                         PTR1
+   -----      -----     -----
+   | 1 |      | 2 | --> | 3 |
+   -----      -----     -----
+    |                     ^  
+    |                     |  
+    -----------------------
+
+    Save current (1) as previous
+    Go to next node (through saved link -- 2)
+    save next link (3) point current to previous
+    if current node is end (3), terminate
+
+                         PTR1
+   -----      -----     -----
+   | 1 | <--  | 2 |     | 3 |
+   -----      -----     -----
+    |                     ^  
+    |                     |  
+    -----------------------
+    
+    Save current (2) as previous
+    Go to next node (through saved link -- 3)
+    save next(link - doesn't matter) point current to previous
+    if next node is end (3), terminate
+
+                         PTR1
+   -----      -----     -----
+   | 1 | <--  | 2 | <-- | 3 |
+   -----      -----     -----
+    |                     ^  
+    |                     |  
+    -----------------------
