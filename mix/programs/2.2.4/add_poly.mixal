@@ -214,8 +214,6 @@ SW3         LDA  0,1        * get the coefficients from queue1
             ENT3 0,6        * I3 (previous node) is now the new node
             JMP 0B
 
-
-
 PTR1        CON 0
 PTR2        CON 0
 PLUS        ALF    +  

@@ -151,6 +151,21 @@
     I don't think you need to make any changes. You still can maintain a strict ordering, and you can still add them together
     just fine.
 
-11) Implement a copy routine. See `copy.mixal`. Effectively, we save off the first node, allocate space for it and move on to next link, allocating and copying each time, until we reach the end. 
+11) Implement a copy routine. See `listops.mixal`. Effectively, we save off the first node, allocate space for it and move on to next link, allocating and copying each time, until we reach the end. 
 
-12) Implement an erase routine. See `erase.mixal`. Save off pointer to first node, and go to the next link. Move the saved off pointer to AVAIL, and set AVAIL to first node
+12) Compare the running time of copy to an add when the poly(Q) is 0:
+
+    So for a copy, we have 6u per allocation, and 8u per copy. First thing we do is store a jump (2u), allocate, and copy (14u), plus two register copies for overhead (2u)
+
+    Then, for each element (n - 1 times) we do overhead iterator advancement and check (5u), copy and allocate ( 14u), store previous link (2u),  and 2u for the jump. Then 1 time we will exit which is just the 5u. 
+
+    Finally, we save a link and jump back (3u)
+
+    This means we have 16u + n*(5u) + (n-1)*(18u) + 3u  This gives us (23n + 1) u.
+
+    For the add routine, we are always going to add a new element (element in P but not in Q). This is about (26n+13) (note I don't have jump overflows). It does seem faster though.
+
+
+13) Implement an erase routine. See `listops.mixal`. Save off pointer to first node, and go to the next link. Move the saved off pointer to AVAIL, and set AVAIL to first node
+
+14) Write a ZERO routine. See `listops.mixal`. 
