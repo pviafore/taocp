@@ -151,4 +151,4 @@
     I don't think you need to make any changes. You still can maintain a strict ordering, and you can still add them together
     just fine.
 
-11) 
+11) Implement a copy routine. See `copy.mixal`. Effectively, we save off the first node, allocate space for it and move on to next link, allocating and copying each time, until we reach the end. 
