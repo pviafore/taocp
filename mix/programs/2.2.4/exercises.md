@@ -152,3 +152,5 @@
     just fine.
 
 11) Implement a copy routine. See `copy.mixal`. Effectively, we save off the first node, allocate space for it and move on to next link, allocating and copying each time, until we reach the end. 
+
+12) Implement an erase routine. See `erase.mixal`. Save off pointer to first node, and go to the next link. Move the saved off pointer to AVAIL, and set AVAIL to first node
