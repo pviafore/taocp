@@ -169,3 +169,24 @@
 13) Implement an erase routine. See `listops.mixal`. Save off pointer to first node, and go to the next link. Move the saved off pointer to AVAIL, and set AVAIL to first node
 
 14) Write a ZERO routine. See `listops.mixal`. 
+
+15) Make a Multiply routine. Note, in Knuth's example, he's modifying ADD by swapping out SW1, SW2 and SW3. That sounds yucky to me, so I'm going to actually copy and paste in the interest of readability. See `listops.mixal`
+
+16) Estimate the running time of the multiply
+
+    So, first, let's see how long the add changes (per multiply term). we've added 6u on the add of abc n-1 times, and 4u 1 time ( and we do this 1+p times). We've added 11u m times and 11u p' times. 
+
+    So our new polynomial is A= (38m' + 35m'' + 44p' + q' + 17)u. As for the multiply, we do (7n) u cycles with n adds. The trick is for every node n, the numbers of matching and cancelling terms will differ. Assuming that you have roughly the same number of matching and cancelling terms, you could just multiply them them together, but probably have to get more involved probability based on polynomial patterns.
+
+17) What advantage is there for circular lists over linked lists. 
+
+    Honestly, I don't see much, except for a multiply, you don't have to do a conditional to check for end of list and resetting it( it automatically goes back to the beginning). On architectures with branch prediction, I could see
+    a real performance boost, but other than that, not so much. Maybe things like convolutions help more because you cycle
+    through more often.  Knuth does point out ERASE is really nice, but I can also just store a rear pointer as well.
+
+18) Can you find a way that a list can be traversed efficiently in both directions, but only one link field in one node?
+
+    Only thing I can think of (along with the hint) is to store two nodes in consecutive memory at once. One node can point forward, and one can point backwards, as you always have a static offset to figure that out. You'd have to change your
+    allocator and handle the second node possibly not being there (maybe a sentinel field to indicate if its filled or not?)
+
+    Knuth mentions that you always need to track two nodes at once, and you could XOR previous node and next node in a link (if you know the previous or next , such as tracking two nodes, you can xor it back to restore the link to the way you want.
