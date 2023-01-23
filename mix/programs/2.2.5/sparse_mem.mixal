@@ -1,0 +1,150 @@
+SET     EQU 0:1
+LLINK   EQU 2:3
+RLINK   EQU 4:5
+VADDR   EQU 2:3
+FUNC    EQU 4:5
+
+        ORIG  100
+MAIN    ENT1 LISTHEAD
+        ST1 LISTHEAD(LLINK) 
+        ST1 LISTHEAD(RLINK) 
+        ENT1 -1
+        ST1 LISTHEAD(SET)
+        JMP UPDATE
+        JMP UPDATE
+        JMP UPDATE
+        HLT
+
+
+UPDATE      STJ 9F
+            ENT1 V1
+            ENT2 UPDATEV1
+            JMP INSERT
+            ENT1 V2
+            ENT2 UPDATEV2
+            JMP INSERT
+            ENT1 V3
+            ENT2 UPDATEV3
+            JMP INSERT
+            JMP COMPUTE
+            JMP PRINT
+9H          JMP *
+
+* I1 is the variable address
+* I2 is the update functino
+INSERT      STJ 9F
+            LD3 LISTHEAD(LLINK)   * I3 will go through the LISTHEAD
+1H          LD4 0,3(SET)
+            J4N NEWNODE
+
+            CMP1 1,3(VADDR)
+            JL NEWNODE
+            JE ALREADYSET
+            LD3 0,3(LLINK)
+            JMP 1B
+
+NEWNODE     LD6 AVAIL
+            J6Z ADDMEM
+            LDA 0,6(RLINK)  * move avail up one
+            STA 0,6  
+            JMP ADD 
+ADDMEM      LD6 POOLMAX
+            INC6 3
+            ST6 POOLMAX
+* 6 is new node, three is node to the right
+ADD         LD4 0,3(LLINK)
+            ST3 0,6(RLINK) 
+            ST6 0,3(LLINK)
+            ST4 0,6(LLINK)
+            ST6 0,4(RLINK)
+            ST1 1,6(VADDR)
+            ST2 1,6(FUNC)
+
+9H          JMP *
+
+
+COMPUTE     STJ 9F
+            LD1 LISTHEAD(RLINK)
+1H          LD2 0,1(SET)
+            J2N 8F   * if we're all the way through, be done
+            LD3 1,1(FUNC)
+            ST3 *+1(0:2)
+            JMP *   *  this should set A
+            STA 2,1   * this sets the value
+            LD1 0,1(RLINK)
+            JMP 1B
+* now set everything            
+
+8H          LD1 LISTHEAD(RLINK)
+2H          LD2 0,1(SET)
+            J2N 9F   * if we're all the way through, be done
+            LD3 1,1(VADDR)
+            LDA 2,1 * this gets the value
+            STA 0,3  * stores in vaddr
+            LD1 0,1(RLINK)
+            JMP 2B
+9H          JMP *
+
+PRINT       STJ 9F
+            LDA V1
+            CHAR
+            STX OUTBUF
+
+            LDA V2
+            CHAR
+            STX OUTBUF+2
+            
+            LDA V3
+            CHAR
+            STX OUTBUF+4
+
+            OUT OUTBUF(18)
+9H          JMP  *
+
+
+ALREADYSET  STJ 9F
+            ENT1 DBLSET
+            MOVE OUTBUF(2)
+            OUT OUTBUF(18)
+            HLT
+
+UPDATEV1    STJ 9F
+* adds multiplies V3 by 3 and adds 2
+            LDA V3
+            MUL =3=
+            SLAX 5
+            INCA  2
+9H          JMP *
+
+UPDATEV2    STJ 9F
+* adds 5    
+            LDA V2
+            INCA 5
+9H          JMP *
+
+
+UPDATEV3    STJ 9F
+* adds V1 and V2
+            LDA V1
+            ADD V2
+9H          JMP *
+
+
+*node layout goes like this: 
+
+* |  0   | LLINK  |  RLINK  |
+* |  0   | ADDR   |  FUNC   |
+* |     NEW VALUE           |
+* the first zero is -1 for the list head
+LISTHEAD    CON 0
+V1          CON 0
+V2          CON 0
+V3          CON 0
+AVAIL       CON 0
+DBLSET      ALF DOUBL
+            ALF E SET
+OUTBUF      ORIG *+24
+
+POOLMAX     CON *
+            ORIG 3000
+            END MAIN
