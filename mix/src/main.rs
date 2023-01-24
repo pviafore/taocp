@@ -123,7 +123,7 @@ fn get_computer(program_filename: String, from: String, start: i16, verbose: boo
     else if from == "mixal"{
         let file = File::open(program_filename).unwrap();
         let lines: Vec<String> = std::io::BufReader::new(file).lines().map(|x| x.unwrap()).collect();
-        let (assembled, load_address, start_location) = assembler::assemble(lines, verbose);
+        let (assembled, load_address, start_location, label_map) = assembler::assemble(lines, verbose);
         let program_start = match start_location {
             Some(loc) => if start != -1 {
                 panic!("Program start already lives inside program")
@@ -141,7 +141,10 @@ fn get_computer(program_filename: String, from: String, start: i16, verbose: boo
             }
         };
         let cardpack = convert_mix_to_cardpack(assembled, load_address, program_start);
-        load_cards_into_computer(cardpack.as_bytes().to_vec())
+        let mut computer = load_cards_into_computer(cardpack.as_bytes().to_vec());
+
+        computer.set_label_map(label_map);
+        computer
     }
     else {
         panic!("Can only read from cardpacks, mix, or mixal files");
@@ -200,7 +203,7 @@ fn run(cmd: Run) {
 fn assemble(cmd: Assemble) {
     let file = File::open(cmd.input_filename).unwrap();
     let lines: Vec<String> = std::io::BufReader::new(file).lines().map(|x| x.unwrap()).collect();
-    let (assembled, _load_address, _start_location) = assembler::assemble(lines, false);
+    let (assembled, _load_address, _start_location, _) = assembler::assemble(lines, false);
     let mut output_file = std::fs::File::create(cmd.output_filename).expect("create failed");
     output_file.write_all(&assembled).unwrap();
 }

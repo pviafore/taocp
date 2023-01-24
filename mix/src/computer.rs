@@ -5,6 +5,8 @@ use crate::timing;
 
 use std::cmp;
 use instructions::Instruction;
+
+use std::collections::HashMap;
 struct Registers {
     a: arch::Word,
     x: arch::Word,
@@ -39,6 +41,7 @@ enum DebugCommand {
     LIST { memory_location: i16},
     RESETTIMING,
     SHOWTIME,
+    SHOWLABEL,
     HALT
 }
 
@@ -90,7 +93,8 @@ pub struct Computer {
     last_debug_command: DebugCommand,
     breakpoints: Vec<Box<dyn Fn(&Computer) -> bool>>,
     breakpoint_counter: u32,
-    io_ops: Vec<Option<IoOperation>>
+    io_ops: Vec<Option<IoOperation>>,
+    label_map: HashMap<String, usize>
 }
 
 impl Computer {
@@ -199,6 +203,7 @@ impl Computer {
                     DebugCommand::RESETTIMING => self.timer = timing::TimingUnit::new(),
                     DebugCommand::SHOWTIME => println!("{}", self.timer.get_time_to_run()),
                     DebugCommand::LIST {memory_location} => self.print_source(memory_location),
+                    DebugCommand::SHOWLABEL => println!("{:?}", self.label_map),
                     DebugCommand::NOOP => ()
                 };
             }
@@ -215,11 +220,15 @@ impl Computer {
                  val.bytes[4].read());
     }
 
+    fn find_label(&self, location: i16) -> String{
+        self.label_map.iter().find_map(|(key, &val)| if val == location as usize { Some(key) } else { None }).unwrap_or(&String::new()).to_string()
+    }
     fn print_source(&self, location: i16) {
         let min_index = std::cmp::max(0, location - 5);
         for n in min_index..std::cmp::min(4096, min_index+10) {
-            println!("{}{:0>width$}: {}",
-                     if n == self.instruction_pointer.read() { "-> " } else { "   " },
+            println!("{:8}{:4}{:0>width$}: {}",
+                     self.find_label(n),
+                     if n == self.instruction_pointer.read() { " -> " } else { "   " },
                      n as usize,
                      Instruction::from_word(self.memory[n as usize]).to_string(),
                      width=4);
@@ -229,6 +238,10 @@ impl Computer {
     fn add_breakpoint(&mut self, location: i16) {
         self.breakpoints.push(Box::new(move |computer| computer.instruction_pointer.read() == location));
         println!("Breakpoint added at location {}", location);
+    }
+
+    fn get_label_loc(&self, text: &str) -> i16 {
+        self.label_map.get(text).map(|x| *x as i16).unwrap_or_else(|| text.parse::<i16>().unwrap())
     }
 
     fn get_debug_command(&mut self) -> DebugCommand {
@@ -270,13 +283,14 @@ impl Computer {
                 self.last_debug_command = match split[0] {
                     "q" | "quit" => DebugCommand::HALT,
                     "n" | "next" => DebugCommand::SINGLESTEP,
-                    "b" | "breakpoint" => DebugCommand::BREAK { location: split[1].parse::<i16>().unwrap()},
-                    "m" | "memory" => DebugCommand::SHOWMEM { location: split[1].parse::<i16>().unwrap()},
+                    "b" | "breakpoint" => DebugCommand::BREAK { location: self.get_label_loc(split[1])},
+                    "m" | "memory" => DebugCommand::SHOWMEM { location: self.get_label_loc(split[1])},
                     "c" | "continue" => DebugCommand::CONTINUE { number_of_breakpoints_to_skip: split.get(1).unwrap_or(&"0").parse::<i16>().unwrap()},
                     "B" | "bytes" => DebugCommand::BYTES {value: split[1].parse::<i32>().unwrap()},
-                    "l" | "list" => DebugCommand::LIST { memory_location: split.get(1).unwrap_or(&&(instruction_pointer).to_string()[..]).parse::<i16>().unwrap()},
+                    "l" | "list" => DebugCommand::LIST { memory_location: self.get_label_loc(split.get(1).unwrap_or(&&(instruction_pointer).to_string()[..]))},
                     "r" | "reset" => DebugCommand::RESETTIMING,
                     "t" | "time"  => DebugCommand::SHOWTIME,
+                    "L" | "labels" => DebugCommand::SHOWLABEL,
                     "" => self.last_debug_command,
                     _ => DebugCommand::NOOP
                 };
@@ -318,6 +332,10 @@ impl Computer {
         self.trace = true;
     }
 
+    pub fn set_label_map(&mut self, label_map: HashMap<String, usize>) {
+        self.label_map = label_map;
+    }
+
     pub fn new() -> Computer{
         use std::iter::FromIterator;
         Computer {
@@ -345,7 +363,8 @@ impl Computer {
             breakpoint_counter: 0,
             io_ops: vec![None, None, None, None, None, None, None, None,
                          None, None, None, None, None, None, None, None,
-                         None, None, None, None, None]
+                         None, None, None, None, None],
+            label_map: HashMap::new()
         }
     }
 

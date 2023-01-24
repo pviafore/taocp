@@ -68,7 +68,7 @@ fn _is_local_symbol(text: &str) -> bool {
     chars.len() == 2 && chars[0].is_digit(10) && (chars[1] == 'H' || chars[1] == 'F' || chars[1] == 'B')
 }
 
-pub fn assemble(lines: Vec<String>, verbose: bool) -> (Vec<u8>, usize, Option<usize>) {
+pub fn assemble(lines: Vec<String>, verbose: bool) -> (Vec<u8>, usize, Option<usize>, HashMap<String, usize>) {
     let program_data = get_program_data(lines);
     if verbose {
         println!("{}", program_data.get_debug_data());
@@ -80,7 +80,7 @@ pub fn assemble(lines: Vec<String>, verbose: bool) -> (Vec<u8>, usize, Option<us
                                              .collect();
     let word_bytes: Vec<Vec<u8>> = words.iter().map(_make_bytes).collect();
     let bytes: Vec<u8> = word_bytes.into_iter().flatten().collect();
-    (bytes, program_data.get_min_address(), program_data.start_location)
+    (bytes, program_data.get_min_address(), program_data.start_location, program_data.label_table)
 }
 
 fn get_program_data(lines: Vec<String>) -> ProgramData {

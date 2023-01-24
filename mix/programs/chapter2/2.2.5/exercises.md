@@ -117,4 +117,4 @@ TMP          CON  0
     We need to delete elements from the queue if they give up, which means they may not be in the front of the queue
     Since there may be more than one of these, it doesn't work to keep a trailing value.
 
-    Similarly, we're removing things from the wait list (and they may be in the middle as well) to shuffle it around.
+    Similarly, we're removing things from the wait list (and they may be in the middle as well) to shuffle it around.t 
