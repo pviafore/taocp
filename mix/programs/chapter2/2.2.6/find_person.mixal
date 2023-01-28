@@ -1,0 +1,167 @@
+* A node is the following 
+*   |  SEX  |  AGE  | EYES  | HAIR |
+*  This means we need 2 word nodes, since we have 8 addresses
+
+SEX     EQU  0:2
+AGE     EQU  3:4
+EYES    EQU  0:2
+HAIR    EQU  3:4
+        ORIG 100
+MAIN    JMP SETUPDATA
+        JMP FINDP
+        HLT
+
+SETUPDATA  STJ  9F
+           ENTA PERSON+10
+           STA PERSON+13(EYES)
+           STA PERSON+13(HAIR)
+           ENTA PERSON+8
+           STA PERSON+12(SEX)
+           ENTA PERSON+6
+           STA PERSON+10(SEX)
+           STA PERSON+9(HAIR)
+           ENTA PERSON+4
+           STA  PERSON+8(SEX)
+           STA  PERSON+8(AGE)
+           ENTA PERSON+2
+           STA  PERSON+4(SEX)
+           STA PERSON+12(AGE)
+           STA PERSON+5(EYES)
+           STA PERSON+7(HAIR)
+           
+9H         JMP  *
+
+FINDP      STJ  9F
+F1         LD1 FEMALE    
+           LD2 A21
+           LD3 A22
+           LD4 A23
+           LD5 BLUE
+           LD6 BLOND
+F2         J1Z  9F   * check if any field is null
+           J5Z  9F
+           J6Z  9F
+           J2NZ SETMIN
+           J3NZ SETMIN
+           J4NZ SETMIN
+           JMP 9F
+SETMIN     ST1  MIN 
+1H         CMP5 MIN
+           JGE 1F
+           ST5 MIN
+1H         CMP6 MIN
+           JGE 1F
+           ST6 MIN
+
+1H         ST2 MAX
+           CMP3 MAX
+           JL 1F
+           ST3 MAX
+1H         CMP4 MAX
+           JL   1F
+           ST4  MAX
+
+1H         LDA MAX   * save off any of the AGE values
+           CMPA MIN
+           JGE F3 
+           STA MIN
+
+F3         CMP1 MIN
+           JNE  F4
+           CMP5 MIN
+           JNE  F4
+           CMP6 MIN 
+           JNE  F4
+
+           CMP2 MIN
+           JE PRINT
+           CMP3 MIN
+           JE PRINT
+           CMP4 MIN
+           JE PRINT
+           JMP F4   * no match, advance
+PRINT      LDX MIN
+           DECX PERSON
+           ENTA 0
+           DIV =2=
+           CHAR
+           STX  OUTBUF+1
+           LDA ROW
+           STA OUTBUF
+           OUT OUTBUF(18)
+* advance everything
+           
+           LD1 0,1(SEX)
+           LD5 1,5(EYES)
+           LD6 1,6(HAIR)
+
+           CMP2 MIN
+           JNE 1F
+           LD2 0,2(AGE)
+           JMP F4
+
+1H         CMP2 MIN
+           JNE 1F
+           LD2 0,2(AGE)
+           JMP F4
+
+1H         CMP2 MIN
+           JNE F4
+           LD2 0,2(AGE)
+
+*   Advance everything until its less than or equal to min row
+F4         CMP1 MIN
+           JLE 1F
+           LD1 0,1(SEX)
+           JMP F4        
+
+1H         CMP5 MIN
+           JLE 1F
+           LD5 1,5(EYES)
+           JMP 1B        
+
+1H         CMP6 MIN
+           JLE 1F
+           LD6 1,6(HAIR)
+           JMP 1B        
+
+1H         CMP2 MIN
+           JLE 1F
+           LD2 0,2(AGE)
+           JMP 1B        
+
+1H         CMP3 MIN
+           JLE 1F
+           LD3 0,3(AGE)
+           JMP 1B        
+
+1H         CMP4 MIN
+           JLE 1F
+           LD4 0,4(AGE)
+           JMP 1B        
+
+1H         JMP F2
+
+9H         JMP  *
+MIN        CON  0
+MAX        CON  0
+
+ROW        ALF  ROW
+OUTBUF     ORIG *+24 
+PERSON     ORIG *+16
+MALE       CON  PERSON+10           
+FEMALE     CON  PERSON+12
+A21        CON  PERSON+12
+A22        CON  PERSON+8
+A23        CON  0
+A24        CON  PERSON+10
+A25        CON  PERSON+12
+BLUE       CON  PERSON+8
+BROWN      CON  PERSON+12
+GREEN      CON  PERSON+8
+HAZEL      CON  PERSON+6
+BLOND      CON  PERSON+8
+RED        CON  PERSON+4
+DARK       CON  PERSON+12
+           
+           END  MAIN
