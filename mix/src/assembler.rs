@@ -268,7 +268,11 @@ fn _get_address(spl: &Vec<&str>, index: usize, program_data: &ProgramData) -> ar
 
         }
     };
-    arch::HalfWord::from_value(val)
+    let mut halfWord = arch::HalfWord::from_value(val);
+    if val == 0 && evaluated.chars().next().unwrap() == '-'  {
+        halfWord.invert_sign()
+    }
+    halfWord
 }
 
 fn _evaluate(text: &str, index: usize, program_data: &ProgramData) -> String {
@@ -408,7 +412,7 @@ fn _parse_modifier(spl: Vec<&str>, default: u8, program_data: &ProgramData) -> u
             else {
                 match program_data.symbol_table.get(modifier[0]) {
                     Some(val) => *val as u8,
-                    None => modifier[0].parse::<u8>().unwrap()
+                    None => modifier[0].parse::<u8>().expect(&format!("Incorrect symbol {}", modifier[0]))
                 }
             }
         }

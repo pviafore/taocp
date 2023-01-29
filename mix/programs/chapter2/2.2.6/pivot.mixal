@@ -1,0 +1,361 @@
+LEFT        EQU  1:2
+UP          EQU  4:5
+LINK        EQU  4:5
+ROW         EQU  1:1
+SIGN        EQU  0:0
+COL         EQU  2:2
+VAL         EQU  3:5
+N           EQU  4    * NxN matrix
+            ORIG 100
+
+MAIN        JMP SETUPMEM
+            JMP SETUPDATA
+            JMP PRINT
+            ENT2 MEMORY+22
+            JMP PIVOT
+            JMP PRINT
+            HLT
+
+SETUPDATA   STJ 9F
+
+            ENTA 1   * setup basecol and base row columns
+            STA  MEMORY+3(ROW)
+            STA  MEMORY+5(ROW)
+            STA  MEMORY+7(ROW)
+            STA  MEMORY+9(ROW)
+            STA  MEMORY+11(COL)
+            STA  MEMORY+21(COL)
+            STA  MEMORY+31(COL)
+            STA  MEMORY+41(COL)
+
+            ENTA MEMORY+12
+            STA MEMORY+10(LEFT)
+
+            ENTA MEMORY+26
+            STA MEMORY+20(LEFT)
+
+            ENTA MEMORY+30
+            STA MEMORY+30(LEFT)
+
+            ENTA MEMORY+42
+            STA MEMORY+2(UP)
+            
+            ENTA MEMORY+4
+            STA MEMORY+4(UP)
+
+            ENTA MEMORY+46
+            STA MEMORY+6(UP)
+
+            ENTA MEMORY+48
+            STA MEMORY+8(UP)
+            STA MEMORY+40(LEFT)
+
+            ENTA -1  * For mix programming, I'm putting the sign on the first word
+            STA MEMORY+2(SIGN)
+            STA MEMORY+4(SIGN)
+            STA MEMORY+6(SIGN)
+            STA MEMORY+8(SIGN)
+            STA MEMORY+10(SIGN)
+            STA MEMORY+20(SIGN)
+            STA MEMORY+30(SIGN)
+            STA MEMORY+40(SIGN)
+* setup 1,1
+            ENTA 1
+            STA MEMORY+13(ROW)
+            STA MEMORY+13(COL)
+            ENTA 50
+            STA MEMORY+13(VAL)
+            ENTA MEMORY+10
+            STA MEMORY+12(LEFT)
+            ENTA MEMORY+2
+            STA MEMORY+12(UP)
+
+* setup 2,1 
+            ENTA 2
+            STA MEMORY+23(ROW)
+            ENTA 1
+            STA MEMORY+23(COL)
+            ENTA 10
+            STA MEMORY+23(VAL)
+            ENTA MEMORY+12
+            STA MEMORY+22(UP)
+            ENTA MEMORY+20
+            STA MEMORY+22(LEFT)
+
+*setup 2,3
+            ENTA 2
+            STA MEMORY+27(ROW)
+            ENTA 3
+            STA MEMORY+27(COL)
+            ENTA 20
+            STA MEMORY+27(VAL)
+
+            ENTA MEMORY+22
+            STA MEMORY+26(LEFT)
+
+            ENTA MEMORY+6
+            STA MEMORY+26(UP)
+
+* setup 4,1
+
+            ENTA 4
+            STA MEMORY+43(ROW)
+            ENTA 1
+            STA MEMORY+43(COL)
+            ENTA -30
+            STA MEMORY+43(SIGN)
+            STA MEMORY+43(VAL)
+
+            ENTA MEMORY+22
+            STA MEMORY+42(UP)
+
+            ENTA MEMORY+40
+            STA MEMORY+42(LEFT)
+
+* setup 4,2
+            ENTA 4
+            STA MEMORY+47(ROW)
+            ENTA 3
+            STA MEMORY+47(COL)
+            ENTA -60
+            STA MEMORY+47(SIGN)
+            STA MEMORY+47(VAL)
+
+            ENTA MEMORY+42
+            STA MEMORY+46(LEFT)
+
+            ENTA MEMORY+26
+            STA MEMORY+46(UP)
+
+* setup 4,3
+
+            ENTA 4
+            STA MEMORY+49(ROW)
+            STA MEMORY+49(COL)
+            ENTA 5
+            STA MEMORY+49(VAL)
+
+            ENTA MEMORY+46
+            STA MEMORY+48(LEFT)
+            ENTA MEMORY+8
+            STA MEMORY+48(UP)
+
+9H          JMP *
+
+PRINT       STJ 9F
+
+            ENT2 BASEROW+1
+PRINTROW    LD1 0,2
+            LD1 0,1(LEFT)
+           
+            ENT3 N   
+2H          J3NZ 3F   * if I3 == 0, then we have printed everything
+            CMP2 =BASEROW+N+1=    * go to next row (or exit if we're done)
+            JE 8F
+            OUT OUTBUF(18)
+            INC2 1  * advance BASEROW by 1 node
+            JMP PRINTROW  ( and start over)
+
+3H          ENT4 OUTBUF,3
+            INC4 0,3
+            LDA 0,1(0:5)  * If its an empty row
+            JAN PRINTZERO
+            ENTA 0,3
+            SLA 3
+            CMPA 1,1(COL)
+            JG PRINTZERO
+            JE PRINTVAL
+            HLT   * SHOULD NOT GET HERE
+PRINTZERO   ENTA 30
+            STA 1,4
+            STZ 0,4
+            DEC3 1
+            JMP 2B
+PRINTVAL    LDA 1,1(VAL)
+            CHAR
+            STX 1,4
+            LDA 1,1
+            JANN 4F
+            LDA MINUS
+            STA 0,4
+            JMP 5F
+4H          STZ 0,4
+5H          DEC3 1
+            LD1 0,1(LEFT)
+            JMP 2B
+8H          OUT EMPTY(18)
+9H          JMP *
+
+* I2 should be the pivot variable
+PIVOT       STJ 9F
+S1          LD1 1,2(ROW)  * I0
+            ST1 I0
+            LDA  1,2(VAL)
+            STA ALPHA
+            ENTA 1
+            STA 1,2(VAL)
+            LD2 1,2(COL)  * J0
+            ST2 J0
+            LD3 BASEROW,1 * P0
+            LD4 BASECOL,2 * Q0
+S2          LD3 0,3(LEFT)
+            LDA 0,3(0:5)    ( remember that we are making the first word negative for basecol )
+            JAN S3
+            LD5 1,3(COL)   * sets j
+            LDA BASECOL,5
+            STA  PTR,5
+            ENTA 0
+            LDX 1,3(VAL)
+            DIV ALPHA(VAL)
+            STA 1,3(VAL)
+            STA 1,3(SIGN)
+            JMP S2
+S3          LD4 0,4(UP)
+            LDA 0,4(0:5)
+            JAN 9F  * terminate if we're back to zero
+            LD6 1,4(ROW)   * sets I 
+            CMP6 I0
+            JE S3  * go again if we're at the same row
+            LD1 BASEROW,6    * sets P
+            LD2 0,1(LEFT)    * sets P1
+S4          LD3 0,3(LEFT)    *( P0 <- LEFT(P0)) 
+            LDA 0,3(0:5)
+            LD5 1,3(COL)    * J <- COL(P0)
+            JANN 1F 
+            LDX 1,4(VAL)
+            LDA 1,4(0:5)
+            JANN 7F
+            STX TEMP
+            LDA TEMP
+            MUL =-1=
+            ENTA -0
+            JMP 5F
+              
+7H          ENTA 0
+5H          DIV ALPHA
+
+            
+            MUL =-1=
+            STX 1,4(VAL)
+            STX 1,4(SIGN)
+            JMP S3
+1H          CMP5 J0
+            JE S4 
+S5          LDA 1,2(COL)
+            DECA 0,5
+            JAZ S7   * pivot
+            JAN S6   * insert new element
+            ENT1 0,2 * repeat  , set P
+            LD2 0,1(LEFT) * and P1
+            JMP S5
+S6          ST1 TEMP
+            LD1 PTR,5
+            LDA 1,1(ROW)  *  A is ROW(UP(PTR[J]))
+            DECA 0,6
+            LD1 TEMP
+            JANP INSERT     * if less than or equal to I, add new node
+            ST1 TEMP
+            LD1 PTR,5(UP)
+            ST1 PTR,5
+            LD1 TEMP
+            JMP S6
+INSERT      ST3 TEMP
+            LD3 AVAIL
+            LDA 0,3(LINK)
+            STA AVAIL
+
+            STZ 1,3(VAL)
+            ST6 1,3(ROW)
+            ST5 1,3(COL)
+            ST2 0,3(LEFT)   * set P1 to be new nodes lefgt
+            ST3 0,1(LEFT)  * set P's left to X
+            LDA PTR,5(UP)
+            STA 0,3(UP)
+            ENT2 0,3       * set P1 to x
+            ST3 PTR,5(UP)
+            LD3 TEMP
+S7          LDA 1,3(VAL)
+            MUL 1,4(VAL)
+            STX TEMP
+            LDA 1,4(0:5)
+            JANN 1F
+            ENTA -1
+            MUL  TEMP
+            STX  TEMP
+1H          LDA 1,2(VAL)
+            LDX 1,2(0:5)
+            JXNN 1F
+            MUL =-1=
+            SLAX 5
+1H          SUB TEMP
+            STA 1,2(VAL)
+            STA 1,2(SIGN)
+            JAZ S8
+            ST1 PTR,5
+            ENT1 0,2
+            LD2 0,1(LEFT)
+            JMP S4
+S8          ST1 TEMP
+            LD1 PTR,5
+            LD1 0,1(UP)
+            DEC1 0,2
+            J1NZ 3F
+            ST1 PTR,5
+            LD1 TEMP
+            JMP S8
+3H          LD1 TEMP
+            ST3 TEMP
+            LDA 0,2(UP)
+            LD3 PTR,5
+            STA 0,3(UP) 
+            LDA 0,2(LEFT)
+            STA 0,1(LEFT)
+            LDA AVAIL
+            STA 0,2(LINK)
+            LD2 0,1(LEFT)
+            LD3 TEMP
+            JMP S4
+9H          JMP *
+
+
+
+SETUPMEM    STJ 9F
+            LD1 AVAIL
+1H          ENT2 0,1
+            
+            INC2 2
+            ST2 1,1(LINK)
+            ENT1 0,2
+            CMP1 =3000=
+            JL   1B
+
+9H          JMP *
+
+
+
+ALPHA       CON 0
+I0          CON 0
+J0          CON 0
+TEMP        CON 0
+
+MINUS       ALF      -
+PTR         ORIG *+5
+OUTBUF      ORIG  *+24
+EMPTY       ORIG  *+24
+PTR         ORIG *+N+1
+BASECOL     CON  0
+            CON  MEMORY+2
+            CON  MEMORY+4
+            CON  MEMORY+6
+            CON  MEMORY+8
+BASEROW     CON  0
+            CON  MEMORY+10
+            CON  MEMORY+20
+            CON  MEMORY+30
+            CON  MEMORY+40
+MEMORY      ORIG *+50  * the matrix will still be sparse linkage even though I have enough memory for sequential
+AVAIL       CON MEM
+OUTBUF      ORIG *+24
+            ORIG 1000
+MEM         ORIG *+2000
+            END MAIN

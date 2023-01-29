@@ -70,3 +70,37 @@
     F3. If `X==MINROW` for all `X=(PFEMALE, PBLONDE, PBLUE)` and `X == MINROW` for any `X=(PA21, PA22, PA23)`, print out all attributes. Advance all X to X(NEXT).
 
     F4. For each X!=MINROW for all `X=(PFEMALE, PBLONDE, PBLUE, PA21, PA22, PA23)`, set `X=X(nNEXT)`. If X < MINROW, repeat this step. Otherwise, Go to step F2.
+
+
+10) Can you think of a better way to organize a table for searches
+
+    Hashing the fields you're looking for and using a hash table lookup
+
+11) If we have a 200x200 matrix with at most 4 entries per row. How much storage for this (three words per node, one per head)
+
+    $200 \times 3 \times 4 + 200 + 200 = 2800 $ words
+
+12) What is `VAL(Q0)`, `VAL(P0)` and `VAL(P1)` at the beginning of step S7, in terms of a,b,c,d.
+
+    $VAL(Q0) = c $
+
+    $VAL(P0) = \dfrac{b}{a}$ 
+
+    $VAL(P1) = d$
+
+13) Why were circular lists used instead of straight circular lists?
+
+    There's no condition for end of list and resetting/inserting/deleting, instead, when the algorithm hits the end, it is ready to go for the next iteration
+
+    You could check full null every time you advance a list and then reset back to the beginning/end (depending on direction), but that's extra instructions.
+
+14) The pivot algorithm saves time in a sparse matrix, since it avoids zero elements. Show that this savings in running time can be achieved in a large sparse matrix that is stored sequentially, with an auxillary table LINK[J]
+
+    If you have a large matrix in memory, you could save a separate table in one dimension, and make sure that it has a list of nodes per row. So for each node $0 \le i \le j$, $LINK[i]$, that could contain a linked list where the value is the node that is in that row, making it easy to figure out which elements are in the row and skipping zeroes.
+
+    I do not know how to do it with a singular table with no linked lists
+
+15) Write the pivot algorithm
+
+    See [`pivot.mixal`](pivot.mixal). I do not have floating point operations yet, so I am going to do all integer division. Unfortunately, this means the pivot point will be zero when printed out, so sorry.
+

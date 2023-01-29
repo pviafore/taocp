@@ -580,41 +580,65 @@ impl Computer {
     fn address_transfer_a(&mut self, instruction:Instruction) {
         let value = self.get_address_transfer_value(instruction, self.registers.a.read(), 30);
         self.registers.a = arch::Word::from_value(value);
+        if self.is_address_transfer_inverted(instruction)  {
+            self.registers.a.invert_sign()
+        }
     }
 
     fn address_transfer_x(&mut self, instruction:Instruction) {
         let value = self.get_address_transfer_value(instruction, self.registers.x.read(), 30);
         self.registers.x = arch::Word::from_value(value);
+        if self.is_address_transfer_inverted(instruction)  {
+            self.registers.x.invert_sign()
+        }
     }
 
     fn address_transfer_i1(&mut self, instruction:Instruction) {
         let value = self.get_address_transfer_value(instruction, self.registers.i1.read() as i32, 12);
         self.registers.i1 = arch::HalfWord::from_value(value as i16);
+        if self.is_address_transfer_inverted(instruction)  {
+            self.registers.i1.invert_sign()
+        }
     }
 
     fn address_transfer_i2(&mut self, instruction:Instruction) {
         let value = self.get_address_transfer_value(instruction, self.registers.i2.read() as i32, 12);
         self.registers.i2 = arch::HalfWord::from_value(value as i16);
+        if self.is_address_transfer_inverted(instruction)  {
+            self.registers.i2.invert_sign()
+        }
     }
 
     fn address_transfer_i3(&mut self, instruction:Instruction) {
         let value = self.get_address_transfer_value(instruction, self.registers.i3.read() as i32, 12);
         self.registers.i3 = arch::HalfWord::from_value(value as i16);
+        if self.is_address_transfer_inverted(instruction)  {
+            self.registers.i3.invert_sign()
+        }
     }
 
     fn address_transfer_i4(&mut self, instruction:Instruction) {
         let value = self.get_address_transfer_value(instruction, self.registers.i4.read() as i32, 12);
         self.registers.i4 = arch::HalfWord::from_value(value as i16);
+        if self.is_address_transfer_inverted(instruction)  {
+            self.registers.i4.invert_sign()
+        }
     }
 
     fn address_transfer_i5(&mut self, instruction:Instruction) {
         let value = self.get_address_transfer_value(instruction, self.registers.i5.read() as i32, 12);
         self.registers.i5 = arch::HalfWord::from_value(value as i16);
+        if self.is_address_transfer_inverted(instruction)  {
+            self.registers.i5.invert_sign()
+        }
     }
 
     fn address_transfer_i6(&mut self, instruction:Instruction) {
         let value = self.get_address_transfer_value(instruction, self.registers.i6.read() as i32, 12);
         self.registers.i6 = arch::HalfWord::from_value(value as i16);
+        if self.is_address_transfer_inverted(instruction)  {
+            self.registers.i6.invert_sign()
+        }
     }
 
     fn get_address_transfer_value(&mut self, instruction: Instruction, base: i32, bits: u8) -> i32 {
@@ -630,6 +654,15 @@ impl Computer {
             self.overflow = true;
         }
         value
+    }
+
+    fn is_address_transfer_inverted(&mut self, instruction: Instruction) -> bool{
+        let raw_value = self.get_raw_value(instruction);
+        match instruction.modification() {
+            2 => (raw_value == 0 && !instruction.address().is_positive),
+            3 => (raw_value == 0 && instruction.address().is_positive),
+            _ => false
+        }
     }
 
     fn get_raw_value(&mut self, instruction:Instruction) -> i16 {
