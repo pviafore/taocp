@@ -104,3 +104,56 @@
 
     See [`pivot.mixal`](pivot.mixal). I do not have floating point operations yet, so I am going to do all integer division. Unfortunately, this means the pivot point will be zero when printed out, so sorry.
 
+16) Write an algorithm that copies a sparse matrix
+
+    Assuming you are given $M,N$ for a $M \times N$ matrix, as well as the locations of `BASEROW[1]` and `BASECOL[1]`.
+    Also assuming there is a auxilary table `PTR[J]`, where $1 \le J \le M$.
+
+    C1. (Initialize) Set $I=1$
+
+    C2. (Start New Column) If $I==N$, terminate. $NEWBASECOL[I] \leftarrow AVAIL, OLDPTR \leftarrow BASECOL[I], LASTUP \leftarrow NEWBASECOL[I]$. This sets the new base column and sets up OLDPTR to iterate through the column
+
+    C3. (Copy Column) $OLDPTR \leftarrow OLDPTR(UP), J \leftarrow OLDPTR(ROW) $. 
+    
+    If $PTR[J] == null$, then $PTR[J] \leftarrow AVAIL$. 
+
+    If $OLDPTR(ROW) == -1$, then $ LEFT(PTR[J]) \leftarrow BASEROW
+    [J], NEWNODE(UP) \leftarrow NEWBASECOL[I], I \leftarrow I+1$ and go to step C2.
+    
+    
+    $NEWNODE \leftarrow AVAIL, LASTUP(UP) \leftarrow NEWNODE, LASTUP \leftarrow NEWNODE. NEWNODE(LEFT) \leftarrow PTR[J], PTR[J] \leftarrow NEWNODE, NEWNODE(VAL) \leftarrow OLDPTR(VAL)$
+
+    This advances the old pointer to the value to copy, and copies it over to a new node. The linkage for the node is set up for left and up.
+
+    Repeat Step C3.
+
+    
+    See [copy.mixal](copy.mixal)
+
+17) Write an algorithm for multiplying a matrix
+
+    Assuming we know M and N for a $M \times N$ matrix. 
+
+    M1.(Initialize) Set $I=1$ for the column. 
+
+    M2.(Iterate Column) If $ I \gt N$, terminate. Set $J \leftarrow M,  NEWBASECOL[I] \leftarrow AVAIL, LASTNEW \leftarrow NEWBASECOL[I], LASTNEW(ROW) \leftarrow -1$
+
+    M3. (Iterate Row) If J == 0, $LASTNEW(UP) \leftarrow NEWBASECOL[I],I \leftarrow I+1,$ and go to M2. Set $K \leftarrow N, SUM \leftarrow 0, M1BC \leftarrow MATRIX1\_BASECOL[I](UP), M2BR \leftarrow MATRIX2\_BASEROW[J](LEFT),$
+
+    M4. (Multiply) If  $K == 0$ and go to M5
+
+
+    Otherwise, if $K == M1BC(ROW)$, then $VAL1 \leftarrow M1BC(VAL)$ and $M1BC \leftarrow M1BC(LEFT)$, else $VAL1 \leftarrow 0$. If and $K == M2BR(COL)$, then $VAL2 \leftarrow M2BR(VAL)$ and $M2BR \leftarrow M2BR(UP)$, else $VAL2 \leftarrow 0$.  
+
+    $SUM \leftarrow SUM + VAL1 \times VAL2, K \leftarrow K-1, $
+
+    Repeat Step M4.
+
+    M5. (Set Value)  If $SUM == 0$, Go to M3. If $PTR[J] == NULL$, $PTR[J] \leftarrow AVAIL, NEWBASEROW[J] \leftarrow PTR[J], PTR[J](COL) \leftarrow -1$  
+
+    $NEWNODE \leftarrow AVAIL, LASTNEW(UP) \leftarrow NEWNODE, NEWNODE(LEFT) \leftarrow PTR[J], PTR[J] \leftarrow NEWNODE, NEWNODE(ROW) \leftarrow J, NEWNODE(COL) \leftarrow ROW, NEWNODE(VAL) \leftarrow SUM, LASTNEW \leftarrow NEWNODE, NEWBASEROW[J](LEFT) \leftarrow NEWNODE$
+
+    $J \leftarrow J-1$, go to step M3
+
+
+    See [multiply.mixal](multiply.mixal)

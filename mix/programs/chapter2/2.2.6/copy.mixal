@@ -2,17 +2,25 @@ LEFT        EQU  1:2
 UP          EQU  4:5
 LINK        EQU  4:5
 ROW         EQU  1:1
-SIGN        EQU  0:0
 COL         EQU  2:2
+ROWCOL      EQU  0:3
+SIGN        EQU  0:0
 VAL         EQU  3:5
-N           EQU  4    * NxN matrix
+N           EQU  4    * MxN matrix
             ORIG 100
 
 MAIN        JMP SETUPMEM
             JMP SETUPDATA
+            ENT5 BASEROW
             JMP PRINT
-            ENT2 MEMORY+22
-            JMP PIVOT
+* I1 is the old base column
+* I2 is the new base column pointer
+* I3 is the new base row pointer
+            ENT1 BASECOL
+            ENT2 NEWBASECOL
+            ENT3 NEWBASEROW
+            JMP COPY
+            ENT5 NEWBASEROW
             JMP PRINT
             HLT
 
@@ -142,15 +150,19 @@ SETUPDATA   STJ 9F
 
 9H          JMP *
 
+* I5 should be BASEROW
 PRINT       STJ 9F
 
-            ENT2 BASEROW+1
+            ENT2 1,5
+            INC5 N+1
+            ST5  SENTINEL
+             
 PRINTROW    LD1 0,2
             LD1 0,1(LEFT)
            
             ENT3 N   
 2H          J3NZ 3F   * if I3 == 0, then we have printed everything
-            CMP2 =BASEROW+N+1=    * go to next row (or exit if we're done)
+            CMP2 SENTINEL    * go to next row (or exit if we're done)
             JE 8F
             OUT OUTBUF(18)
             INC2 1  * advance BASEROW by 1 node
@@ -185,137 +197,93 @@ PRINTVAL    LDA 1,1(VAL)
             JMP 2B
 8H          OUT EMPTY(18)
 9H          JMP *
+SENTINEL    CON 0
 
-* I2 should be the pivot variable
-PIVOT       STJ 9F
-S1          LD1 1,2(ROW)  * I0
-            ST1 I0
-            LDA  1,2(VAL)
-            STA ALPHA
-            ENTA 1
-            STA 1,2(VAL)
-            LD2 1,2(COL)  * J0
-            ST2 J0
-            LD3 BASEROW,1 * P0
-            LD4 BASECOL,2 * Q0
-S2          LD3 0,3(LEFT)
-            LDA 0,3(0:5)    ( remember that we are making the first word negative for basecol )
-            JAN S3
-            LD5 1,3(COL)   * sets j
-            LDA BASECOL,5
-            STA  PTR,5
-            ENTA 0
-            LDX 1,3(VAL)
-            DIV ALPHA(VAL)
-            STA 1,3(VAL)
-            STA 1,3(SIGN)
-            JMP S2
-S3          LD4 0,4(UP)
-            LDA 0,4(0:5)
-            JAN 9F  * terminate if we're back to zero
-            LD6 1,4(ROW)   * sets I 
-            CMP6 I0
-            JE S3  * go again if we're at the same row
-            LD1 BASEROW,6    * sets P
-            LD2 0,1(LEFT)    * sets P1
-S4          LD3 0,3(LEFT)    *( P0 <- LEFT(P0)) 
-            LDA 0,3(0:5)
-            LD5 1,3(COL)    * J <- COL(P0)
-            JANN 1F 
-            LDX 1,4(VAL)
-            LDA 1,4(0:5)
-            JANN 7F
-            STX TEMP
-            LDA TEMP
-            MUL =-1=
-            ENTA -0
-            JMP 5F
-              
-7H          ENTA 0
-5H          DIV ALPHA
 
-            
-            MUL =-1=
-            STX 1,4(VAL)
-            STX 1,4(SIGN)
-            JMP S3
-1H          CMP5 J0
-            JE S4 
-S5          LDA 1,2(COL)
-            DECA 0,5
-            JAZ S7   * pivot
-            JAN S6   * insert new element
-            ENT1 0,2 * repeat  , set P
-            LD2 0,1(LEFT) * and P1
-            JMP S5
-S6          ST1 TEMP
-            LD1 PTR,5
-            LDA 1,1(ROW)  *  A is ROW(UP(PTR[J]))
-            DECA 0,6
-            LD1 TEMP
-            JANP INSERT     * if less than or equal to I, add new node
-            ST1 TEMP
-            LD1 PTR,5(UP)
-            ST1 PTR,5
-            LD1 TEMP
-            JMP S6
-INSERT      ST3 TEMP
-            LD3 AVAIL
-            LDA 0,3(LINK)
+* I1 is the old base column
+* I2 is the new base column pointer
+* I3 is the new base row pointer
+COPY        STJ 9F
+C1          ENT4 1  * I = 1
+            ST1 OBCOL
+            ST2 NBCOL
+            ST3 NBROW
+C2          CMP4 =N+1=
+            JE 9F
+
+            LD1 OBCOL
+            INC1 0,4
+            LD1 0,1
+
+            LD5 AVAIL  * LASTUP 
+            LDA 0,5(LINK)
             STA AVAIL
-
-            STZ 1,3(VAL)
-            ST6 1,3(ROW)
-            ST5 1,3(COL)
-            ST2 0,3(LEFT)   * set P1 to be new nodes lefgt
-            ST3 0,1(LEFT)  * set P's left to X
-            LDA PTR,5(UP)
-            STA 0,3(UP)
-            ENT2 0,3       * set P1 to x
-            ST3 PTR,5(UP)
-            LD3 TEMP
-S7          LDA 1,3(VAL)
-            MUL 1,4(VAL)
-            STX TEMP
-            LDA 1,4(0:5)
-            JANN 1F
             ENTA -1
-            MUL  TEMP
-            STX  TEMP
-1H          LDA 1,2(VAL)
-            LDX 1,2(0:5)
-            JXNN 1F
-            MUL =-1=
-            SLAX 5
-1H          SUB TEMP
-            STA 1,2(VAL)
-            STA 1,2(SIGN)
-            JAZ S8
-            ST1 PTR,5
-            ENT1 0,2
-            LD2 0,1(LEFT)
-            JMP S4
-S8          ST1 TEMP
-            LD1 PTR,5
-            LD1 0,1(UP)
-            DEC1 0,2
-            J1NZ 3F
-            ST1 PTR,5
-            LD1 TEMP
-            JMP S8
-3H          LD1 TEMP
-            ST3 TEMP
-            LDA 0,2(UP)
-            LD3 PTR,5
-            STA 0,3(UP) 
-            LDA 0,2(LEFT)
-            STA 0,1(LEFT)
-            LDA AVAIL
-            STA 0,2(LINK)
-            LD2 0,1(LEFT)
-            LD3 TEMP
-            JMP S4
+            STA 1,5(ROW)
+            STZ 0,5
+            STA 0,5(SIGN)
+
+            LD6 NBCOL
+            INC6 0,4    * at this point, I6 is NEWBASECOL[I]
+            ST5 0,6  * saving avail to NEWBASECOL[I]
+
+C3          LD1 0,1(UP)   * advance oldptr
+            LD6 1,1(ROW)  * J
+
+            LD2 NBROW
+            INC2 0,6   
+            LDA 0,2
+            JANZ 3F
+            ENT3 0,2    * at this point, I3 is PTR[J]
+3H          LDA 1,3(ROWCOL)
+            JANZ 1F   * if we are zero we need to set it  (PTR[J] == NULL)
+
+            LD2 AVAIL  
+            LDA 0,2(LINK)
+            STA AVAIL
+            STZ 0,2
+            ENTA -1
+            STA 1,2(COL)
+            STA 0,2(SIGN)
+            ST2 0,3
+            ST2 PTR,6
+1H          LDA 0,1
+            JANN 2F
+            
+
+            LDA NBCOL
+            INCA 0,4
+            STA 0,5(UP)
+
+            INC4 1
+            JMP C2
+2H          LD2 AVAIL
+            LDA 0,2(LINK)
+            STA AVAIL
+            STZ 0,2
+
+            ST2 0,5(UP)
+            ENT5 0,2
+
+            LD3 PTR,6
+            ST3 0,2(LEFT)
+            ST2 PTR,6
+            ENT3 0,2
+
+            LDA 1,1
+            STA 1,2
+            
+            LD2 NBROW
+            INC2 0,6
+            LD2 0,2
+            ST3 0,2(LEFT)
+            JMP C3 
+
+
 9H          JMP *
+OBCOL
+NBCOL       CON 0
+NBROW       CON 0
 
 
 
@@ -333,16 +301,9 @@ SETUPMEM    STJ 9F
 
 
 
-ALPHA       CON 0
-I0          CON 0
-J0          CON 0
-TEMP        CON 0
-
 MINUS       ALF      -
-PTR         ORIG *+5
 OUTBUF      ORIG  *+24
 EMPTY       ORIG  *+24
-PTR         ORIG *+N+1
 BASECOL     CON  0
             CON  MEMORY+2
             CON  MEMORY+4
@@ -353,6 +314,10 @@ BASEROW     CON  0
             CON  MEMORY+20
             CON  MEMORY+30
             CON  MEMORY+40
+
+NEWBASECOL  ORIG *+5
+NEWBASEROW  ORIG *+5
+PTR         ORIG *+5
 MEMORY      ORIG *+50  * the matrix will still be sparse linkage even though I have enough memory for sequential
 AVAIL       CON MEM
 OUTBUF      ORIG *+24
