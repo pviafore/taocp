@@ -157,3 +157,136 @@
 
 
     See [multiply.mixal](multiply.mixal)
+
+
+18) Given the matrix, 
+
+	$
+	\begin{bmatrix} 
+	1 & 2 & 3 \\
+	0 & 1 & 2\\
+	0 & 0 & 1 \\
+	\end{bmatrix}
+	$
+
+    Invert it.
+
+    For the first row, the pivot element is 3, so the first pivot is : 
+
+	$
+	\begin{bmatrix} 
+	1/3 & 2/3 & 1/3 \\
+	-2/3 & -1/3 & -2/3\\
+	-1/3 & -2/3 & -1/3 \\
+	\end{bmatrix}
+	$
+
+    In the second row, the pivot is in column 1, so
+
+	$
+	\begin{bmatrix} 
+	1/2 & 1/2 & 0 \\
+	-3/2 & 1/2 & 1\\
+	-1/2 & -1/2 & 0 \\
+	\end{bmatrix}
+	$
+
+
+    Our final pivot point is the -1/2
+
+	$
+	\begin{bmatrix} 
+	0 & 1 & 0 \\
+	-2 & 1 & 1\\
+	1 & -2 & 0 \\
+	\end{bmatrix}
+	$
+
+    The permutation goes like this, 
+
+    Row 1 <- 3, 2 <- 1, 3<- 2
+	$
+	\begin{bmatrix} 
+	-2 & 1 & 1\\
+	1 & -2 & 0 \\
+	0 & 1 & 0 \\
+	\end{bmatrix}
+	$
+
+
+    Column 1<-3, 2 <- 1, 3 <-2
+	$
+	\begin{bmatrix} 
+	1 & -2 & 1 \\
+	0 & 1 & -2  \\
+	0 & 0 & 1 &\\
+	\end{bmatrix}
+	$
+
+
+19) How would you do the invert with sparse matrices?
+
+    You would need a table CR to populate C[k]'s BASEROW poitner and table CC to poulate C[K]'s BASECOL pointer with. 
+    Then for each $1 \le k \le N$ row , you would need to iterate through the row and find the greatest value (and checking that the column is not already in C[k]).
+
+    Once you have the element, you perform a pivot (Sorry, I don't have code for this - I don't have the floating point operations implemented yet in MIX).
+
+    Then comes the row/column swap. Let's say you're doing the rows first. 
+
+    You would set the BASEROW values to be what the CR[k] table was, which would permute the rows just fine. You would need to re-link all the column values, which you can do by iterating BASEROW in parallel and seeing which values match up for which column.
+
+    Then you could do the same thing with BASECOL and CC[K], which would let you permute the column heads (which have been updated from row permutes from before), and then do the relinking of the rows in a similar manner.
+
+20) Come up with the indexing/storage scheme for tridiagonal matrices
+
+So there are three elements for each row, except for the first and last.
+
+So, when we get to row J and column I, we know that the position of that row is going to start with $3(J-1)$. Then for each row, we know we have skipped $J-1$ elements so far, so the storage function should be
+
+$LOC[A[0,0]] + 3(J-1) + (I - J + 1) $
+
+
+21) Suggest a storage allocation for $N \times N$ matrix, where N is variable
+
+    I'm assuming this means that that N will change during runtime, but storage alloation is the same:
+
+    so element 1 has 1x1, 2,3,4 will be 1,2, 2,1 and 2,2, 3 will be 1,3, 2,3, 3,1, 3,2 3,3
+
+    So it looks like we grow by 1,3,5,7,11 (the growth of perfect squares)
+
+    So, we need some function that expresses these numbers based on index
+
+    So, for each element of $x=max(I,J)$, we know that we have done $(x-1)^2$ elements so far to get to the right "growth". 
+
+    But how do we know which element to get to. We assume the first element is $1,x$, so we can start with $J-1$ as the index, and we need to add $I-(x)$ to get further (for the column you add, this second term should always be zero).
+
+    So, that gives us 
+
+    $LOC(A[0,0]) + (x-1)^2 + y$
+    
+    where $x = max(I,J)$
+    and $y = J$ if J \le I, otherwise $y = I + x - 1$ 
+
+
+22) Find a polynomial that assumes each nonnegative integer value exactly once as the indicies run through all k dimensional nonnegative integer vectors, with the additional property that if the sum of indices is less than another sum of indices, than the polynomial is also less than.
+
+    I have no idea what this is asking for, so skipping this one
+
+23) What is the storage function for an extensible matrix?
+
+     so in memory, it would look like this ( with pipes separating when it grows)
+
+     1,1   | 1,2  | 2,1  2,2 |  1,3, 2,3 |  3,1, 3,2, 3,3
+
+     So it grows to the right by M whenever J < I, and when I > J, it looks like we grow beneath. 
+
+     If $J \le I$, then $LOC(A[0,0]) + (I-2)(I-1)  + J - 1$
+     Otherwise $LOC(A[0,0]) + J(J - 1) + I - 1 $
+
+
+24) HOw is it possible to read/write any element of a sparse array (that is still contiguous in memory), when most are zero, and you don't want to set everything to zero.
+
+You could have a separate array (maybe even just a word per element) that stores whether it is set or not. That can be set to zero much quicker. If there were bit manipulation functions in your assembly language, you could even do it as part of a bitfield, but alas, MIX does not have that.
+
+Alternatively, you could have a list per row/column or something of that regard that's sorted of storage, for quicker lookup (since you can subdivide by row).
+
