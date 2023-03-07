@@ -84,3 +84,48 @@
     Post-order and in-order should be able to rectify things as well for the same reason.
 
     However, pre-order and post-order will not give an answer, as a simple (A, (B)) link will confuse them. For both, the answer is AB and BA, but there is no way to tell if B is the left link or the right link in this case (the in-order will bisect to tell us which link a side is on.) 
+
+
+8)  Find all binary trees whose nodes appear in exactly the same sequence in 
+
+    a) pre order and in order
+
+    Any trees that are comprised of only right links
+
+    b)  pre-order and post-order
+
+    Any two trees which have only a root
+
+    c) inorder and postorder 
+
+    Any two trees that only have left links
+
+9) When a binary tree having n nodes is traversed using Algorithm T, how many times is T1, T2, T3, T4 and T5 performed?
+
+    T1 - just once
+    T2 - this happens after every visit of a node, as well as every left descend. We can be up to n left descends on the worst case, so let's say 2n on the worst case and on the average case (a balanced tree?), it would be 1.5n
+    T3 - This happens N times, for each tree that we have
+    T4 - This happens N+1 times ( each node and the final condition of stack empty)
+    T5 - This happens N times
+
+10) What is the largest number of entries that can be in the stack at once, if the binary tree has n nodes for traversal?
+
+    It can be N if we just have a giant list of left links. In a balanced tree, $lg_n$.
+
+11) Analyze the average value of the largest stack size?
+
+    oof a higher math problem. I suspect it is on average (warning my math is probably suspect) $\frac{n + lg_n}{2} $. The reason being is that you have a balanced tree in the middle (which is $lg_n$, but then as you unbalance, you get either to llinks only or rlinks only). With llinks only, you'll tend to more to n and with rrlinks only, you'll tend more to zero. Since we're we can take a symmetric reflection of that tree at any time, you're going to have some part of your tree balanced which is $lg_n$ stack depth, and the remainder if either tending to the rest of the n nodes or zero. On average, I say that's probably half balanced, half unbalanced (it reality it probably tends more to unbalanced, which would mess with my fractions). So I'm just guessing at what the depth would actually be,'
+
+    And now that I look at the answer in the book, I'm nowhere close (or rather, I'm nowhere close to knowing how close I am to the answer). This math is beyond me. If you want the right answer, read the book :)
+
+12) Design an algorithm to traverse a binary tree in pre-order and prove that your algorithm is correct.
+
+    See [preorder.mixal](preorder.mixal). Also note that I have [inorder.mixal](inorder.mixal) for comparison.
+
+    The big thing is you visit the node before you add it to the stack.
+
+13) Cool cool, now do post-order
+
+    See [postorder.mixal](postorder.mixal)
+
+    In essence, I just keep the elements on the stack and track (in the stack) whether they were just pushed, have gone down the left, or gone down the right. If we went down the right, pop it

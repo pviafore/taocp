@@ -1,0 +1,110 @@
+* Post-order traversal of tree
+LTAG         EQU 1:1
+RTAG         EQU 1:1
+LLINK        EQU 2:3
+RLINK        EQU 2:3
+INFO1        EQU 4:5
+INFO2        EQU 4:5
+
+             ORIG 100
+MAIN         JMP SETUPTREE
+             LD1 TREE
+             JMP POSTORDER
+             HLT
+
+POSTORDER    STJ 9F
+T1           LD1 TREE
+             ENT2 STACK
+             J1Z 9F
+PUSH         ST1 0,2(4:5)
+             STZ 0,2(1:2)
+             INC2 2
+LOOP         CMP2 =STACK=
+             JE 9F
+             LDA -2,2(1:2) * read the status of the element on the stack
+             JANZ 1F  * go left
+             ENTX 1
+             STX -2,2(1:2)
+             LD1 -2,2(4:5)
+             LD1 0,1(LLINK)
+             J1NZ PUSH * if you have a node, push on stack and recurse 
+1H           LDA -2,2(1:2)
+             CMPA =1=  *  have gone down left, now go right
+             JNE 2F
+             ENTX 2
+             STX -2,2(1:2)
+             LD1 -2,2(4:5)
+             LD1 1,1(RLINK)
+             J1NZ PUSH
+2H           LDA -2,2(1:2)
+             CMPA =2=
+             JNE LOOP * right was empty, 
+             LD1 -2,2(4:5)
+             DEC2 2
+             JMP VISIT
+             JMP LOOP
+9H           JMP *
+
+             
+* Assumes I1 contains the node
+VISIT        STJ 9F
+             LDA 0,1(INFO1)
+             STA OUTBUF
+             OUT OUTBUF(18)
+9H           JMP *
+
+SETUPTREE    STJ 9F
+             ENTA NODEB
+             STA  NODEA(LLINK)
+             ENTA NODEC
+             STA  NODEA+1(RLINK)
+             ENTA NODED
+             STA  NODEB(LLINK)
+             ENTA NODEE
+             STA  NODEC(LLINK)
+             ENTA NODEF
+             STA  NODEC+1(RLINK)
+             ENTA NODEG
+             STA  NODEE+1(RLINK)
+             ENTA NODEH
+             STA  NODEF(LLINK)
+             ENTA NODEJ
+             STA  NODEF+1(RLINK)
+
+             ENTA 1
+             STA NODEB+1(RTAG)
+             STA NODED(LTAG)
+             STA NODED+1(RTAG)
+             STA NODEE(LTAG)
+             STA NODEG(LTAG)
+             STA NODEG+1(RTAG)
+             STA NODEH(LTAG)
+             STA NODEH+1(RTAG)
+             STA NODEJ(LTAG)
+             STA NODEJ+1(RTAG)
+
+             
+9H           JMP *
+
+NODEA        CON 1
+             CON 0
+NODEB        CON 2
+             CON 0
+NODEC        CON 3
+             CON 0
+NODED        CON 4
+             CON 0
+NODEE        CON 5
+             CON 0
+NODEF        CON 6
+             CON 0
+NODEG        CON 7
+             CON 0
+NODEH        CON 8
+             CON 0
+NODEJ        CON 11 
+             CON 0
+TREE         CON NODEA
+OUTBUF       ORIG *+24 
+STACK        ORIG *+100
+             END MAIN

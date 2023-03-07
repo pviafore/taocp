@@ -1,0 +1,94 @@
+* In-order traversal of tree
+LTAG         EQU 1:1
+RTAG         EQU 1:1
+LLINK        EQU 2:3
+RLINK        EQU 2:3
+INFO1        EQU 4:5
+INFO2        EQU 4:5
+
+             ORIG 100
+MAIN         JMP SETUPTREE
+             LD1 TREE
+             JMP INORDER
+             HLT
+
+INORDER      STJ 9F
+T1           LD1 TREE
+             ENT2 STACK
+T2           J1Z T4
+T3           ST1 0,2 
+             INC2 2   * advance the stack
+             LD1 0,1(LLINK)
+             JMP T2
+T4           CMP2 =STACK=
+             JE  9F
+             LD1 -2,2 * read top of stack
+             DEC2 2
+T5           JMP VISIT
+             LD1 1,1(RLINK)
+             JMP T2
+9H           JMP *
+
+             
+* Assumes I1 contains the node
+VISIT        STJ 9F
+             LDA 0,1(INFO1)
+             STA OUTBUF
+             OUT OUTBUF(18)
+9H           JMP *
+
+SETUPTREE    STJ 9F
+             ENTA NODEB
+             STA  NODEA(LLINK)
+             ENTA NODEC
+             STA  NODEA+1(RLINK)
+             ENTA NODED
+             STA  NODEB(LLINK)
+             ENTA NODEE
+             STA  NODEC(LLINK)
+             ENTA NODEF
+             STA  NODEC+1(RLINK)
+             ENTA NODEG
+             STA  NODEE+1(RLINK)
+             ENTA NODEH
+             STA  NODEF(LLINK)
+             ENTA NODEJ
+             STA  NODEF+1(RLINK)
+
+             ENTA 1
+             STA NODEB+1(RTAG)
+             STA NODED(LTAG)
+             STA NODED+1(RTAG)
+             STA NODEE(LTAG)
+             STA NODEG(LTAG)
+             STA NODEG+1(RTAG)
+             STA NODEH(LTAG)
+             STA NODEH+1(RTAG)
+             STA NODEJ(LTAG)
+             STA NODEJ+1(RTAG)
+
+             
+9H           JMP *
+
+NODEA        CON 1
+             CON 0
+NODEB        CON 2
+             CON 0
+NODEC        CON 3
+             CON 0
+NODED        CON 4
+             CON 0
+NODEE        CON 5
+             CON 0
+NODEF        CON 6
+             CON 0
+NODEG        CON 7
+             CON 0
+NODEH        CON 8
+             CON 0
+NODEJ        CON 11 
+             CON 0
+TREE         CON NODEA
+OUTBUF       ORIG *+24 
+STACK        ORIG *+100
+             END MAIN
