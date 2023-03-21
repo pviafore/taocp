@@ -1,0 +1,144 @@
+* Post-order successor of tree
+* Even though the tree is fully threaded, I only use right threads
+LTAG         EQU 1:1
+RTAG         EQU 1:1
+LLINK        EQU 2:3
+RLINK        EQU 2:3
+INFO1        EQU 4:5
+INFO2        EQU 4:5
+
+             ORIG 100
+MAIN         JMP SETUPTREE
+             ENT1 NODEC
+             JMP POST_SUCC
+             JMP VISIT
+             HLT
+
+POST_SUCC    STJ 9F
+             ST1 TEMP
+1H           LDA 1,1(RTAG)
+             LD1 1,1(RLINK)
+             JANZ FOUNDPARENT
+             JMP 1B    * go right until we have a parent
+* at this point we have a parent
+FOUNDPARENT  ENT2 0,1
+             LD1 0,1(LLINK)  * go left first 
+8H           CMP1 TEMP
+             JE 2F
+             ENT2 0,1
+             LD1 1,1(RLINK)
+             JMP 8B
+*are we the left child of the parent
+2H           LD3 0,2(LLINK)
+             CMP3 TEMP
+             JE 3F   * yes we need to descend right then left
+* no, we need to just return parent
+             ENT1 0,2
+             JMP 9F
+3H           LD3 1,2(RTAG)
+             J3Z 5F
+             ENT1 0,2
+             JMP 9F
+5H           LD1 1,2(RLINK)
+8H           LD3 0,1(LTAG)
+             J3NZ 4F  * we need to go deeper
+             LD1 0,1(LLINK)
+             JMP 8B
+4H           LD3 1,1(RTAG)
+             J3NZ 9F   * no children at all return
+             LD1 1,1(RLINK)
+             JMP 8B
+9H           JMP *
+TEMP         CON 0
+
+             
+* Assumes I1 contains the node
+VISIT        STJ 9F
+             LDA 0,1(INFO1)
+             STA OUTBUF
+             OUT OUTBUF(18)
+9H           JMP *
+
+SETUPTREE    STJ 9F
+             ENTA NODEA
+             STA  TREE(LLINK)
+             ENTA NODEB
+             STA  NODEA(LLINK)
+             ENTA NODEC
+             STA  NODEA+1(RLINK)
+             ENTA NODED
+             STA  NODEB(LLINK)
+             ENTA NODEE
+             STA  NODEC(LLINK)
+             ENTA NODEF
+             STA  NODEC+1(RLINK)
+             ENTA NODEG
+             STA  NODEE+1(RLINK)
+             ENTA NODEH
+             STA  NODEF(LLINK)
+             ENTA NODEJ
+             STA  NODEF+1(RLINK)
+
+             ENTA 1
+             STA NODEB+1(RTAG)
+             STA NODED(LTAG)
+             STA NODED+1(RTAG)
+             STA NODEE(LTAG)
+             STA NODEG(LTAG)
+             STA NODEG+1(RTAG)
+             STA NODEH(LTAG)
+             STA NODEH+1(RTAG)
+             STA NODEJ(LTAG)
+             STA NODEJ+1(RTAG)
+             STA TREE+1(RTAG)
+
+* set up threads
+             ENTA TREE
+             STA NODED(LLINK)
+             STA NODEJ+1(RLINK)
+             STA TREE+1(RLINK)
+
+             ENTA NODEB
+             STA NODED+1(RLINK)
+
+             ENTA NODEA
+             STA NODEB+1(RLINK)
+             STA NODEE(LLINK)
+             
+             ENTA NODEC
+             STA NODEG+1(RLINK)
+             STA NODEH(LLINK)
+
+             ENTA NODEE
+             STA NODEG(LLINK)
+
+             ENTA NODEF
+             STA NODEH+1(RLINK)
+             STA NODEJ(LLINK)
+
+             
+9H           JMP *
+
+NODEA        CON 1
+             CON 0
+NODEB        CON 2
+             CON 0
+NODEC        CON 3
+             CON 0
+NODED        CON 4
+             CON 0
+NODEE        CON 5
+             CON 0
+NODEF        CON 6
+             CON 0
+NODEG        CON 7
+             CON 0
+NODEH        CON 8
+             CON 0
+NODEJ        CON 11 
+             CON 0
+TREE         CON 0
+             CON 0
+OUTBUF       ORIG *+24 
+STACK        ORIG *+100
+             END MAIN

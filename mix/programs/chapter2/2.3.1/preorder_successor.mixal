@@ -1,0 +1,116 @@
+* Pre-order successor of tree
+LTAG         EQU 1:1
+RTAG         EQU 1:1
+LLINK        EQU 2:3
+RLINK        EQU 2:3
+INFO1        EQU 4:5
+INFO2        EQU 4:5
+
+             ORIG 100
+MAIN         JMP SETUPTREE
+             ENT1 NODEJ
+             JMP PRE_SUCC
+             JMP VISIT
+             HLT
+
+PRE_SUCC     STJ 9F
+S1           LDA 0,1(LTAG)
+             JAP S2
+             LD1 0,1(LLINK)
+             JMP 9F
+S2           LDA 1,1(RTAG)
+             LD1 1,1(RLINK)
+             JAP S2
+             JMP 9F
+9H           JMP *
+
+             
+* Assumes I1 contains the node
+VISIT        STJ 9F
+             LDA 0,1(INFO1)
+             STA OUTBUF
+             OUT OUTBUF(18)
+9H           JMP *
+
+SETUPTREE    STJ 9F
+             ENTA NODEA
+             STA  TREE(LLINK)
+             ENTA NODEB
+             STA  NODEA(LLINK)
+             ENTA NODEC
+             STA  NODEA+1(RLINK)
+             ENTA NODED
+             STA  NODEB(LLINK)
+             ENTA NODEE
+             STA  NODEC(LLINK)
+             ENTA NODEF
+             STA  NODEC+1(RLINK)
+             ENTA NODEG
+             STA  NODEE+1(RLINK)
+             ENTA NODEH
+             STA  NODEF(LLINK)
+             ENTA NODEJ
+             STA  NODEF+1(RLINK)
+
+             ENTA 1
+             STA NODEB+1(RTAG)
+             STA NODED(LTAG)
+             STA NODED+1(RTAG)
+             STA NODEE(LTAG)
+             STA NODEG(LTAG)
+             STA NODEG+1(RTAG)
+             STA NODEH(LTAG)
+             STA NODEH+1(RTAG)
+             STA NODEJ(LTAG)
+             STA NODEJ+1(RTAG)
+
+* set up threads
+             ENTA TREE
+             STA NODED(LLINK)
+             STA NODEJ+1(RLINK)
+             STA TREE+1(RLINK)
+
+             ENTA NODEB
+             STA NODED+1(RLINK)
+
+             ENTA NODEA
+             STA NODEB+1(RLINK)
+             STA NODEE(LLINK)
+             
+             ENTA NODEC
+             STA NODEG+1(RLINK)
+             STA NODEH(LLINK)
+
+             ENTA NODEE
+             STA NODEG(LLINK)
+
+             ENTA NODEF
+             STA NODEH+1(RLINK)
+             STA NODEJ(LLINK)
+
+             
+9H           JMP *
+
+NODEA        CON 1
+             CON 0
+NODEB        CON 2
+             CON 0
+NODEC        CON 3
+             CON 0
+NODED        CON 4
+             CON 0
+NODEE        CON 5
+             CON 0
+NODEF        CON 6
+             CON 0
+NODEG        CON 7
+             CON 0
+NODEH        CON 8
+             CON 0
+NODEJ        CON 11 
+             CON 0
+TREE         CON 0
+             CON 0
+OUTBUF       ORIG *+24 
+STACK        ORIG *+100
+             END MAIN

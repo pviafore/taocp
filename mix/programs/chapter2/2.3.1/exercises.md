@@ -129,3 +129,61 @@
     See [postorder.mixal](postorder.mixal)
 
     In essence, I just keep the elements on the stack and track (in the stack) whether they were just pushed, have gone down the left, or gone down the right. If we went down the right, pop it
+
+14) Show that a binary tree with n nodes has a function of n that expresses the amount of of null links.
+
+    The number of null links is always n + 1.
+
+    Consider the root node only. It has two empty links, which is 1 more than 1 (hopefully no advanced math is needed for that statement).
+
+    As we add more nodes to that tree, we subtract a null link to place the node, which then adds two more null links (the newly added node will not have any children). Thus, we minus 1 null link, and add 2 , which gives us a net of +1 link. Given that we just added a node, we have n+1 nodes, and n + 1 + 1 links at this point. 
+
+15) In a threade tree representation, what can we say between the number of links pointing to the node and some other property of the node?
+
+    The number of links pointing to a node is the same as the number of children. Since we are dealing with in-order traversal, if the node has no children, the next node will be a parent, and there is nothing to point back "up" to this node. If we have a left child, then this node is a successor of the right most child of the left tree. If we have a right child, then this node is a predecessor of the left most child of the right tree. In either of those cases, there has to be a point-back to this node.
+
+16) What's the rule for determining NODE(Q*) 
+
+    If I have a left child, then that child is my successor. If I have no left child and a right child, then that node is my successor. If I have no children, then the successor of my parent is my successor (you may have to go all the way up the tree until you find it, in which case the successor will be the first right child of a parent that is not your ancestor (or none if there is none))
+
+17) Give an algorithm analagous to Algorithm S for determining P* in a threaded binary tree.
+
+    S1 If LTAG(P) == 0, P <- LLINK(P). Terminate
+    
+    S2 Else, if RTAG(P) = 0, P <- RLINK(P). Terminate. If RTAG(P) == 1, Repeat S2
+
+    See [preorder_successor.mixal](preorder_successor.mixal)
+
+18) Modfiy traversal and successor for double order
+
+    For traversal, we are going to visit a node as we would in both pre-order and post-order. For successor, we will have to look at the index. If we are 1, then we need to look at the next node in pre-order, and if we are 2, then we need to look at next node in post-order. If we're a leaf, we will go to ourself if we are 1. Also, when checking for successor, if we find ourself with an empty left branch, and we are the first time through, we should do the in-order step then.
+
+    See [double_order.mixal](double_order.mixal)
+
+19) Design an algorithm that determines post-order successor in a right-threaded and a fully-threaded tree.
+
+    For a right-threaded tree:
+
+    Go right all the way down until you find your first thread. When you go that right link, you know you are the nearest ancestor for which you are in its left sub-tree (based on how in-order works).
+
+    Now, we keep two pointers: one for the current node and one for its parent. We start them both at the ancestor. 
+
+    Then we :
+
+    S1: Go Left First
+
+    S2: If node is the original node P, go to S4
+
+    S3: Go right and repeat step S2
+
+    S4: See below
+
+    Now, we know who the direct parent is. If we're doing post-order, we need to know if P is the left node or the right node of the parent. If we're the right node, we just return the parent. If we're the left node though, we have to find the left most terminal node of the right child.
+
+    See [post_successor_right_threaded.mixal](post_successor_right_threaded.mixal)
+
+    There's probably a really neat trick for a fully-threaded tree, but I don't see it at the moment based on how I wrote my original algorithm.
+
+20) Write Program T so that is uses a linked list as its stack.
+
+    See [traversal_stack.mixal](traversal_stack.mixal).
