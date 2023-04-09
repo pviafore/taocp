@@ -1,70 +1,63 @@
-*  Use linked list instead of stack
+* Insert to the right.
 LTAG         EQU 1:1
 RTAG         EQU 1:1
 LLINK        EQU 2:3
 RLINK        EQU 2:3
 INFO1        EQU 4:5
 INFO2        EQU 4:5
-MAX          EQU 100
 
              ORIG 100
 MAIN         JMP SETUPTREE
-             JMP SETUPMEM
-             LD1 TREE
-             ENT6 0
+             ENT1 NODEK
+             ENT2 NODEA
+             JMP INSERT
+             ENT1 NODEA
              JMP INORDER
              HLT
 
-INORDER      STJ 9F
-T1           LD5 TREE
-T2A          J5Z 9F
-T3           LD2 AVAIL
-             LDA 0,2(4:5)
-             J2Z OVERFLOW
-             STA AVAIL
+* I1 is node to insert, I2 is node to insert right of
+INSERT       STJ 9F
+             LD3 1,2(RLINK)
+             ST3 1,1(RLINK)
+             LD3 1,2(RTAG)
+             ST3 1,1(RTAG)
+             STZ 0,1(LLINK)
+             ENTA 1
+             STA 0,1(LTAG)
 
-             ST5 0,2(2:3)
-             ST6 0,2(4:5)
-             ENT6 0,2
-             
-             LD5 0,5(LLINK)
-T2B          J5NZ T3
-T4           LD5 0,6(2:3)
-             ENT2 0,6
-             LD6 0,6(4:5)
-             LDA AVAIL
-             STA 0,2(4:5)
-             ST2 AVAIL 
-T5           JMP VISIT
-             LD5 1,5(RLINK)
-T2C          J5NZ T3
-             J6NZ T4
+             ST1 1,2(RLINK)
+             STZ 1,2(RTAG)
 9H           JMP *
 
-OVERFLOW     HLT
-UNDERFLOW    HLT
+INORDER      STJ 9F
+             ENT2 STACK
+T2           J1Z T4
+T3           ST1 0,2 
+             INC2 2   * advance the stack
+             LD1 0,1(LLINK)
+             JMP T2
+T4           CMP2 =STACK=
+             JE  9F
+             LD1 -2,2 * read top of stack
+             DEC2 2
+T5           JMP VISIT
+             LD3 1,1(RTAG)
+             J3P T4
+             LD1 1,1(RLINK)
+             JMP T2
+9H           JMP *
+
              
-* Assumes I5 contains the node
+* Assumes I1 contains the node
 VISIT        STJ 9F
-             LDA 0,5(INFO1)
+             LDA 0,1(INFO1)
              STA OUTBUF
              OUT OUTBUF(18)
 9H           JMP *
 
-
-SETUPMEM    STJ 9F
-            LD1 AVAIL
-1H          ENT2 0,1
-            
-            INC2 1
-            ST2 0,1(4:5)
-            ENT1 0,2
-            CMP1 =STACK+200=
-            JL   1B
-
-9H          JMP *
-
 SETUPTREE    STJ 9F
+             ENTA NODEA
+             STA  TREE(LLINK)
              ENTA NODEB
              STA  NODEA(LLINK)
              ENTA NODEC
@@ -93,9 +86,28 @@ SETUPTREE    STJ 9F
              STA NODEH+1(RTAG)
              STA NODEJ(LTAG)
              STA NODEJ+1(RTAG)
+             STA TREE+1(RTAG)
 
+* set up threads
+             ENTA TREE
+             STA NODEJ+1(RLINK)
+             STA TREE+1(RLINK)
+
+             ENTA NODEB
+             STA NODED+1(RLINK)
+
+             ENTA NODEA
+             STA NODEB+1(RLINK)
              
+             ENTA NODEC
+             STA NODEG+1(RLINK)
+
+
+             ENTA NODEF
+             STA NODEH+1(RLINK)
+
 9H           JMP *
+
 
 NODEA        CON 1
              CON 0
@@ -115,8 +127,10 @@ NODEH        CON 8
              CON 0
 NODEJ        CON 11 
              CON 0
-TREE         CON NODEA
+NODEK        CON 12 
+             CON 0
+TREE         CON 0
+             CON 0
 OUTBUF       ORIG *+24 
-AVAIL        CON  STACK
-STACK        ORIG *+200
+STACK        ORIG *+100
              END MAIN

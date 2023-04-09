@@ -1,0 +1,143 @@
+* Checks equivalence of two trees
+LTAG         EQU 1:1
+RTAG         EQU 1:1
+LLINK        EQU 2:3
+RLINK        EQU 2:3
+INFO1        EQU 4:5
+INFO2        EQU 4:5
+
+             ORIG 100
+MAIN         JMP SETUPTREE
+             ENT1 NODEB
+             ENT2 NODEC
+             JMP CHK_EQUIV
+             CHAR
+             STX OUTBUF+1
+             STZ OUTBUF
+             JAP 1F
+             LDA MINUS
+             STA OUTBUF 
+1H           OUT OUTBUF(18)
+             HLT
+
+* I1 is tree1, I2 is tree2
+* Returns negative in A if T1 is < T2, positive if T1 > T2, or zero
+CHK_EQUIV    STJ 9F
+             ENTA 0
+GOLEFT       JMP CMP
+             JANZ 9F
+             J1Z 9F    * in case the tree is empty
+             ENT3 0,1
+             ENT4 0,2
+             LD1 0,1(LLINK)
+             LD2 0,2(LLINK)
+             J1NZ 1F
+             J2NZ 4F  * 1 is empty, and 2 is not
+             ENT1 0,3 * both empty, restore to parent
+             ENT2 0,4
+             JMP GORIGHT
+1H           J2NZ GOLEFT 
+             ENTA 1  * T2 is empty, T1 is not
+             JMP 9F
+4H           ENTA -1
+             JMP 9F
+GORIGHT      LDA 1,1(RTAG)
+             SUB 1,2(RTAG)
+             JANZ 9F
+             LDA 1,1(RTAG)
+             LD1 1,1(RLINK)
+             LD2 1,2(RLINK)
+             JAZ GOLEFT
+             CMP1 =TREE=
+             ENTA 0
+             JE 9F
+             JMP GORIGHT 
+9H           JMP *
+
+
+CMP          STJ 9F
+             LDA 0,1(INFO1)
+             SUB 0,2(INFO1)
+9H           JMP *
+
+             
+
+SETUPTREE    STJ 9F
+             ENTA NODEA
+             STA  TREE(LLINK)
+             ENTA NODEB
+             STA  NODEA(LLINK)
+             ENTA NODEC
+             STA  NODEA+1(RLINK)
+             ENTA NODED
+             STA  NODEB(LLINK)
+             ENTA NODEE
+             STA  NODEC(LLINK)
+             ENTA NODEF
+             STA  NODEC+1(RLINK)
+             ENTA NODEG
+             STA  NODEE+1(RLINK)
+             ENTA NODEH
+             STA  NODEF(LLINK)
+             ENTA NODEJ
+             STA  NODEF+1(RLINK)
+
+             ENTA 1
+             STA NODEB+1(RTAG)
+             STA NODED(LTAG)
+             STA NODED+1(RTAG)
+             STA NODEE(LTAG)
+             STA NODEG(LTAG)
+             STA NODEG+1(RTAG)
+             STA NODEH(LTAG)
+             STA NODEH+1(RTAG)
+             STA NODEJ(LTAG)
+             STA NODEJ+1(RTAG)
+             STA TREE+1(RTAG)
+
+* set up threads
+             ENTA TREE
+             STA NODEJ+1(RLINK)
+             STA TREE+1(RLINK)
+
+             ENTA NODEB
+             STA NODED+1(RLINK)
+
+             ENTA NODEA
+             STA NODEB+1(RLINK)
+             
+             ENTA NODEC
+             STA NODEG+1(RLINK)
+
+             ENTA NODEF
+             STA NODEH+1(RLINK)
+
+9H           JMP *
+
+
+NODEA        CON 1
+             CON 0
+NODEB        CON 2
+             CON 0
+NODEC        CON 2
+             CON 0
+NODED        CON 5 
+             CON 0
+NODEE        CON 5
+             CON 0
+NODEF        CON 6
+             CON 0
+NODEG        CON 4 
+             CON 0
+NODEH        CON 8
+             CON 0
+NODEJ        CON 11 
+             CON 0
+NODEK        CON 12 
+             CON 0
+TREE         CON 0
+             CON 0
+OUTBUF       ORIG *+24 
+STACK        ORIG *+100
+MINUS        ALF      -
+             END MAIN

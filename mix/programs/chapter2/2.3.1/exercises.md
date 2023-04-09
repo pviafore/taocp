@@ -187,3 +187,70 @@
 20) Write Program T so that is uses a linked list as its stack.
 
     See [traversal_stack.mixal](traversal_stack.mixal).
+
+21) Design an algorithm that goes through an in-order traversal of an unthreaded binary tree with no stack. Only link fields may be modified. 
+
+    My main thought is to keep an auxillary variable that always points to the parent. You push onto the "stack" by saving the parent in the left child whenever you descend left. In a way, you are creating a linked list throughout the left trees.
+
+    But this doesn't work when trying to restore the links. You only know the current node, and you are
+    not guaranteed that is the child of the parent (since the parent is only the last time we went left).
+
+    I thought we needed to also store the last left child, but I only had one word to work with, but two words need to be saved.
+
+    So then I started seeing if there was a way to use the right link as well, but then I ran into the issue of knowing which child I was trying to restore.
+
+    I couldn't use any other bits or signs, which makes it tough. So I was stuck, and looked at Knuth for a hint.
+
+    In the answers, I didn't look through all of it, but saw a hint of adding a thread. Whenever I go left, I know there is a right null link all the way right. I could use the entire right link to store the parent.
+
+    So whenever I descend left, I can then go all the way right and set that link to the parent. 
+
+    So now what do I do when I need to restore? I can immediately get to the parent, but how do I know its the parent? I'm now back to square one.
+
+    At this point I threw in the towel and went to go learn online. I found this [online resource](https://www.educative.io/answers/what-is-morris-traversal) to be a good explainer on how to do "Morris Traversal".
+
+    The idea is that you do indeed make threads before you descend to the left. However, whenever you go go left or right down a tree, you need to make know if you went down a thread or not. You can find that out by going left once, then right all the time until null or you hit yourself (which means a thread). If its null, then you're fine, you went down left (in which case, make a thread). If you're right, then you should check to see if following the right of your left child leads to yourself (null it back out in this case), print yourself, then go right.
+
+    See [inorder_nostack.mixal](inorder_nostack.mixal)
+
+22) Write a program and compare time for Algorithm S and T
+
+For each time we go to a node, we have to descend all the way to the right of the left subtree. Assuming an average depth of m throughout the tree, we have $m/2$ average nodes to go through to find the thread. We descend twice, at a cost of $4 + 3m$, plus additional for creating the thread or removing the thread. To create the thread, we have an additional cost of $3m/2$, but to remove the thread, we have an additional cost of $11m/2$. 
+
+Comparing to S however, is even slower, because that is a constant operation (we already have the links generated). It's almost like we are doing S with an insert of link and remove of link before every visit.
+
+23) Insert in a right threaded tree to the right, and the left.
+
+
+    For inserting to the right, you don't need any right threads to be set up. See [insert_right.mixal](insert_right.mixal).
+
+    For inserting to the left, we're going to follow the same sort of idea. Insert to the left child, using the pre-existing left child as your node's left. You will need to set up a right thread of your node to point to the parent, and the right most null link of the left child will set to you. See [insert_left.mixal](insert_left.mixal).
+
+24) Is Theorem A still valid if T and T' are given in in-order instead of pre-order?
+
+    I don't have the math to prove this, but it has to do with the fact that we don't know what the actual root is when givne in-order (the root is always first in pre-order)
+
+25) Given a relation ≼, prove the transtive property, equivalence, and ordering.
+
+    First, transitive. if T≼T' and T'≼T'', then T≼T''.
+
+    So if T≼T', that means that one of four things:
+
+    T is empty, which means that T will also ≼ T''.
+    
+    The root of T is ≼ than the root of T'. If the roots of T' and T'' are different, than since the info can be defined by ≼, we know that tracks as well. If the roots are the same betwen T' and T'', then we know that T will be ≼ than T'' (since T' and T'' have teh same root).
+
+    Now, if the roots are the same between all of them, we have to look at the left tree, or the right tree. The same idea applies recursively.
+
+
+    For equivalence, we are seeing if two trees are equivalent if T≼T' and T'≼T. Well, if one is empty, than the other must be empty, thus equivalent. Otherwise, we are looking at nodes and their relationship with ≼, which we know is fine.
+
+    For any T, T', we either have T' ≼ T or T ≼ T'. First off, if the trees are equal, we know we have the ≼ relation. Otherwise, we are looking at the info of nodes, either at the root or recursively down a child, which we know satisfies ≼.
+
+26) Given the ≼ ordering of trees, prove Theorem A, ande make use of double order.
+
+    Since double order gives us pre and in order, exercise 7 tells us that we can tell if two trees are equivalent, as their construction must be the same. However, I have no idea how to tell if they are similar using the ≼ ordering on top of this.
+
+27) WRite an algorithm that tests if two trees are ordered or equivalent, and its right-threaded. Don't use a stack.
+
+    If we can't use a stack, then let's see what we can do in in-order traversal. First, keep going down the left branch, and see if any of those have the relationship. If they do, return the change. Otherwise, go right until you have a non-thread to go down.  

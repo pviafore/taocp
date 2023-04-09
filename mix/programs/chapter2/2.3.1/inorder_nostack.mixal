@@ -1,68 +1,57 @@
-*  Use linked list instead of stack
+* In-order traversal of tree with no stack
 LTAG         EQU 1:1
 RTAG         EQU 1:1
 LLINK        EQU 2:3
 RLINK        EQU 2:3
 INFO1        EQU 4:5
 INFO2        EQU 4:5
-MAX          EQU 100
-
              ORIG 100
 MAIN         JMP SETUPTREE
-             JMP SETUPMEM
              LD1 TREE
-             ENT6 0
              JMP INORDER
+             LD1 TREE
+PASS2        JMP INORDER
              HLT
 
+* I4 is lastnode
 INORDER      STJ 9F
-T1           LD5 TREE
-T2A          J5Z 9F
-T3           LD2 AVAIL
-             LDA 0,2(4:5)
-             J2Z OVERFLOW
-             STA AVAIL
-
-             ST5 0,2(2:3)
-             ST6 0,2(4:5)
-             ENT6 0,2
-             
-             LD5 0,5(LLINK)
-T2B          J5NZ T3
-T4           LD5 0,6(2:3)
-             ENT2 0,6
-             LD6 0,6(4:5)
-             LDA AVAIL
-             STA 0,2(4:5)
-             ST2 AVAIL 
-T5           JMP VISIT
-             LD5 1,5(RLINK)
-T2C          J5NZ T3
-             J6NZ T4
+T1           LD1 TREE
+             ENT4 TREE
+T2           J1Z T4  * left link was empty, print previous
+T3           ENT4 0,1
+             LD1 0,1(LLINK) * go down left link 
+             ENT5 0,1
+             ENT3 0,1
+             J1Z T4
+1H           LD3 1,3(RLINK) 
+             J3Z 2F
+             ENT6 0,3
+             DEC6 0,4 * did we reach previous node
+             J6Z 3F  * we did, remove the thread
+             ENT5 0,3
+             JMP 1B  * keep going back down to the right
+2H           ST4 1,5(RLINK) * we had a null right link, so thread it
+             JMP T2
+3H           LD1 1,5(RLINK)
+             STZ 1,5(RLINK) * put in the null link
+             JMP VISIT
+             ENT4 0,1
+             LD1 1,1(RLINK)
+             JMP T2
+T4           ENT1 0,4  * restore previous
+             JMP VISIT
+T5           LD1 1,1(RLINK)
+             J1Z 9F
+             JMP T2
 9H           JMP *
 
-OVERFLOW     HLT
-UNDERFLOW    HLT
              
-* Assumes I5 contains the node
+* Assumes I1 contains the node
 VISIT        STJ 9F
-             LDA 0,5(INFO1)
+             LDA 0,1(INFO1)
              STA OUTBUF
              OUT OUTBUF(18)
 9H           JMP *
-
-
-SETUPMEM    STJ 9F
-            LD1 AVAIL
-1H          ENT2 0,1
-            
-            INC2 1
-            ST2 0,1(4:5)
-            ENT1 0,2
-            CMP1 =STACK+200=
-            JL   1B
-
-9H          JMP *
 
 SETUPTREE    STJ 9F
              ENTA NODEB
@@ -117,6 +106,5 @@ NODEJ        CON 11
              CON 0
 TREE         CON NODEA
 OUTBUF       ORIG *+24 
-AVAIL        CON  STACK
-STACK        ORIG *+200
+STACK        ORIG *+100
              END MAIN
