@@ -253,4 +253,29 @@ Comparing to S however, is even slower, because that is a constant operation (we
 
 27) WRite an algorithm that tests if two trees are ordered or equivalent, and its right-threaded. Don't use a stack.
 
-    If we can't use a stack, then let's see what we can do in in-order traversal. First, keep going down the left branch, and see if any of those have the relationship. If they do, return the change. Otherwise, go right until you have a non-thread to go down.  
+    If we can't use a stack, then let's see what we can do in in-order traversal. First, keep going down the left branch, and see if any of those have the relationship. If they do, return the change. Otherwise, go right until you have a non-thread to go down. Because we always check the left first, we should be fine. See [ordering.mixal](ordering.mixal) 
+
+28) If you copy a tree with Algorithm C, is the tree similar or equivalent.
+
+    Equivalent, which implies similar.
+
+29) Prove that Algorithm C is correct
+
+    For a single node, the algorithm checks that if there is a left node or a right node, and since there are none, it only copies the single item and exits.
+
+    Therefore, if we can prove that this works for a tree with nodes which are subtrees, we can recursively copy the left and right children.
+
+    Does it copy the left subtree? Since we are using pre-order succession, we will always go to the left first if it exists and then the algorithm starts over.
+
+    Does it copy the right subtree? Since we always add a right subtree before descending to left, we verify that there will be at some point where the preorder successor will be this right child (since we descend left, and we know that we are going to view that left child before we do the right child.)
+
+30) Design an algorithm that threads an unthreaded tree.
+
+    T1. Is $LLINK(P) = \Lambda$? $LTAG(P) \leftarrow 1, LLINK(P) \leftarrow \$P$.
+
+
+    T2. Is $RLINK(P) = \Lambda$? If so, $RLINK(P) \leftarrow P\$, RTAG(P) \leftarrow 1$.
+
+    T3. Go to P*.
+
+    See [thread.mixal](thread.mixal).  
