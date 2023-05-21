@@ -279,3 +279,21 @@ Comparing to S however, is even slower, because that is a constant operation (we
     T3. Go to P*.
 
     See [thread.mixal](thread.mixal).  
+
+31) Design an algorithm that erases a right threaded binary tree (returns everything to AVAIL.)
+
+    Just go in order , you can use the successor function, grab a node, return it to stack, and go to the successor (you can compute the successor first). You're guaranteed to hit every node just once, and you don't have to look at old information.
+
+    See [erase_threaded.mixal](erase_threaded.mixal)
+
+     
+    
+
+
+32) Design an algorithm for inserting to a tree where you have a LLINK, RLINK, SUC, and PRED.
+
+    Assuming that you are inserting to the left of the tree. 
+
+    If the left link is empty, then you know your current predecessor can be used as the node you inserts predecessor. The node you insert's successor will point to you
+
+    See [insert_4link.mixal](insert_4link.mixal).

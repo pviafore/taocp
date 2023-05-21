@@ -1,0 +1,171 @@
+*  Use linked list instead of stack
+LTAG         EQU 1:1
+RTAG         EQU 1:1
+LLINK        EQU 2:3
+RLINK        EQU 2:3
+INFO1        EQU 4:5
+INFO2        EQU 4:5
+MAX          EQU 100
+
+             ORIG 100
+MAIN         JMP SETUPTREE
+             JMP SETUPMEM
+             LD1 TREE
+             JMP INORDER
+             ENT1 TREE
+             JMP ERASE
+HALT         HLT
+
+SUCC         STJ 9F
+             LD2 1,1(RLINK)
+             LD6 1,1(RTAG)
+             J6P 9F
+1H           LD6 0,2(LTAG)
+             J6P 9F
+             LD2 0,2(LLINK)
+             JMP 1B
+9H           JMP *
+
+
+ERASE        STJ 9F
+             LD2 0,1(LLINK)
+1H           ENT1 0,2
+             CMP1 =TREE=
+             JE 9F
+             JMP SUCC
+             LD3 AVAIL
+             ST3 1,1(4:5)
+             ST1 AVAIL
+             JMP 1B
+             ENT1 TREE
+             ST1 0,1(LLINK)
+9H           JMP *
+
+INORDER      STJ 9F
+T1           LD5 TREE
+T2A          J5Z 9F
+T3           LD2 AVAIL
+             LDA 0,2(4:5)
+             J2Z OVERFLOW
+             STA AVAIL
+
+             ST5 0,2(2:3)
+             ST6 0,2(4:5)
+             ENT6 0,2
+             
+             LD5 0,5(LLINK)
+T2B          J5NZ T3
+T4           LD5 0,6(2:3)
+             ENT2 0,6
+             LD6 0,6(4:5)
+             LDA AVAIL
+             STA 0,2(4:5)
+             ST2 AVAIL 
+T5           JMP VISIT
+             LD5 1,5(RLINK)
+T2C          J5NZ T3
+             J6NZ T4
+9H           JMP *
+
+OVERFLOW     HLT
+UNDERFLOW    HLT
+             
+* Assumes I5 contains the node
+VISIT        STJ 9F
+             LDA 0,5(INFO1)
+             STA OUTBUF
+             OUT OUTBUF(18)
+9H           JMP *
+
+
+SETUPMEM    STJ 9F
+            LD1 AVAIL
+1H          ENT2 0,1
+            
+            INC2 2
+            ST2 1,1(4:5)
+            ENT1 0,2
+            CMP1 =STACK+200=
+            JL   1B
+
+9H          JMP *
+
+SETUPTREE    STJ 9F
+             ENTA NODEB
+             STA  NODEA(LLINK)
+             ENTA NODEC
+             STA  NODEA+1(RLINK)
+             ENTA NODED
+             STA  NODEB(LLINK)
+             ENTA NODEE
+             STA  NODEC(LLINK)
+             ENTA NODEF
+             STA  NODEC+1(RLINK)
+             ENTA NODEG
+             STA  NODEE+1(RLINK)
+             ENTA NODEH
+             STA  NODEF(LLINK)
+             ENTA NODEJ
+             STA  NODEF+1(RLINK)
+
+             ENTA 1
+             STA NODEB+1(RTAG)
+             STA NODED(LTAG)
+             STA NODED+1(RTAG)
+             STA NODEE(LTAG)
+             STA NODEG(LTAG)
+             STA NODEG+1(RTAG)
+             STA NODEH(LTAG)
+             STA NODEH+1(RTAG)
+             STA NODEJ(LTAG)
+             STA NODEJ+1(RTAG)
+             STA TREE+1(RTAG)
+
+
+* set up threads
+             ENTA TREE
+             STA NODEJ+1(RLINK)
+             STA TREE+1(RLINK)
+
+             ENTA NODEB
+             STA NODED+1(RLINK)
+
+             ENTA NODEA
+             STA NODEB+1(RLINK)
+             STA TREE(LLINK)
+             
+             ENTA NODEC
+             STA NODEG+1(RLINK)
+
+             ENTA NODEF
+             STA NODEH+1(RLINK)
+
+             
+9H           JMP *
+
+NODEA        CON 1
+             CON 0
+NODEB        CON 2
+             CON 0
+NODEC        CON 3
+             CON 0
+NODED        CON 4
+             CON 0
+NODEE        CON 5
+             CON 0
+NODEF        CON 6
+             CON 0
+NODEG        CON 7
+             CON 0
+NODEH        CON 8
+             CON 0
+NODEJ        CON 11 
+             CON 0
+NODEK        CON 11
+             CON 0
+TREE         CON 0
+             CON 0
+OUTBUF       ORIG *+24 
+AVAIL        CON  STACK
+STACK        ORIG *+200
+             END MAIN
