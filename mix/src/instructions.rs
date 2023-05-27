@@ -46,7 +46,6 @@ impl Instruction {
         }
     }
 
-    //do not include JBUS because that is a no-op for us
     pub fn is_jump(self) -> bool{
         match self.op_code() {
             OpCode::Jump => true,
@@ -421,16 +420,5 @@ pub fn str_to_opcode(line: &str) -> OpCode {
         "CMP6" => OpCode::CMP6,
         "CMPX" => OpCode::CMPX,
         _ => OpCode::NOP
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_jbus_is_not_jump() {
-        let instruction = Instruction::new(OpCode::JBUS, 5, 0, arch::HalfWord::from_value(2000));
-        assert_eq!(instruction.is_jump(), false);
     }
 }

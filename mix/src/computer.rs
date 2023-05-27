@@ -19,15 +19,9 @@ struct Registers {
     j: arch::HalfWord
 }
 
-enum IoType {
-    Read,
-    Write
-}
 // used to help catch "not waiting long enough" for IO
 struct IoOperation {
     target_done_time: u32,
-    memory_range: (usize, usize),
-    io_type: IoType
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -53,13 +47,12 @@ enum ComparisonIndicator {
     GREATER
 }
 
-fn compare_half_word(value: arch::HalfWord, rhs: i32, instruction: Instruction) -> ComparisonIndicator {
-    compare_word(arch::Word::from_half_word(value), rhs, instruction)
+fn compare_half_word(value: arch::HalfWord, rhs: i32) -> ComparisonIndicator {
+    compare_word(arch::Word::from_half_word(value), rhs)
 }
 
-fn compare_word(value: arch::Word, rhs: i32, instruction: Instruction) -> ComparisonIndicator {
-    let (l,r) = instruction.field_modifier();
-    let lhs = value.read_partial_as_word(l, r).read();
+fn compare_word(value: arch::Word, rhs: i32) -> ComparisonIndicator {
+    let lhs = value.read();
     if lhs < rhs {
         ComparisonIndicator::LESS
     }
@@ -659,8 +652,8 @@ impl Computer {
     fn is_address_transfer_inverted(&mut self, instruction: Instruction) -> bool{
         let raw_value = self.get_raw_value(instruction);
         match instruction.modification() {
-            2 => (raw_value == 0 && !instruction.address().is_positive),
-            3 => (raw_value == 0 && instruction.address().is_positive),
+            2 => raw_value == 0 && !instruction.address().is_positive,
+            3 => raw_value == 0 && instruction.address().is_positive,
             _ => false
         }
     }
@@ -670,36 +663,36 @@ impl Computer {
     }
 
     fn cmpa(&mut self, instruction: Instruction) {
-        self.comparison = compare_word(self.registers.a, self.readmem(instruction).read(), instruction)
+        self.comparison = compare_word(self.registers.a, self.readmem(instruction).read())
     }
 
     fn cmpx(&mut self, instruction: Instruction) {
-        self.comparison = compare_word(self.registers.x, self.readmem(instruction).read(), instruction)
+        self.comparison = compare_word(self.registers.x, self.readmem(instruction).read())
     }
 
     fn cmpi1(&mut self, instruction: Instruction) {
-        self.comparison = compare_half_word(self.registers.i1, self.readmem(instruction).read(), instruction)
+        self.comparison = compare_half_word(self.registers.i1, self.readmem(instruction).read())
     }
     fn cmpi2(&mut self, instruction: Instruction) {
-        self.comparison = compare_half_word(self.registers.i2, self.readmem(instruction).read(), instruction)
+        self.comparison = compare_half_word(self.registers.i2, self.readmem(instruction).read())
     }
     fn cmpi3(&mut self, instruction: Instruction) {
-        self.comparison = compare_half_word(self.registers.i3, self.readmem(instruction).read(), instruction)
+        self.comparison = compare_half_word(self.registers.i3, self.readmem(instruction).read())
     }
     fn cmpi4(&mut self, instruction: Instruction) {
-        self.comparison = compare_half_word(self.registers.i4, self.readmem(instruction).read(), instruction)
+        self.comparison = compare_half_word(self.registers.i4, self.readmem(instruction).read())
     }
     fn cmpi5(&mut self, instruction: Instruction) {
-        self.comparison = compare_half_word(self.registers.i5, self.readmem(instruction).read(), instruction)
+        self.comparison = compare_half_word(self.registers.i5, self.readmem(instruction).read())
     }
     fn cmpi6(&mut self, instruction: Instruction) {
-        self.comparison = compare_half_word(self.registers.i6, self.readmem(instruction).read(), instruction)
+        self.comparison = compare_half_word(self.registers.i6, self.readmem(instruction).read())
     }
 
     fn jred(&mut self, instruction: Instruction) {
         let unit = instruction.modification();
         let should_jump = match self.io_ops[unit as usize] {
-            Some(IoOperation{target_done_time, ..}) => self.timer.get_time_to_run() > target_done_time,
+            Some(IoOperation{target_done_time}) => self.timer.get_time_to_run() > target_done_time,
             None => true
         };
         if should_jump {
@@ -713,7 +706,7 @@ impl Computer {
     fn jbus(&mut self, instruction: Instruction) {
         let unit = instruction.modification();
         let should_jump = match self.io_ops[unit as usize] {
-            Some(IoOperation{target_done_time, ..}) => self.timer.get_time_to_run() <= target_done_time,
+            Some(IoOperation{target_done_time}) => self.timer.get_time_to_run() <= target_done_time,
             None => false
         };
         if should_jump {
@@ -932,9 +925,7 @@ impl Computer {
         let values = self.io.read(unit, self.registers.x.read().abs() as u32);
         self.memory.splice(address..(address + values.len()), values.iter().cloned());
         self.add_io_time(unit as usize);
-        self.io_ops[unit as usize] = Some(IoOperation{target_done_time: self.timer.get_time_to_run()+1000,
-                                             memory_range: (address, address+values.len()),
-                                             io_type: IoType::Read});
+        self.io_ops[unit as usize] = Some(IoOperation{target_done_time: self.timer.get_time_to_run()+1000})
     }
 
     fn add_io_time(&mut self, unit: usize) {
@@ -951,9 +942,7 @@ impl Computer {
         let address = (instruction.address().read() + self.get_offset(instruction.index_specification())) as usize;
         self.io.write(unit, self.registers.x.read().abs() as u32, &self.memory[address..]);
         self.add_io_time(unit as usize);
-        self.io_ops[unit as usize] = Some(IoOperation{target_done_time: self.timer.get_time_to_run()+1000,
-                                             memory_range: (address, address+self.io.get_block_size(unit)),
-                                             io_type: IoType::Write});
+        self.io_ops[unit as usize] = Some(IoOperation{target_done_time: self.timer.get_time_to_run()+1000})
     }
 
     fn ioctl(&mut self, instruction: Instruction) {
@@ -962,9 +951,7 @@ impl Computer {
         self.io.ioctl(unit, address as i16, self.registers.x.read().abs() as u32);
         self.add_io_time(unit as usize);
         // use 0 address
-        self.io_ops[unit as usize] = Some(IoOperation{target_done_time: self.timer.get_time_to_run()+1000,
-                                             memory_range: (0, 0),
-                                             io_type: IoType::Write});
+        self.io_ops[unit as usize] = Some(IoOperation{target_done_time: self.timer.get_time_to_run()+1000})
     }
 
     fn get_offset(&self, val: u8) -> i16 {
@@ -1751,9 +1738,9 @@ mod tests {
     #[test]
     fn test_cmpi3 (){
         let mut c = Computer::new();
-        c.registers.i3 = arch::HalfWord::from_values(true, 4, 4);
+        c.registers.i3 = arch::HalfWord::from_values(true, 0, 4);
         c.memory[2000] = arch::Word::from_values(true, 0, 0, 0, 4, 5);
-        c.run_command(Instruction::new(instructions::OpCode::CMP3, 0, 0, arch::HalfWord::from_value(2000)));
+        c.run_command(Instruction::new(instructions::OpCode::CMP3, 36, 0, arch::HalfWord::from_value(2000)));
         assert_eq!(c.comparison, ComparisonIndicator::EQUAL);
     }
 
@@ -1761,8 +1748,8 @@ mod tests {
     fn test_cmpi4 (){
         let mut c = Computer::new();
         c.registers.i4 = arch::HalfWord::from_values(true, 4, 4);
-        c.memory[2000] = arch::Word::from_values(true, 0, 0, 0, 4, 5);
-        c.run_command(Instruction::new(instructions::OpCode::CMP4, 0, 0, arch::HalfWord::from_value(2000)));
+        c.memory[2000] = arch::Word::from_values(true, 0, 0, 0, 4, 4);
+        c.run_command(Instruction::new(instructions::OpCode::CMP4, 5, 0, arch::HalfWord::from_value(2000)));
         assert_eq!(c.comparison, ComparisonIndicator::EQUAL);
     }
 

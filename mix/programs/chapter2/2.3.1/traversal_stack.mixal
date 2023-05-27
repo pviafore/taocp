@@ -56,7 +56,7 @@ SETUPMEM    STJ 9F
             LD1 AVAIL
 1H          ENT2 0,1
             
-            INC2 1
+            INC2 2
             ST2 0,1(4:5)
             ENT1 0,2
             CMP1 =STACK+200=

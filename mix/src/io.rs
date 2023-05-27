@@ -232,16 +232,6 @@ impl IO {
         }
     }
 
-    pub fn get_block_size(&mut self, unit: u8) -> usize {
-        match unit {
-            0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 => 100,
-            16 | 17 => 16,
-            18 => 24,
-            19 | 20 => 14,
-            _ => panic!("Invalid unit")
-        }
-    }
-
     pub fn load_paper_tape(&mut self, contents: Vec<u8>) {
         self.paper_tape.contents = contents.chunks(5)
                                            .map(|x| arch::Word::from_values(true, *x.get(0).unwrap_or(&0),

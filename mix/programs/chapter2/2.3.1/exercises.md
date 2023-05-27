@@ -286,14 +286,45 @@ Comparing to S however, is even slower, because that is a constant operation (we
 
     See [erase_threaded.mixal](erase_threaded.mixal)
 
-     
-    
-
 
 32) Design an algorithm for inserting to a tree where you have a LLINK, RLINK, SUC, and PRED.
 
     Assuming that you are inserting to the left of the tree. 
 
-    If the left link is empty, then you know your current predecessor can be used as the node you inserts predecessor. The node you insert's successor will point to you
+    The node you insert will take the predecessor, ltag, and llink of the place you're inserting. You set the predecessor and llink of existing tree to the new node. The predecessor of the insert node (the one you just set) should have its successor set to the insert node, and the insert's node's successor should be set to the tree root.
 
     See [insert_4link.mixal](insert_4link.mixal).
+
+33) Given a left-threaded only tree that saves off pre-order in the null left links, how do we have an insert and copy algorithm?
+
+    In this case, we want an insert that inserts to the left of the current node. In this case:
+
+    Assuming current=C and insert node = I:
+
+    $llink(I) \leftarrow llink(c), ltag(I) \leftarrow ltag(C), llink(C) \leftarrow I, ltag(C) \leftarrow 0$
+
+    If you are inserting to the right, then you would do the following
+
+    If you have a $LTAG == 0$, $P \leftarrow LLINK(C)$. Then, repeat the following until $RLINK(P) == \Lambda: P \leftarrow RLINK(P)$. Go back to beginning of this step
+
+    If you have $LTAG(P) == 1$, you know that your left link will point to something above C; you will set $ LLINK(I) \leftarrow LLINK(P), LTAG(I) = 1, LLINK(P) \leftarrow I$, 
+
+    Then, $RLINK(I) \leftarrow RLINK(C), RTAG(I) \leftarrow RTAG(C), RLINK(C) \leftarrow I,m RTAG(C) \leftarrow 0 $
+
+    
+    As far as copying goes:
+
+    For your current node, if you have physical links to the left and right, allocate space for them both first.
+
+    You will need a stack to push onto every time you go to a left physical link (and it has to track the address in both trees)
+
+    When you go to a left link and it's ltag is 1, one of two things is happening. Either it's going to your right link next, or it is going to an ancestor's right link. 
+
+    Check if it's your right link, and if so, you know which node to focus on next and copy.
+
+    If it's not you, pop the stack for both trees and check if it's the right node of that new node. 
+
+    See [preorder_threaded.mixal](preorder_threaded.mixal)
+
+
+

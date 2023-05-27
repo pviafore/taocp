@@ -268,11 +268,11 @@ fn _get_address(spl: &Vec<&str>, index: usize, program_data: &ProgramData) -> ar
 
         }
     };
-    let mut halfWord = arch::HalfWord::from_value(val);
+    let mut half_word = arch::HalfWord::from_value(val);
     if val == 0 && evaluated.chars().next().unwrap() == '-'  {
-        halfWord.invert_sign()
+        half_word.invert_sign()
     }
-    halfWord
+    half_word
 }
 
 fn _evaluate(text: &str, index: usize, program_data: &ProgramData) -> String {
@@ -463,7 +463,7 @@ mod tests {
 
     #[test]
     fn test_parse_address_string_with_asterisk() {
-        let mut program_data = ProgramData::new();
+        let program_data = ProgramData::new();
         assert_eq!(parse_address_string("JMP", "*", 150, &program_data), (arch::HalfWord::from_value(150), 0, 0));
         assert_eq!(parse_address_string("JMP", "*+3", 150, &program_data), (arch::HalfWord::from_value(153), 0, 0));
         assert_eq!(parse_address_string("JMP", "*-3", 150, &program_data), (arch::HalfWord::from_value(147), 0, 0));

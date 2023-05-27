@@ -1,0 +1,254 @@
+* Pre-order traversal of tree with a left-threaded tree
+LTAG         EQU 1:1
+RTAG         EQU 1:1
+LLINK        EQU 2:3
+RLINK        EQU 2:3
+INFO1        EQU 4:5
+INFO2        EQU 4:5
+
+             ORIG 100
+MAIN         JMP SETUPTREE
+             JMP SETUPMEM
+             ENT1 NODEC
+             ENT2 NODEK
+             JMP INSERTLEFT
+             ENT2 NODEL
+             JMP INSERTRIGHT
+             ENT1 NODED
+             ENT2 NODEM
+             JMP INSERTRIGHT
+             ENT1 TREE
+             JMP PREORDER
+             ENT1 NODEA
+             ENT2 TREE2
+             JMP COPY
+             STZ OUTBUF
+             OUT OUTBUF(18)
+             ENT1 TREE2
+             JMP PREORDER
+HALT         HLT
+
+SETUPMEM    STJ 9F
+            LD1 AVAIL
+1H          ENT2 0,1
+            
+            INC2 2
+            ST2 0,1(4:5)
+            ENT1 0,2
+            CMP1 =MEM+200=
+            JL   1B
+
+9H          JMP *
+
+PREORDER     STJ 9F
+             ST1 SENT
+1H           LD1 0,1(LLINK)
+             CMP1 SENT 
+             JE 9F
+             JMP VISIT
+             JMP 1B
+9H           JMP *
+SENT         CON 0
+
+* I1 is current node, I2 is node to insert
+INSERTLEFT   STJ 9F
+             LD3 0,1(LLINK)
+             ST3 0,2(LLINK) 
+             ST2 0,1(LLINK)
+
+             LD3 0,1(LTAG)
+             ST3 0,2(LTAG)
+             STZ 0,1(LTAG)
+9H           JMP *
+
+* I1 is current node, I2 is node to insert
+INSERTRIGHT  STJ 9F
+             ENT3 0,1
+2H           LD4 0,3(LTAG)
+             J4NZ 1F
+             LD3 0,3(LLINK)
+3H           LD4 1,3(RLINK)
+             J4Z 2B
+             ENT3 0,4
+             JMP 3B
+1H           LDA 0,3(LLINK)
+             STA 0,2(LLINK)
+             LDA 0,3(LTAG)
+             STA 0,2(LTAG)
+             ST2 0,3(LLINK)
+             
+             LDA 1,1(RLINK)
+             STA 1,2(RLINK)
+             LDA 1,1(RTAG)
+             STA 1,2(RTAG)
+             ST2 1,1(RLINK)
+             STZ 1,1(RTAG) 
+9H           JMP *
+
+* I1 is the node to copy, we insert to the left of I2
+COPY         STJ 9F
+             ENT6 STACK
+             ENTA TREE
+             STA 0,6(1:2)
+             INC6 2
+* copy current node
+             LD3 AVAIL * allocate first node
+             LD4 0,3(INFO1)
+             ST4 AVAIL
+             
+             ST3 0,2(LLINK)
+             STZ 0,2(LTAG)
+
+2H           LD4 0,1(INFO1)
+             ST4 0,3(INFO1)
+
+* is left node present
+             LD5 0,1(LTAG)
+             J5NZ 1F
+             LD5 AVAIL   * allocate left node - its present
+             LD4 0,5(INFO1)
+             ST4 AVAIL
+             ST5 0,3(LLINK)
+             STZ 0,3(LTAG)
+
+* is right node present
+1H           LD5 1,1(RTAG)
+             J5NZ 1F
+             LD5 AVAIL   * allocate right node - its present
+             LD4 0,5(INFO1)
+             ST4 AVAIL
+             ST5 1,3(RLINK)
+             STZ 1,3(RTAG)
+
+* go down to the left
+* I3 is the new node
+1H           LD4 0,1(LTAG)
+             J4NZ 1F
+
+             ST1 0,6(1:2)  * left is a physical node, push on stack and go down to it
+             ST3 0,6(3:4)
+             INC6 2
+
+             LD1 0,1(LLINK)
+             LD3 0,3(LLINK)
+             JMP 2B
+1H           LD4 1,1(RLINK)
+             LD5 1,3(RLINK)    * left is a link, not physical, start popping stasck
+4H           CMP4 0,1(LLINK)
+             JE 7F 
+* pop the stack
+             LD4 -2,6(1:2)
+             LD5 -2,6(3:4)
+             DEC6 2
+             CMP4 =TREE=
+             JE 8F
+             LD4 1,4(RLINK)
+             LD5 1,5(RLINK)
+             JMP 4B
+7H           ST5 0,3(LLINK)
+             ENTA 1
+             STA 0,3(LTAG)
+             ENT1 0,4
+             ENT3 0,5
+             JMP 2B
+8H           LD4 1,2(RLINK)   * assign the last left link to maintain preorder
+             ST4 0,3(LLINK)
+9H           JMP *
+             
+* Assumes I1 contains the node
+VISIT        STJ 9F
+             LDA 0,1(INFO1)
+             STA OUTBUF
+             OUT OUTBUF(18)
+9H           JMP *
+
+SETUPTREE    STJ 9F
+             ENTA NODEA
+             STA  TREE(LLINK)
+             ENTA NODEB
+             STA  NODEA(LLINK)
+             ENTA NODEC
+             STA  NODEA+1(RLINK)
+             ENTA NODED
+             STA  NODEB(LLINK)
+             ENTA NODEE
+             STA  NODEC(LLINK)
+             ENTA NODEF
+             STA  NODEC+1(RLINK)
+             ENTA NODEG
+             STA  NODEE+1(RLINK)
+             ENTA NODEH
+             STA  NODEF(LLINK)
+             ENTA NODEJ
+             STA  NODEF+1(RLINK)
+             ENTA TREE
+             STA  TREE+1(RLINK)
+
+             ENTA 1
+             STA NODEB+1(RTAG)
+             STA NODED(LTAG)
+             STA NODED+1(RTAG)
+             STA NODEE(LTAG)
+             STA NODEG(LTAG)
+             STA NODEG+1(RTAG)
+             STA NODEH(LTAG)
+             STA NODEH+1(RTAG)
+             STA NODEJ(LTAG)
+             STA NODEJ+1(RTAG)
+
+             STA TREE2(LTAG)
+             STA TREE2+1(RTAG)
+
+* set up threads
+
+             ENTA NODEC
+             STA  NODED(LLINK)
+             ENTA NODEG
+             STA  NODEE(LLINK)
+             ENTA NODEF
+             STA  NODEG(LLINK)
+             ENTA NODEH
+             STA  NODEF(LLINK)
+             ENTA NODEJ
+             STA  NODEH(LLINK)
+             ENTA TREE
+             STA  NODEJ(LLINK)
+             ENTA TREE2
+             STA TREE2(LLINK)
+             STA TREE2+1(RLINK)
+             
+9H           JMP *
+
+NODEA        CON 1
+             CON 0
+NODEB        CON 2
+             CON 0
+NODEC        CON 3
+             CON 0
+NODED        CON 4
+             CON 0
+NODEE        CON 5
+             CON 0
+NODEF        CON 6
+             CON 0
+NODEG        CON 7
+             CON 0
+NODEH        CON 8
+             CON 0
+NODEJ        CON 11 
+             CON 0
+NODEK        CON 12 
+             CON 0
+NODEL        CON 13 
+             CON 0
+NODEM        CON 14 
+             CON 0
+TREE         CON 0
+             CON 0
+TREE2        CON 0
+             CON 0
+OUTBUF       ORIG *+24 
+STACK        ORIG *+100
+AVAIL        CON MEM
+MEM          ORIG *+200
+             END MAIN
