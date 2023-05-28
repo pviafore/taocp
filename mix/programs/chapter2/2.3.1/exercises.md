@@ -327,4 +327,48 @@ Comparing to S however, is even slower, because that is a constant operation (we
     See [preorder_threaded.mixal](preorder_threaded.mixal)
 
 
+34. Give an algorithm that removes a node from a right-threaded tree and attaches it to another empty tree.
 
+    1. Set $Q \leftarrow P$. Repeat $ Q \leftarrow RLINK(Q)$ until $RTAG(Q) == 1$. If $LLINK(Q\$) != P$, then you need to set $U \leftarrow LLINK(Q\$) $, otherwise $U \leftarrow Q\$ $.
+    
+    2. U is now the parent of P. If P was a left link, Set $LLINK(U) \leftarrow 0, LTAG(U) \leftarrow 1$. Otherwise, set $U \leftarrow RLINK(U)$ until you have P. $RLINK(U) \leftarrow Q\$ , RTAG(U) \leftarrow 1$
+
+    3. Set $RLINK(Q) \leftarrow HEAD, LLINK(HEAD) \leftarrow P, LTAG(HEAD) \leftarrow 0$
+
+    See [move_tree.mixal](move_tree.mixal)
+
+
+35. Define a t-ary tree
+
+    While this is set up to be a research level paper of how we do things, I'm just going to cover some of the basics.
+
+    A t-ary tree is defined as one of the following:
+
+    1) An empty node
+    2) A single node containing information, along with an ordered list of t trees
+    
+    Pre-order and post-order traversals are mostly the same, but there is not just 1 in-order traversal. Assuming left-to-right, there are actually t+1 traversals (as you can visit the current node between any of the t sub-trees.)
+
+    This also means threading can be exponentially complex. Assuming a meaning of a thread (such as threaded to your order-type successor/predecessor, depending on your right or left thread, respectively). There are $2^t$ different ways of threading, as each link can be threaded or not. Now, most of the time, you really probably just need the left link and right link, but you might be able to do more double-order shenanigans with more links.
+
+36. This is about well-ordering of trees. I'll be honest, I have no clue what this is asking for as I didn't do 1.2.1-15
+
+37. How do you get more space efficient than 2n for a tree, given that one link and one info field fits in a word.
+
+    We can get in 3n/2 space if we're tricky enough.
+
+    Rather than spend 2 nodes per tree, we can fit a tree node in 1.5 words. However, we can't use up half a word, but we can fit the half a word of another tree in here as well. You get a three word layout like this (assuming link is shorter than info)
+
+            WORD1           WORD2           WORD3
+        -------------|-----------------|------------
+         INFO1 LINK1   LINK2     LINK2   LINK1  INFO1
+         |------------------|   |--------------------|
+              Tree 1                     Tree 2
+
+    Now, addressing gets interesting. You would either point to the first node or the third node. You could use the signs to let you know if they were actively pointed to or not (and mod 3 to let you know whether you have to look forward or backward.
+    
+    If you didn't want to do fixed addressing and deal with modulus 3, you could keep the sign of the first word positive and the sign of the third word negative (so when you point to it, you know which is which.)
+
+    Where it gets more interesting is returning the block of memory back, since you can't do that until both tree nodes are no longer pointed to. Instead of deleting the node, you can invert your sign (you couldn't have more than one thing pointing to it, but that's a problem with delete anyway (where's reference counting when you need it.)) As you "invert a sign", you can check your companion word to see if it's sign has already been inverted as well (remember, first node is positive and third node is negative in this scheme when active). If your companion is inverted, then you know its not pointed to, and you can delete the entire node.
+
+    If I can get away with array representation of trees, it's easier to fit two nodes into three words 

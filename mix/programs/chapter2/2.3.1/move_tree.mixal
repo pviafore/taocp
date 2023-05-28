@@ -1,78 +1,88 @@
-*  Use linked list instead of stack
+* Move a node from one tree to another tree 
 LTAG         EQU 1:1
 RTAG         EQU 1:1
 LLINK        EQU 2:3
 RLINK        EQU 2:3
 INFO1        EQU 4:5
 INFO2        EQU 4:5
-MAX          EQU 100
 
              ORIG 100
 MAIN         JMP SETUPTREE
              JMP SETUPMEM
-             ENT1 TREE
+             ENT1 NODEA
              JMP INORDER
-             ENT1 TREE
-             JMP ERASE
+             JMP BLANK
+             ENT1 NODEG 
+             ENT2 TREE2
+             
+             JMP MOVE
+
+             ENT1 NODEA
+             JMP INORDER 
+             JMP BLANK
+
+             ENT1 NODEG
+             JMP INORDER
 HALT         HLT
 
-SUCC         STJ 9F
-             LD2 1,1(RLINK)
-             LD6 1,1(RTAG)
-             J6P 9F
-1H           LD6 0,2(LTAG)
-             J6P 9F
-             LD2 0,2(LLINK)
-             JMP 1B
+BLANK        STJ 9F
+             STZ OUTBUF
+             OUT OUTBUF(18)
 9H           JMP *
 
-
-ERASE        STJ 9F
-             LD2 0,1(LLINK)
-1H           ENT1 0,2
-             CMP1 =TREE=
-             JE 9F
-             JMP SUCC
-             LD3 AVAIL
-             ST3 1,1(4:5)
-             ST1 AVAIL
+* I1 is P / node we're moving, I2 is the head to which we move
+MOVE         STJ 9F
+M1           ENT3 0,1        * this is Q
+1H           LD4 1,3(RTAG)
+             J4NZ 2F
+             LD3 1,3(RLINK)
              JMP 1B
-             ENT1 TREE
-             ST1 0,1(LLINK)
+2H           LD4 1,3(RLINK)  * this is now Q$
+             CMP1 0,4(LLINK) * does the left link match Post
+             JE M2 
+             LD4 0,4(LLINK)
+5F           CMP1 1,4(RLINK)
+             JE M2
+             LD4 1,4(RLINK)
+             JMP 5B
+M2           CMP1 0,4(LLINK)  * I4 is now parent of P, but which one
+             JE IS_LEFT
+IS_RIGHT     LD5 1,3(RLINK)
+             ST5 1,4(RLINK)
+             ENTA 1
+             STA 1,4(RTAG)
+             JMP M3
+IS_LEFT      STZ 0,4(LLINK)
+             ENTA 1
+             STA 0,4(LTAG)
+M3           ST2 1,3(RLINK)
+             ST1 0,2(LLINK)
+             STZ 0,2(LTAG)
 9H           JMP *
+
 
 INORDER      STJ 9F
-T1           ENT5 TREE
-T2A          J5Z 9F
-T3           LD2 AVAIL
-             LDA 0,2(4:5)
-             J2Z OVERFLOW
-             STA AVAIL
-
-             ST5 0,2(2:3)
-             ST6 0,2(4:5)
-             ENT6 0,2
-             
-             LD5 0,5(LLINK)
-T2B          J5NZ T3
-T4           LD5 0,6(2:3)
-             ENT2 0,6
-             LD6 0,6(4:5)
-             LDA AVAIL
-             STA 0,2(4:5)
-             ST2 AVAIL 
+             ENT2 STACK
+T2           J1Z T4
+T3           ST1 0,2 
+             INC2 2   * advance the stack
+             LD1 0,1(LLINK)
+             JMP T2
+T4           CMP2 =STACK=
+             JE  9F
+             LD1 -2,2 * read top of stack
+             DEC2 2
 T5           JMP VISIT
-             LD5 1,5(RLINK)
-T2C          J5NZ T3
-             J6NZ T4
+             LD3 1,1(RTAG)
+             J3P T4
+             LD1 1,1(RLINK)
+             JMP T2
 9H           JMP *
 
-OVERFLOW     HLT
-UNDERFLOW    HLT
              
 * Assumes I5 contains the node
 VISIT        STJ 9F
-             LDA 0,5(INFO1)
+             LDA 0,1(INFO1)
              STA OUTBUF
              OUT OUTBUF(18)
 9H           JMP *
@@ -91,6 +101,8 @@ SETUPMEM    STJ 9F
 9H          JMP *
 
 SETUPTREE    STJ 9F
+             ENTA NODEA
+             STA  TREE(LLINK)
              ENTA NODEB
              STA  NODEA(LLINK)
              ENTA NODEC
@@ -120,7 +132,8 @@ SETUPTREE    STJ 9F
              STA NODEJ(LTAG)
              STA NODEJ+1(RTAG)
              STA TREE+1(RTAG)
-
+             STA TREE2(LTAG)
+             STA TREE2+1(RTAG)
 
 * set up threads
              ENTA TREE
@@ -132,16 +145,20 @@ SETUPTREE    STJ 9F
 
              ENTA NODEA
              STA NODEB+1(RLINK)
-             STA TREE(LLINK)
              
              ENTA NODEC
              STA NODEG+1(RLINK)
 
+
              ENTA NODEF
              STA NODEH+1(RLINK)
 
-             
+             ENTA TREE2
+             STA TREE2(LLINK)
+             STA TREE2+1(LLINK)
+
 9H           JMP *
+
 
 NODEA        CON 1
              CON 0
@@ -164,6 +181,8 @@ NODEJ        CON 11
 NODEK        CON 11
              CON 0
 TREE         CON 0
+             CON 0
+TREE2        CON 0
              CON 0
 OUTBUF       ORIG *+24 
 AVAIL        CON  STACK
