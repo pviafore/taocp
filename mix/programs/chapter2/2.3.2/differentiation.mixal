@@ -422,22 +422,20 @@ PWR             ST1     PWR_REST(0:2)
 
                 LD3    PWR_REST+2(0:2)
                 JMP    COPYP2
-                ENTX   0,1
+                ENTA   0,1
 
                 ENT1   0,2
-                ENTA   TIMES
 
-                JMP    TREE2
+                JMP    MULT
 
                 ENT2   0,1
 
                 ENT1   0,6
                 JMP    COPY
-                ENTX   0,1
+                ENTA   0,1
 
                 ENT1   0,2
-                ENTA   TIMES
-                JMP    TREE2   * I1 is now the full left side of the multiplication tree
+                JMP    MULT   * I1 is now the full left side of the multiplication tree
 
                 ENT2   0,1     (* now its I2)
 
@@ -445,10 +443,9 @@ PWR             ST1     PWR_REST(0:2)
                 ENTA   LOG 
                 JMP    TREE1   * I1 now is ln(u)
 
-                ENTX   0,1
+                ENTA   0,1
                 ENT1   0,5
-                ENTA   TIMES
-                JMP    TREE2  * I1 is now (ln(u) * d(v))
+                JMP    MULT  * I1 is now (ln(u) * d(v))
                 ENT5   0,1
 
                 LD4   PWR_REST+3(0:2)   * I4 / U
@@ -462,9 +459,8 @@ PWR             ST1     PWR_REST(0:2)
                 ENTA  UPARROW
                 JMP   TREE2
 
-                ENTX  0,5
-                ENTA  TIMES
-                JMP   TREE2
+                ENTA  0,5
+                JMP   MULT
 
                 ENTX   0,2
                 ENTA   PLUS
@@ -502,10 +498,9 @@ DIV             ST1     DIV_REST(0:2)
                 ENT6    0,1  *  I6 is now DU/V
 
                 JMP     COPYP1
-                ENTX    0,1
+                ENTA    0,1
                 ENT1    0,5
-                ENTA    TIMES
-                JMP     TREE2
+                JMP     MULT
                 ENT5    0,1   * I5 is now u* du
 
                 JMP     COPYP2
