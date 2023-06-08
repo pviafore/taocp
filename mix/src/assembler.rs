@@ -170,7 +170,7 @@ fn to_instruction(line: &str, line_index: usize, program_data: &ProgramData) -> 
     let (_label, op, address_string) = tokenize(line);
     match op {
         "CON" => {
-            arch::Word::from_value(_evaluate(address_string, line_index, program_data).parse::<i32>().unwrap())
+            arch::Word::from_value(_evaluate(address_string, line_index, program_data).parse::<i32>().expect(&format!("Could not read constant at line: {}", line)))
         },
         "ALF" => {
             _parse_alphabetic(line)
@@ -327,7 +327,6 @@ fn _get_index(spl: &Vec<&str>, program_data: &ProgramData) -> u8 {
             match program_data.symbol_table.get(index_split[0]) {
                 Some(val) => *val as u8,
                 None => index_split[0].parse::<u8>().expect(&format!("Invalid digit: {}", index_split[0]))
-
             }
         }
     }

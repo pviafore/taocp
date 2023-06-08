@@ -1,0 +1,588 @@
+* Differentiation in a right threaded  tree
+
+LLINK           EQU     4:5
+RLINK           EQU     1:2
+RLINKT          EQU     0:2
+TYPE            EQU     3:3
+
+MAIN            ORIG    100
+                JMP SETUPMEM
+                JMP SETUPTREE
+
+                ENT1 Y
+                JMP PRINT_EQ
+                JMP CLEAR_OUTBUF
+                
+                JMP D1
+
+                ENT1 DY
+                JMP PRINT_EQ
+                HLT
+
+SETUPMEM    STJ 9F
+            LD1 AVAIL
+1H          ENT2 0,1
+            
+            INC2 2
+            ST2 0,1(LLINK)
+            ENT1 0,2
+            CMP1 =MEMORY+2000=
+            JL   1B
+
+9H          JMP *
+
+SETUPTREE   STJ 9F
+            
+* set up right links of trees
+            ENNA Y 
+            STA Y(RLINKT)
+            ENNA DY
+            STA  DY(RLINKT)
+
+            ENT1  VARX
+            JMP   COPY
+            ENT2 0,1
+
+            ENT1 CON1
+            JMP  COPY
+
+            ENTX 0,2
+            ENTA  PLUS
+            JMP   TREE2
+
+            ENTA  LOG
+            JMP   TREE1
+            
+            ENT2 0,1
+
+            ENT1 CON2
+            JMP  COPY
+            ENTA 3
+            STA 1,1
+            
+            ENTX 0,1
+            ENTA TIMES
+            ENT1 0,2
+            JMP TREE2   * left half at this point in I1
+
+            ENT2 0,1
+
+            ENT1 VARX
+            JMP COPY
+            ENT5 0,1
+
+            ENT1 CON2
+            JMP COPY
+            ENTA UPARROW
+            ENTX 0,5
+            JMP TREE2
+
+            
+            ENT4 0,1
+            ENT1 VARX
+            JMP  COPY
+            ENTA 1
+            STA  1,1
+            ENTX 0,1
+            ENT1 0,4
+            ENTA SLASH
+            JMP TREE2
+            
+
+            ENTX 0,2
+            ENTA MINUS
+            JMP TREE2
+            
+            ENT3  0,1
+            ENT2  Y
+            JMP   INSERT_LEFT
+
+9F          JMP *
+
+* MAIN CONTROL ROUTINE
+D1              STJ     9F
+                LD4     Y(LLINK)
+1H              ENT2    0,4    * go down until left link is null
+2H              LD4     0,2(LLINK)
+                J4NZ    1B
+D2              LD1     0,2(TYPE)  * let's do the Differentiation
+                JMP     TYPETABLE,1
+TYPETABLE       JMP     CONSTANT
+                JMP     VARIABLE
+                JMP     LN
+                JMP     NEG
+                JMP     ADD
+                JMP     SUB
+                JMP     MUL
+                JMP     DIV
+                JMP     PWR
+D3              ST3     0,4(RLINK)   * restore the link
+D4              ENT3    0,2
+                LD2     0,2(RLINKT)
+                J2N     1F
+                ST5     0,3(RLINK)
+                JMP     2B
+1H              ENN2    0,2
+D5              ENT1    0-Y,2
+                LD4     0,2(LLINK)
+                LD6     0,4(RLINK)
+                J1NZ    D2
+                ST5     DY(LLINK)
+                ENNA    DY
+                STA     0,5(RLINKT)
+9H              JMP     *
+
+* TREE construction
+
+TREE0           STJ     9F
+                JMP     2F
+TREE1           ST1     3F(0:2)
+                JSJ     1F
+TREE2           STX     3F(0:2)
+3H              ST1     *(RLINKT)
+1H              STJ     9F
+                LDXN    AVAIL
+                JXZ     OVERFLOW
+                STX     0,1(RLINKT)
+                LDX     3B(RLINKT)   * in this case, X is U
+                STA     *+1(0:2)      * copies over root node
+                STX     *(LLINK)
+2H              LD1     AVAIL
+                J1Z     OVERFLOW
+                LDX     0,1(LLINK)
+                STX     AVAIL
+                STA     *+1(0:2)
+                MOVE    *(2)
+                DEC1    2
+9H              JMP     *
+
+COPYP1          ENT1    0,4
+                JSJ     COPY
+COPYP2          ENT1    0,3
+COPY            STJ     9F
+* assume I1 is the node to be copied and no other register can be used (or at least restored)
+                ST2     RESTORE2(0:2)
+                ST3     RESTORE3(0:2)
+                ST4     RESTORE4(0:2)
+                ST5     RESTORE5(0:2)
+                ST6     RESTORE6(0:2)
+CREATEROOT      LD2     AVAIL   * root node
+                LDX     0,2(LLINK)
+                STX     AVAIL
+                STZ     0,2
+                STZ     1,2
+                ENT6    0,2
+
+C2              LDA     0,1(RLINKT)
+                JANP    C3
+
+                LD3     AVAIL
+                LDX     0,3(LLINK)
+                STX     AVAIL
+                STZ     0,3
+
+                JMP    INSERT_RIGHT
+
+C3              LDA     1,1
+                STA     1,2
+
+                LDA     0,1(TYPE)
+                STA     0,2(TYPE)
+
+C4              LDA     0,1(LLINK)
+                JAZ     C5
+
+                LD3     AVAIL
+                LDX     0,3(LLINK)
+                STX     AVAIL
+                STZ     0,3
+
+                JMP INSERT_LEFT
+
+C5              ENT3 0,1
+                JMP PRE_SUCC
+                ENT1 0,3
+
+                ENT3 0,2
+                JMP PRE_SUCC
+                ENT2 0,3 
+                J2NZ C2  *  check if our algorithm is done, since our new node
+
+                ENT1 0,6
+
+RESTORE2        ENT2     *
+RESTORE3        ENT3     *
+RESTORE4        ENT4     *
+RESTORE5        ENT5     *
+RESTORE6        ENT6     *
+9H              JMP      *
+
+PRE_SUCC     STJ 9F
+             ENT5 0,3
+S1           LD3 0,3(LLINK)
+             J3P 9F 
+             ENT3 0,5
+S2           LD5 0,3(RLINKT)
+             LD3 0,3(RLINK) 
+             CMP3 0,3(RLINK)
+             JE 9F  *  we are pointing to ourself
+             J5N S2
+9H           JMP *
+
+* I3 is node to insert, I2 is node to insert right of
+INSERT_RIGHT     STJ 9F
+                 LD4 0,2(RLINKT)
+                 ST4 0,3(RLINKT)
+                 STZ 0,3(LLINK)
+                
+                 ST3 0,2(RLINKT)
+9H               JMP * 
+
+
+* I3 is node to insert, I2 is node to insert left of
+INSERT_LEFT  STJ 9F
+            
+             ST3 0,2(LLINK)
+             ENT5 0,3
+1H           LD4 0,5(RLINKT)
+             J4P 2F
+             ENN4 0,2
+             ST4 0,5(RLINKT)
+             JMP 9F
+2H           ENT5 0,4
+             JMP 1B
+              
+9H           JMP *
+
+
+CON0            CON     0
+                CON     0
+CON1            CON     0
+                CON     1
+CON2            CON     0
+                CON     2
+LOG             CON     4096*2 
+                ALF     LN
+NEGOP           CON     4096*3
+                ALF    NEG  
+PLUS            CON     4096*4
+                ALF     +
+MINUS           CON     4096*5
+                ALF     -
+TIMES           CON     4096*6
+                ALF     *
+SLASH           CON     4096*7
+                ALF     /
+UPARROW         CON     4096*8
+                ALF     **
+VARX            CON     4096
+X               ALF      X
+
+* DIFFERENTIATION ROUTINES
+GOTOCTRL        ENT5    0,1
+                JMP     D4
+VARIABLE        LDX     1,2
+                ENTA    CON1
+                CMPX    X 
+                JE      *+2 
+CONSTANT        ENTA    CON0       
+                JMP     TREE0
+                JMP     GOTOCTRL
+
+LN              LDA     1,5
+                JAZ     D4
+                JMP     COPYP1
+                ENTX    0,5
+                ENTA    SLASH
+                JMP     TREE2
+                JMP     GOTOCTRL
+
+NEG             LDA     1,5
+                JAZ     D4
+                ENTA    NEGOP
+                ENT1    0,5
+                JMP     TREE1
+                JMP     GOTOCTRL
+
+ADD             LDA     1,6
+                JANZ    1F
+3H              LDA     AVAIL
+                STA     0,6(LLINK)
+                ST6     AVAIL
+                JMP     D3
+1H              LDA     1,5
+                JANZ    1F
+2H              LDA     AVAIL
+                STA     0,5(LLINK)
+                ST5     AVAIL
+                ENT5    0,6
+                JMP     D3
+1H              ENTA    PLUS
+4H              ENTX    0,6
+                ENT1    0,5
+                JMP     TREE2
+                ENT5    0,1
+                JMP     D3
+
+SUB             LDA     1,5
+                JAZ    2B
+                LDA     1,6
+                JANZ    1F
+                ENTA    NEGOP
+                ENT1    0,5
+                JMP     TREE1
+                ENT5    0,1
+                JMP     3B
+1H              ENTA    MINUS
+                JMP     4B
+
+MUL             LDA     1,6
+                JAZ     1F
+                JMP     COPYP2
+                ENTA    0,6
+                JMP     MULT
+                ENT6    0,1
+1H              LDA     1,5
+                JAZ     ADD
+                JMP     COPYP1
+                ENTA    0,1
+                ENT1    0,5
+                JMP     MULT
+                ENT5    0,1
+                JMP     ADD
+
+MULT            STJ     9F
+                STA     1F(0:2)
+                ST2     8F(0:2)
+1H              ENT2    *
+                LDA     1,2
+                DECA    1
+                JANZ    1F
+                LDA     0,2(TYPE)
+                JAZ    2F
+1H              LDA     1,1
+                DECA    1
+                JANZ    1F
+                LDA     0,1(TYPE)
+                JANZ    1F
+                ST1     *+2(0:2)
+                ENT1    0,2
+                ENT2    *
+2H              LDA     AVAIL
+                STA     0,2(LLINK)
+                ST2     AVAIL
+                JMP     8F
+1H              ENTA    TIMES
+                ENTX    0,2
+                JMP     TREE2
+8H              ENT2    *
+9H              JMP     *
+
+*     D(u**v) == DU x (v x (u ** (v - 1))) + ((ln(u) x d(v))) x (u ** v)
+*                        +
+*                        |
+*                        *------------------------*
+*                        |                        |
+*                        DU-----*                 *----------------**
+*                               |                 |                |
+*                               v---- **          ln-----d(v)      u------v
+*                                     |           |
+*                                     u--- -      u
+*                                          |
+*                                          v------1
+*     P1 == U I4, P2 == V I3 , Q1 == D(U I6), Q2 == D(V) I5
+PWR             ST1     PWR_REST(0:2)
+                ST2     PWR_REST+1(0:2)
+                ST3     PWR_REST+2(0:2)
+                ST4     PWR_REST+3(0:2)
+
+                ENT1    0,3
+                JMP     COPYP2
+                ENT2    0,1
+                
+                ENT1    CON1
+                JMP     COPY
+                ENT1    0,1
+
+                ENTA    MINUS
+                ENTX    0,2
+
+                JMP     TREE2   * i1 = v-1
+
+                ENT2    0,1
+
+                JMP     COPYP1
+                ENTX    0,1
+                ENTA    UPARROW
+
+                ENT1    0,2
+
+                JMP    TREE2    * i1 = u ** (v-1)
+                ENT2   0,1
+
+                LD3    PWR_REST+2(0:2)
+                JMP    COPYP2
+                ENTX   0,1
+
+                ENT1   0,2
+                ENTA   TIMES
+
+                JMP    TREE2
+
+                ENT2   0,1
+
+                ENT1   0,6
+                JMP    COPY
+                ENTX   0,1
+
+                ENT1   0,2
+                ENTA   TIMES
+                JMP    TREE2   * I1 is now the full left side of the multiplication tree
+
+                ENT2   0,1     (* now its I2)
+
+                JMP    COPYP1
+                ENTA   LOG 
+                JMP    TREE1   * I1 now is ln(u)
+
+                ENTX   0,1
+                ENT1   0,5
+                ENTA   TIMES
+                JMP    TREE2  * I1 is now (ln(u) * d(v))
+                ENT5   0,1
+
+                LD4   PWR_REST+3(0:2)   * I4 / U
+                JMP   COPYP1
+                ENT4  0,1
+
+                LD3   PWR_REST+2(0:2)
+                JMP   COPYP2
+
+                ENTX  0,4
+                ENTA  UPARROW
+                JMP   TREE2
+
+                ENTX  0,5
+                ENTA  TIMES
+                JMP   TREE2
+
+                ENTX   0,2
+                ENTA   PLUS
+                JMP    TREE2  *  put both sides together
+
+
+                ENT5    0,1
+
+
+PWR_REST        ENT1    *
+                ENT2    * 
+                ENT3    * 
+                ENT4    *
+9H              JMP     D3 
+
+
+*     D(u/v) == DU/v - (u * Dv) / (v ** 2)
+*                        -
+*                        |
+*                        /------------------------/
+*                        |                        |
+*                        DU-----v                 *----------------**
+*                                                 |                |
+*                                                 u-----d(u)       v------2
+*     P1 == U I4, P2 == V I3 , Q1 == D(U I6), Q2 == D(V) I5
+
+DIV             ST1     DIV_REST(0:2)
+                ST2     DIV_REST+1(0:2)
+                ST6     DIV_REST+2(0:2)
+                JMP     COPYP2
+                ENTX    0,6
+
+                ENTA    SLASH
+                JMP     TREE2
+                ENT6    0,1  *  I6 is now DU/V
+
+                JMP     COPYP1
+                ENTX    0,1
+                ENT1    0,5
+                ENTA    TIMES
+                JMP     TREE2
+                ENT5    0,1   * I5 is now u* du
+
+                JMP     COPYP2
+                ENT2    0,1
+                
+                ENT1    CON2
+                JMP     COPY
+
+
+                ENTX    0,2
+                ENTA    UPARROW
+                JMP     TREE2
+
+                ENTX    0,5
+                ENTA    SLASH
+                JMP     TREE2
+
+                ENTX    0,6
+                ENTA    MINUS
+                JMP     TREE2
+
+                ENT5    0,1
+DIV_REST        ENT1    *
+                ENT2    *
+                ENT6    *
+9H              JMP     D3 
+
+
+PRINTTERM       STJ     9F
+                CMP4    =24=
+                JNE      1F
+                OUT     OUTBUF(18)
+                ENT1    OUTBUF
+                MOVE    EMPTY(24)
+                ENT4    0
+1H              STA     OUTBUF,4
+                INC4    1
+9H              JMP     *
+
+
+PRINT_EQ        STJ     9F
+                ENT4    0
+                ST1     TEMP
+                ENT3    0,1
+1H              JMP     PRE_SUCC
+                CMP3    TEMP 
+                JE      8F
+PRINT_NODE      LDA     1,3
+                LD2     0,3(TYPE)
+                J2Z     PRINT_NUM 
+                JMP     PRINTTERM
+                JMP     2F 
+PRINT_NUM       CHAR
+                SLAX    5
+                JMP     PRINTTERM
+2H              ENTA    0 
+                JMP     PRINTTERM
+3H              JMP     1B
+8H              OUT     OUTBUF(18)
+9H              JMP     *
+TEMP            CON     0
+                
+CLEAR_OUTBUF    STJ     9F
+                ENT1    OUTBUF
+                MOVE    EMPTY(24)
+9H              JMP     *
+
+OVERFLOW        HLT
+UNDERFLOW       HLT
+
+
+Y               CON 0
+                CON 0
+DY              CON 0
+                CON 0
+OUTBUF          ORIG *+24
+EMPTY           ORIG *+24
+AVAIL           CON MEMORY
+MEMORY          ORIG *+2000
+                END MAIN
