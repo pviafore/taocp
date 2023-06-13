@@ -12,9 +12,17 @@ MAIN            ORIG    100
                 ENT1 Y
                 JMP PRINT_EQ
                 JMP CLEAR_OUTBUF
+                OUT OUTBUF(18)
                 
                 JMP D1
 
+                ENT1 DY
+                JMP PRINT_EQ
+                JMP CLEAR_OUTBUF
+                OUT OUTBUF(18)
+
+                ENT1 DY
+                JMP  REDUCE
                 ENT1 DY
                 JMP PRINT_EQ
                 HLT
@@ -92,7 +100,27 @@ SETUPTREE   STJ 9F
             ENTX 0,2
             ENTA MINUS
             JMP TREE2
-            
+
+
+            ENT1  VARX
+            JMP   COPY
+            ENT2  0,1
+
+            ENT2  0,1
+            ENT1  CON2
+            JMP   COPY
+            ENTX  0,2
+            ENTA  SLASH
+            JMP   TREE2
+           
+            ENT2  0,1
+            ENT1  CON2
+            JMP   COPY
+            ENTX  0,2
+            ENTA  TIMES
+            JMP   TREE2
+           
+
             ENT3  0,1
             ENT2  Y
             JMP   INSERT_LEFT
@@ -170,7 +198,6 @@ CREATEROOT      LD2     AVAIL   * root node
                 LDX     0,2(LLINK)
                 STX     AVAIL
                 STZ     0,2
-                STZ     1,2
                 ENT6    0,2
 
 C2              LDA     0,1(RLINKT)
@@ -527,6 +554,183 @@ DIV_REST        ENT1    *
                 ENT2    *
                 ENT6    *
 9H              JMP     D3 
+
+* I1 should be the tree to reduce.
+* I6 will track if there are reductions or not
+REDUCE          STJ     9F
+                ST1     1F(0:2)
+1H              ENT1    * 
+                ENT6    0
+                JMP     TRY_REDUCTION
+                J6NZ    1B
+9H              JMP     *
+
+
+TRY_REDUCTION   STJ     9F
+
+                ENT3    0,1
+1H              JMP     PRE_SUCC
+                DEC3    0,1
+                J3Z     9F
+                INC3    0,1
+                JMP     TRY_REDUCE
+                J6NZ    9F
+2H              DEC3    0,1
+                J3Z     9F
+                INC3    0,1
+                JMP     1B
+9H              JMP     *
+
+* i3 is the node to check, I6 is 1 if a reduction
+TRY_REDUCE      STJ     9F
+                JMP     IS_ARITH_CON
+                J6NZ    HANDLE_ZEROES
+9H              JMP     *
+TRY_TEMP        CON     0
+
+IS_ARITH_CON    STJ     9F
+                LD4     0,3(LLINK)  *I4 is the first node
+                LDA     0,4(TYPE)
+                JANZ    9F       * left node not constant
+                LDA     1,4       * A is value
+                LD4     0,4(RLINK)  * 4 is the right node
+                LDX     0,4(TYPE)
+                JXNZ    9F      * right node not constant
+
+                LD5     0,3(TYPE)   * 5 is the type
+CON_CHK_ADD     CMP5    PLUS(TYPE) 
+                JNE     CON_CHK_SUB
+                ADD     1,4
+                JMP     CLEANUP_CON 
+                
+CON_CHK_SUB     CMP5    MINUS(TYPE) 
+                JNE     CON_CHK_MULT
+                SUB     1,4
+                JMP     CLEANUP_CON
+
+CON_CHK_MULT    CMP5    TIMES(TYPE) 
+                JNE     CON_CHK_DIV
+                MUL     1,4
+                JAZ     1F   
+                DIV     1,4 * too big for one register
+                JMP     CON_CHK_DIV
+1H              SLAX    5
+                JMP     CLEANUP_CON
+CON_CHK_DIV     CMP5    SLASH(TYPE) 
+                JNE     CON_CHK_PWR
+                SRAX    5
+                DIV     1,4
+                JXZ     1F
+                STX     *+2(0:2)  * uneven divide, multiply it back and add the remainder
+                MUL     1,4   * 
+                INCX    *     
+                SLAX    5
+                JMP     CON_CHK_PWR
+1H              JMP     CLEANUP_CON
+CON_CHK_PWR     CMP5    UPARROW(TYPE) 
+                JNE     9F
+                STA     ORIGINALA(0:2)
+                LD2     ORIGINALA(0:2)
+                ENT1    0,4 
+                LD4     1,4
+1H              DEC4    1
+                J4NP    UPDATE_PWR 
+                MUL     1,1
+                JANZ    ORIGINALA  * we got too big
+                SLAX    5
+                JMP     1B
+UPDATE_PWR      ENT4    0,1
+                JMP     CLEANUP_CON 
+ORIGINALA       ENTA    0,2
+                ENT4    0,1
+                JMP     9F
+CLEANUP_CON     JMP     CLEANUP_ROOT
+                ENT6    1
+9H              JMP     *
+
+
+* Sets the root node, and cleans up memory below
+* at this point, I3 is the root node, A is the value to update
+CLEANUP_ROOT    STJ     9F
+                STA     1,3
+                STZ     0,3(TYPE)  * make it a new constant
+                LD6     0,3(LLINK)  * return memory
+                
+                LDX     AVAIL
+                STX     0,6(LLINK)
+                ST6     AVAIL
+                STZ     0,3(LLINK)
+
+1H              LD6     0,6(RLINKT)
+                J6NP    2F
+                LDX     AVAIL
+                STX     0,6(LLINK)
+                ST6     AVAIL
+                JMP     1B
+
+2H              JANN    9F  * add a neg node
+                ENT1    0,3  
+                JMP     COPY
+                ENTA    NEGOP
+                JMP     TREE1
+                LDA     0,1(TYPE)
+                STA     0,3(TYPE)
+                LDA     1,1
+                STA     1,3
+
+                LDA     0,1(LLINK)
+                STA     0,3(LLINK)
+
+                LD1     0,3(LLINK)
+                ENN3    0,3
+                ST3     0,1(RLINKT)
+9H              JMP     *
+                
+
+
+HANDLE_ZEROES   STJ     9F
+                LD5     0,3(TYPE)
+                CMP5    CONSTANT(TYPE)
+                JE      9F
+                CMP5    VARIABLE(TYPE)
+                JE      9F
+                CMP5    LOG(TYPE) 
+                JE      9F
+                LD1     0,3(LLINK)  *I1 is the left link
+                LDA     0,1(TYPE)
+                JANZ    CHECK_ZRIGHT
+                LDA     1,1
+                JANZ    CHECK_ZRIGHT
+                CMP5    TIMES(TYPE)
+                JE      1F
+                CMP5    SLASH(TYPE)
+                JE      1F
+                CMP5    UPARROW(TYPE)
+                JE      1F
+                CMP5    NEGOP(TYPE)
+                JE      1F
+                JMP     9F 
+1H              ENTA    0     * just set zero to the root node
+*               JMP     REPLACE_ROOT
+                JMP     9F
+
+CHECK_ZRIGHT    ENT4    0,1    * 4 is the left link
+                LD1     0,1(RLINK)  * 1 is the right link
+                J1N     9F
+                LDA     0,3(TYPE)
+                JANZ    9F
+                CMP5    TIMES(TYPE)
+                JE      1F
+                CMP5    UPARROW(TYPE)
+                JE      2F
+                JMP     9F
+1H              ENTA    0
+                JMP     CLEANUP_ROOT
+                ENT6    1
+                JMP     9F
+2H              NOP     * replace with 1
+
+9H              JMP     *
 
 
 PRINTTERM       STJ     9F

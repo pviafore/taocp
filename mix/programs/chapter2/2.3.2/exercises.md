@@ -55,3 +55,161 @@
     Post-order would be B,C,E,F,D,A,H,I,G
 
     This would be go-left, go-right and then print yourself, or post-order traversal
+
+6) If we have a binary tree where every node has zero or two children, and we treat that as a general tree and then make a binary tree correspondence, how do the orders equate in that scenario.
+
+    Imagine we have (A (B, C))
+
+    - Pre-order: ABC
+    - In-order:  BAC
+    - Post-order: BCA
+
+    The corresponding binary tree from the tree is :
+
+            A
+           /
+          B
+           \
+            C
+
+    - Pre-order is ABC (same as pre-order)
+    - In-order is BCA (same as post-order)
+    - Post-order is CBA , which is not related to the orders above
+
+7)  If we say a forest is partially ordered if a node precedes its descendants, then are the nodes topologically sorted
+
+
+    - Pre-order: yes - we always visit the root before it's children by definition
+    - Post-order no, the root will always appear after the children
+    - Reverse pre-order - no , as the children will always be printed before the root
+    - Reverse post-order - yes, as the root will always be printed before children
+
+8)  Define T≼T' for trees
+
+    It is true when:
+
+    Same rules as for binary trees, but with the following:
+
+    Check the right trees first (since those are siblings) before the left trees.
+
+    I'm not sure what else would be different.
+
+9)  Show that the total number of nonterminal nodes in a forest has a relation to number of empty right links
+
+    I'm missing a definition somewhere, because these have the same number of right null links
+
+
+            *                           *
+           /                           /
+          *                           *
+           \                           \
+            *                           *
+                                         \
+                                          *
+
+    But a different number of nonterminal nodes.
+
+    The trees that produce these are as follows
+
+            *                           *
+           / \                         /|\
+          *   *                       * * *
+
+    Oh, I guess we're measuring non terminal nodes in the forest, not in the tree.
+
+    In that case, we know terminal nodes will always have a left link, and that if you have a non-terminal node, you are part of a sibling chain that will have one null link at the end, and any nodes to your left will have their own sibling chain as well. This keeps it even, except for the sibling chain at the root, so you have one more link than nonterminal nodes in the forest.
+
+10) Write a proof that two trees are equivalent or similar.
+
+
+    Oooof, we'll see how bad I am at writing proofs.
+
+    Let the nodes of trees T and T1 be respectively
+
+    $u_1,u_2,...u_n$  and $u'_1,u'_2,...u'_{n'}$
+
+    in pre-order.
+
+    T and T' are similar iff n=n' and $d(u_j) == d(u'_j)$ for $ 1 \le j \le n$, where d(u) is the degree of the node u
+
+    And they are equivalent if 
+
+    $info(u_j) == info(u'_j)$ for $ 1 \le j \le n$
+
+
+    Proof. Let's start with a single node. 
+
+    This will have a degree of zero, so it will only be similar for other trees with a single node (n == n'), and those trees will have a degree of zero as well. So two single node trees are similar. It's pretty easy to see if the info is the same between both, it's equivalent as well. 
+
+    Each sub-tree can be checked recursively, so for induction to work, we need to show that the construction of a tree will uphold this property.
+
+    Since we have a list of nodes in pre-order, we can translate that to a list of degrees. For the root node to have a degree of $k$, we know we can split up the rest of the pre-order nodes into $k$ partitions. Similar, for T', we can split up into $k'$ partitions. Each of the partitions will be a sub-tree of the root. 
+
+    If the two roots have different degrees, then they will have a different amount of subtrees, and thus, will not be similar. For each parition, there is some $m$ nodes associated with that partition. We can compare the roots between $m$ and $m'$ to see if their degrees match, and then keep going recursively.
+
+11) Draw e^-x^2
+
+
+                    **
+                    / \
+                   e  NEG
+                       |
+                       **
+                      /  \
+                    x     2 
+
+
+        **
+        |
+        e-------- NEG
+                   |
+                   **
+                   |
+                   x ------ 2
+
+12) Give specifications to the PWR operation
+
+
+    PWR:
+
+ 
+    $Q <- TREE("+", MULT(Q, MULT(COPY(P2), TREE(**, COPY(P1), TREE("-", COPY(P2), 1)))), MULT(MULT(TREE1("ln", COPY(P1)), Q1)), TREE(**, COPY(P1), COPY(P2)))$
+
+13) Write a copy routine for the differentiation routine
+
+    See [differentiation.mixal](differentiation.mixal)
+
+14) How long does the copy take in the case of n nodes?
+
+    Store/restore/jump overhead:  20
+
+    Each node gets allocated gets allocated 8 cycles (C1, C2, and C4)
+
+    Each node gets a check to see if it has a left node or right node, which is a total of 6 cycles
+
+    For each left node, we have 3 cycles to store the link, and 4 + 5*right nodes
+
+    For each right node, we have 11 cycles
+
+    Then we have pre-successors, which will be 7 + 9*right nodes, * 2, + 5 cycles
+
+    Thus, we have 20 + 6n + 7l + 5r + 11r + 19 + 18r, which will be 39 + 6n + 7l + 34r.
+
+15) Write a div routine for the differentiation routine
+
+    See [differentiation.mixal](differentiation.mixal)
+
+16) Write a pwr routine for the differentiation routine
+
+    See [differentiation.mixal](differentiation.mixal)
+
+17) Write a program to do algebraic simplification
+
+    I'm not going to spend a whole "term project on this", but I will list out the reductions done in the `REDUCE` method in [differentiation.mixal](differentiation.mixal).
+
+    The idea will be to go in a loop as long as reductions can be found, and exit when you have no new reductions.
+
+    First, arithmetic operations done within a single node:
+
+    - Arithmetic on constants
+    - Handling zero nodes
