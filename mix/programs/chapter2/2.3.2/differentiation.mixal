@@ -85,42 +85,6 @@ SETUPTREE   STJ 9F
             ENTX 0,5
             JMP TREE2
 
-            
-            ENT4 0,1
-            ENT1 VARX
-            JMP  COPY
-            ENTA 1
-            STA  1,1
-            ENTX 0,1
-            ENT1 0,4
-            ENTA SLASH
-            JMP TREE2
-            
-
-            ENTX 0,2
-            ENTA MINUS
-            JMP TREE2
-
-
-            ENT1  VARX
-            JMP   COPY
-            ENT2  0,1
-
-            ENT2  0,1
-            ENT1  CON2
-            JMP   COPY
-            ENTX  0,2
-            ENTA  SLASH
-            JMP   TREE2
-           
-            ENT2  0,1
-            ENT1  CON2
-            JMP   COPY
-            ENTX  0,2
-            ENTA  TIMES
-            JMP   TREE2
-           
-
             ENT3  0,1
             ENT2  Y
             JMP   INSERT_LEFT
@@ -584,9 +548,10 @@ TRY_REDUCTION   STJ     9F
 * i3 is the node to check, I6 is 1 if a reduction
 TRY_REDUCE      STJ     9F
                 JMP     IS_ARITH_CON
-                J6NZ    HANDLE_ZEROES
+                J6Z     HANDLE_ZEROES
+*                J6Z     HANDLE_ONES
+                J6Z     CON_FRAC_MULT
 9H              JMP     *
-TRY_TEMP        CON     0
 
 IS_ARITH_CON    STJ     9F
                 LD4     0,3(LLINK)  *I4 is the first node
@@ -596,20 +561,29 @@ IS_ARITH_CON    STJ     9F
                 LD4     0,4(RLINK)  * 4 is the right node
                 LDX     0,4(TYPE)
                 JXNZ    9F      * right node not constant
+                LDX     1,4
+
+                ENT2    LBL_ARITH_CON
 
                 LD5     0,3(TYPE)   * 5 is the type
 CON_CHK_ADD     CMP5    PLUS(TYPE) 
+
                 JNE     CON_CHK_SUB
+                JMP     PRINT_REDUC
+
                 ADD     1,4
+               
                 JMP     CLEANUP_CON 
                 
 CON_CHK_SUB     CMP5    MINUS(TYPE) 
                 JNE     CON_CHK_MULT
+                JMP     PRINT_REDUC
                 SUB     1,4
                 JMP     CLEANUP_CON
 
 CON_CHK_MULT    CMP5    TIMES(TYPE) 
                 JNE     CON_CHK_DIV
+                JMP     PRINT_REDUC
                 MUL     1,4
                 JAZ     1F   
                 DIV     1,4 * too big for one register
@@ -618,6 +592,8 @@ CON_CHK_MULT    CMP5    TIMES(TYPE)
                 JMP     CLEANUP_CON
 CON_CHK_DIV     CMP5    SLASH(TYPE) 
                 JNE     CON_CHK_PWR
+                STA     1F(0:2)
+                STX     2F(0:2)
                 SRAX    5
                 DIV     1,4
                 JXZ     1F
@@ -626,9 +602,16 @@ CON_CHK_DIV     CMP5    SLASH(TYPE)
                 INCX    *     
                 SLAX    5
                 JMP     CON_CHK_PWR
-1H              JMP     CLEANUP_CON
+1H              ENTA    *
+2H              ENTX    *
+                JMP     PRINT_REDUC
+                SRAX    5
+                DIV     1,4
+                JMP     CLEANUP_CON
 CON_CHK_PWR     CMP5    UPARROW(TYPE) 
                 JNE     9F
+ 
+                JMP     PRINT_REDUC
                 STA     ORIGINALA(0:2)
                 LD2     ORIGINALA(0:2)
                 ENT1    0,4 
@@ -644,50 +627,103 @@ UPDATE_PWR      ENT4    0,1
 ORIGINALA       ENTA    0,2
                 ENT4    0,1
                 JMP     9F
-CLEANUP_CON     JMP     CLEANUP_ROOT
+CLEANUP_CON     JMP     REPLACE_ROOT_A
                 ENT6    1
 9H              JMP     *
 
+* A is left, X is right, 3 is root node, set 6 to 1 if A is text, or 2 if X is text
+PRINT_REDUC     STJ     9F
+                STA     1F(0:2)
+                ST2     3F(0:2)
+                ST2
+                ENT2    0,1
+                ENT1    OUTBUF
+3H              MOVE    LBL_ARITH_CON(4)
+                LD1     1,3
+                ST1     OUTBUF+6
+                STX     2F(0:2)
+                CMP6    =1=
+                JE      4F
+                CHAR
+                STX     OUTBUF+5
+                JMP 2F
+4H              STA     OUTBUF+5
+2H              ENTX    *
+                CMP6    =2=
+                JE      4F
+                SLAX    5
+                CHAR
+4H              STX     OUTBUF+8
+                OUT     OUTBUF(18)
+                JMP     CLEAR_OUTBUF
+                ENT1    0,2
+1H              ENTA    *
 
-* Sets the root node, and cleans up memory below
-* at this point, I3 is the root node, A is the value to update
-CLEANUP_ROOT    STJ     9F
-                STA     1,3
-                STZ     0,3(TYPE)  * make it a new constant
+9H              JMP     *
+
+*I3 is the root node, only cleans direct children
+CLEAN_CHILDREN  STJ   9F
                 LD6     0,3(LLINK)  * return memory
-                
                 LDX     AVAIL
                 STX     0,6(LLINK)
                 ST6     AVAIL
                 STZ     0,3(LLINK)
 
 1H              LD6     0,6(RLINKT)
-                J6NP    2F
+                J6NP    9F
                 LDX     AVAIL
                 STX     0,6(LLINK)
                 ST6     AVAIL
                 JMP     1B
 
+
+9H               JMP   *
+* Sets the root node, and cleans up memory below
+* at this point, I3 is the root node, A is the value to update
+REPLACE_ROOT_A  STJ     9F
+                STA     1,3
+                STZ     0,3(TYPE)  * make it a new constant
+
+                JMP     CLEAN_CHILDREN 
+
 2H              JANN    9F  * add a neg node
-                ENT1    0,3  
+                ENT4    0,3  
                 JMP     COPY
                 ENTA    NEGOP
                 JMP     TREE1
-                LDA     0,1(TYPE)
+                LDA     0,4(TYPE)
                 STA     0,3(TYPE)
-                LDA     1,1
+                LDA     1,4
                 STA     1,3
 
-                LDA     0,1(LLINK)
+                LDA     0,4(LLINK)
                 STA     0,3(LLINK)
 
                 LD1     0,3(LLINK)
                 ENN3    0,3
-                ST3     0,1(RLINKT)
+                ST3     0,4(RLINKT)
+9H              JMP     *
+
+
+* Assuming I6 is the tree with an zero right link, clean it up
+CLEANUP_TREE    STJ     9F
+                ENT5    0,6
+                JMP     2F
+SS3             ENT6    0,5
+                LD5N    1,5(RLINKT) 
+                J5Z     9F
+                LDA     AVAIL
+                STA     0,6(LLINK)
+                ST6     AVAIL    * return memory
+SS1             J5NN    1F
+                ENN6    0,5
+SS2             ENT5    0,6
+2H              LD6     0,5(LLINK)
+                J6P     SS2 
+                JMP     SS3 
+                
 9H              JMP     *
                 
-
-
 HANDLE_ZEROES   STJ     9F
                 LD5     0,3(TYPE)
                 CMP5    CONSTANT(TYPE)
@@ -696,10 +732,10 @@ HANDLE_ZEROES   STJ     9F
                 JE      9F
                 CMP5    LOG(TYPE) 
                 JE      9F
-                LD1     0,3(LLINK)  *I1 is the left link
-                LDA     0,1(TYPE)
+                LD2     0,3(LLINK)  *I2 is the left link
+                LDA     0,2(TYPE)
                 JANZ    CHECK_ZRIGHT
-                LDA     1,1
+                LDA     1,2
                 JANZ    CHECK_ZRIGHT
                 CMP5    TIMES(TYPE)
                 JE      1F
@@ -709,26 +745,184 @@ HANDLE_ZEROES   STJ     9F
                 JE      1F
                 CMP5    NEGOP(TYPE)
                 JE      1F
+* for add and minus
                 JMP     9F 
 1H              ENTA    0     * just set zero to the root node
-*               JMP     REPLACE_ROOT
+                ENT6    2
+                LD4     0,2(RLINK)
+                LDX     1,4 
+                ENT2    LBL_ZERO_NODE
+                JMP     PRINT_REDUC 
+                JMP     REPLACE_ROOT_A
+                ENT6    1
                 JMP     9F
-
-CHECK_ZRIGHT    ENT4    0,1    * 4 is the left link
-                LD1     0,1(RLINK)  * 1 is the right link
-                J1N     9F
-                LDA     0,3(TYPE)
+CHECK_ZRIGHT    ENT4    0,2    * 4 is the left link
+                LD2     0,2(RLINKT)  * 2 is the right link
+                LDA     0,2(TYPE)
                 JANZ    9F
+                LDX     1,2
+                JXNZ    9F
                 CMP5    TIMES(TYPE)
                 JE      1F
                 CMP5    UPARROW(TYPE)
                 JE      2F
-                JMP     9F
-1H              ENTA    0
-                JMP     CLEANUP_ROOT
-                ENT6    1
-                JMP     9F
+* the right node is a zero of a + or minus. Grab llink, type, and value,
+* of the root's left and move it to the root node. Re-thread new left's far right
+* node to point to root
+                ENT2   LBL_ZERO_NODE
+                ENT6   1
+                LDA    1,4 
+                ENTX   0
+                JMP    PRINT_REDUC
+
+
+                JMP    REPLACE_ROOT_NODE
+                ENT6   0,1
+                JMP    9F
+1H              ENT2   LBL_ZERO_NODE
+                ENT6   1
+                LDA    1,4 
+                ENTX   0
+                JMP    PRINT_REDUC
+
+                ENTA    0
+                JMP     8F
 2H              NOP     * replace with 1
+8H              JMP     REPLACE_ROOT_A
+                ENT6    1
+9H              JMP     *
+
+*I3 is the root, I4 is the node to copy up
+REPLACE_ROOT_NODE STJ   9F
+                LDA    1,4
+                STA    1,3
+                LDA    0,4(3:5) * tag and left link
+                JMP    CLEAN_CHILDREN
+                STA    0,3(3:5)
+                LD6    0,3(LLINK)
+3H              ENT2   0,6
+                LD6    0,6(RLINKT)
+                J6N    4F * are we at our thread
+                JMP    3B
+4H              ST3    0,2(RLINK)
+9H                JMP   *
+
+HANDLE_ONES     STJ     9F
+                LD5     0,3(TYPE)
+                CMP5    CONSTANT(TYPE)
+                JE      9F
+                CMP5    VARIABLE(TYPE)
+                JE      9F
+                CMP5    LOG(TYPE) 
+                JE      9F
+                CMP5    PLUS(TYPE) 
+                JE      9F
+                CMP5    MINUS(TYPE) 
+                JE      9F
+                CMP5    NEGOP(TYPE) 
+                JE      9F
+                LD2     0,3(LLINK)  *I2 is the left link
+                LDA     0,2(TYPE)
+                JANZ    CHECK_ORIGHT
+                LDA     1,2
+                CMPA    =1=
+                JNE     CHECK_ORIGHT
+                CMP5    TIMES(TYPE)
+                JE      1F
+                CMP5    SLASH(TYPE)
+                JE      9F
+                CMP5    UPARROW(TYPE)
+                JE      2F
+                LD4     0,2(RLINK)
+                
+* the right node is a one of a * or /. Grab llink, type, and value,
+* of the root's left and move it to the root node. Re-thread new left's far right
+* node to point to root
+1H              ENT2   LBL_ONE_NODE
+                ENT6   2
+                ENTA   1
+                LDX    1,4
+                JMP    PRINT_REDUC
+
+                JMP    REPLACE_ROOT_NODE
+                ENT6   1 
+                
+                JMP    9F
+
+2H              JMP     9F
+CHECK_ORIGHT    ENT4    0,2    * 4 is the left link
+                LD2     0,2(RLINKT)  * 2 is the right link
+                LDA     0,2(TYPE)
+                JANZ    9F
+                LDX     1,2
+                CMPX    =1=
+                JNE     9F
+                CMP5    TIMES(TYPE)
+                JE      1F
+                CMP5    SLASH(TYPE)
+                JE      1F
+                CMP5    UPARROW(TYPE)
+                JE      2F
+
+1H              JMP     9F
+2H              NOP     * replace with base
+8H              JMP     REPLACE_ROOT_A
+                ENT6    1
+9H              JMP     *
+
+
+
+CON_FRAC_MULT   STJ     9F
+                LD5     0,3(TYPE)
+                CMP5    TIMES(TYPE)
+                JNE     9F
+                LD4     0,3(LLINK)  * 4 is on left
+                LD5     0,4(RLINK) * 5 is on right
+                LDA     0,4(TYPE)
+                CMPA    CONSTANT(TYPE)
+                JE      1F
+                LDA     0,5(TYPE)
+                CMPA    CONSTANT(TYPE)
+                JNE     9F
+                ENT2    0,5
+                ENT5    0,4
+                ENT4    0,2 * swap the two so constant is on left
+1H              LDA     0,5(TYPE)
+                CMPA    SLASH(TYPE)
+                JNE     9F
+
+                LDA    1,4
+                CMPA   =0=
+                JAZ    9F
+                CMPA   =1= 
+                JE     9F
+
+                LD2    0,5
+                ENT6   2
+                LDX    1,5
+                ENT2   LBL_CON_FRAC
+                JMP    PRINT_REDUC
+                ENT6   0
+
+                ST1     7F(0:2)  * save off I1
+                ENT1    0,4
+                JMP     COPY
+                ENTA    0,1
+                LD1     0,5(LLINK)   * numerator
+                ENT6    0,1  * save off old numerator
+                LD2     0,1(RLINKT)
+                STZ     0,1(RLINKT)  * null it out so we don't have a thread (For cleanup)
+                JMP     MULT   * multiply left constant with numerator 
+                ST1     0,5(LLINK)
+                ST2     0,1(RLINKT)
+
+                JMP     CLEANUP_TREE
+
+                ENTA    1
+                STA     1,4
+7H              ENT1    *
+                ENT6    1
+* further reduces will take care of simplifying the fraction
 
 9H              JMP     *
 
@@ -775,6 +969,23 @@ CLEAR_OUTBUF    STJ     9F
 OVERFLOW        HLT
 UNDERFLOW       HLT
 
+* LABELS
+LBL_ARITH_CON   ALF ARITH
+                ALF METIC
+                ALF   CONS
+                ALF TANT 
+LBL_ZERO_NODE   ALF ZERO
+                ALF NODE
+                CON 0
+                CON 0
+LBL_ONE_NODE    ALF ONE N
+                ALF ODE 
+                CON 0
+                CON 0
+LBL_CON_FRAC    ALF CONST
+                ALF ANT F
+                ALF RACTI 
+                ALF ON 
 
 Y               CON 0
                 CON 0

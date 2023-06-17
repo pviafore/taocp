@@ -212,4 +212,6 @@
     First, arithmetic operations done within a single node:
 
     - Arithmetic on constants
-    - Handling zero nodes
+    - Handling zero nodes (todo - 0 on left side, x^0 )
+    - Handling one nodes  (todo - 1 on the left and one and the right)
+    - Multiplication of constant and a fraction
