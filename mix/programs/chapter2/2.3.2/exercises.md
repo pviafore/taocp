@@ -205,13 +205,14 @@
 
 17) Write a program to do algebraic simplification
 
-    I'm not going to spend a whole "term project on this", but I will list out the reductions done in the `REDUCE` method in [differentiation.mixal](differentiation.mixal).
+    I'm not going to spend a whole "term project on this", but I will list out the reductions done in the `REDUCE` method in [differentiation.mixal](differentiation.mixal). This should serve as a reference of an idea of what's possible.
 
     The idea will be to go in a loop as long as reductions can be found, and exit when you have no new reductions.
 
     First, arithmetic operations done within a single node:
 
     - Arithmetic on constants
-    - Handling zero nodes (todo - 0 on left side, x^0 )
-    - Handling one nodes  (todo - 1 on the left and one and the right)
+    - Handling zero nodes (todo - 0 on left side for +/-, x^0 )
+    - Handling one nodes  (todo - 1 on the left (1^x) and one and the right for * and /)
     - Multiplication of constant and a fraction
+    - Double Negatives (todo - subtraction)

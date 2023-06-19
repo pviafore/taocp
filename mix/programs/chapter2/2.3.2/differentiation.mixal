@@ -84,6 +84,21 @@ SETUPTREE   STJ 9F
             ENTA UPARROW
             ENTX 0,5
             JMP TREE2
+             
+            ENT4 0,1
+            ENT1 VARX
+            JMP  COPY
+            ENTA 1
+            STA  1,1
+            ENTX 0,1
+            ENT1 0,4
+            ENTA SLASH
+            JMP TREE2
+            
+
+            ENTX 0,2
+            ENTA MINUS
+            JMP TREE2
 
             ENT3  0,1
             ENT2  Y
@@ -549,8 +564,9 @@ TRY_REDUCTION   STJ     9F
 TRY_REDUCE      STJ     9F
                 JMP     IS_ARITH_CON
                 J6Z     HANDLE_ZEROES
-*                J6Z     HANDLE_ONES
+                J6Z     HANDLE_ONES
                 J6Z     CON_FRAC_MULT
+                J6Z     DOUBLE_NEGATIVE
 9H              JMP     *
 
 IS_ARITH_CON    STJ     9F
@@ -604,7 +620,12 @@ CON_CHK_DIV     CMP5    SLASH(TYPE)
                 JMP     CON_CHK_PWR
 1H              ENTA    *
 2H              ENTX    *
-                JMP     PRINT_REDUC
+                LD5     0,3(LLINK)
+                LD5     0,5(TYPE)
+                J5Z     3F
+                ENT6    1
+
+3H              JMP     PRINT_REDUC
                 SRAX    5
                 DIV     1,4
                 JMP     CLEANUP_CON
@@ -635,14 +656,13 @@ CLEANUP_CON     JMP     REPLACE_ROOT_A
 PRINT_REDUC     STJ     9F
                 STA     1F(0:2)
                 ST2     3F(0:2)
-                ST2
                 ENT2    0,1
                 ENT1    OUTBUF
 3H              MOVE    LBL_ARITH_CON(4)
-                LD1     1,3
-                ST1     OUTBUF+6
                 STX     2F(0:2)
                 CMP6    =1=
+                JE      4F
+                CMP6    =3=
                 JE      4F
                 CHAR
                 STX     OUTBUF+5
@@ -651,9 +671,13 @@ PRINT_REDUC     STJ     9F
 2H              ENTX    *
                 CMP6    =2=
                 JE      4F
+                CMP6    =3=
+                JE      4F
                 SLAX    5
                 CHAR
 4H              STX     OUTBUF+8
+                LDA     1,3
+                STA     OUTBUF+6
                 OUT     OUTBUF(18)
                 JMP     CLEAR_OUTBUF
                 ENT1    0,2
@@ -757,6 +781,8 @@ HANDLE_ZEROES   STJ     9F
                 ENT6    1
                 JMP     9F
 CHECK_ZRIGHT    ENT4    0,2    * 4 is the left link
+                CMP5    NEGOP(TYPE)
+                JE      9F
                 LD2     0,2(RLINKT)  * 2 is the right link
                 LDA     0,2(TYPE)
                 JANZ    9F
@@ -787,7 +813,8 @@ CHECK_ZRIGHT    ENT4    0,2    * 4 is the left link
 
                 ENTA    0
                 JMP     8F
-2H              NOP     * replace with 1
+2H              JMP     9F     * replace with 1
+3H              
 8H              JMP     REPLACE_ROOT_A
                 ENT6    1
 9H              JMP     *
@@ -801,11 +828,12 @@ REPLACE_ROOT_NODE STJ   9F
                 STA    0,3(3:5)
                 LD6    0,3(LLINK)
 3H              ENT2   0,6
+                J2Z    9F   *  our left link is empty
                 LD6    0,6(RLINKT)
-                J6N    4F * are we at our thread
+                J6NP   4F * are we at our thread
                 JMP    3B
 4H              ST3    0,2(RLINK)
-9H                JMP   *
+9H              JMP   *
 
 HANDLE_ONES     STJ     9F
                 LD5     0,3(TYPE)
@@ -835,16 +863,17 @@ HANDLE_ONES     STJ     9F
                 JE      2F
                 LD4     0,2(RLINK)
                 
-* the right node is a one of a * or /. Grab llink, type, and value,
+* the left node is a one of a * or /. Grab llink, type, and value,
 * of the root's left and move it to the root node. Re-thread new left's far right
 * node to point to root
-1H              ENT2   LBL_ONE_NODE
-                ENT6   2
-                ENTA   1
+1H              ENT6   2
+                LD4    0,2(RLINK)
                 LDX    1,4
+                ENTA   1
+                ENT2   LBL_ONE_NODE
                 JMP    PRINT_REDUC
 
-                JMP    REPLACE_ROOT_NODE
+BRK             JMP    REPLACE_ROOT_NODE
                 ENT6   1 
                 
                 JMP    9F
@@ -865,9 +894,16 @@ CHECK_ORIGHT    ENT4    0,2    * 4 is the left link
                 JE      2F
 
 1H              JMP     9F
-2H              NOP     * replace with base
-8H              JMP     REPLACE_ROOT_A
+2H              ENT2   LBL_ONE_NODE
+                ENT6   1
+                ENTX   1
+                LDA    1,4
+                JMP    PRINT_REDUC
+
+
+                JMP     REPLACE_ROOT_NODE 
                 ENT6    1
+                JMP     9F
 9H              JMP     *
 
 
@@ -916,15 +952,56 @@ CON_FRAC_MULT   STJ     9F
                 ST1     0,5(LLINK)
                 ST2     0,1(RLINKT)
 
-                JMP     CLEANUP_TREE
+                LDA     0,6(TYPE)
+                JANZ    1F
+                LDA     1,6
+                DECA    1
+                JAZ     2F
 
-                ENTA    1
+
+1H              JMP     CLEANUP_TREE
+
+2H              ENTA    1
                 STA     1,4
 7H              ENT1    *
                 ENT6    1
 * further reduces will take care of simplifying the fraction
 
 9H              JMP     *
+
+DOUBLE_NEGATIVE STJ     9F
+                LD5     0,3(TYPE)
+                CMP5    NEGOP(TYPE)
+                JE      1F
+                JMP     9F
+1H              LD4     0,3(LLINK)
+                LD5     0,4(TYPE)
+                CMP5    NEGOP(TYPE)
+                JNE     9F
+                ENT2    LBL_DBL_NEG
+                ENT6    3
+                ENTA    0 
+                ENTX    0
+                JMP     PRINT_REDUC
+                ENT5    0,4
+                STZ     0,5(RLINKT)
+                LD4     0,4(LLINK)
+                LDA     0,4(3:5)
+                STA     0,3(3:5)
+                LDA     1,4
+                STA     1,3
+* find the tree and repoint it
+                LD6     0,3(LLINK)
+                J6Z     3F
+2H              ENT4    0,6
+                LD6     0,4(RLINKT)
+                J6P     2B
+                ENN6    0,3
+                ST6     0,4(RLINKT)
+3H              ENT6    0,5
+                JMP     CLEANUP_TREE
+                ENT6    1
+9H              JMP     * 
 
 
 PRINTTERM       STJ     9F
@@ -986,6 +1063,10 @@ LBL_CON_FRAC    ALF CONST
                 ALF ANT F
                 ALF RACTI 
                 ALF ON 
+LBL_DBL_NEG     ALF DOUBL
+                ALF E NEG
+                ALF ATIVE
+                CON 0
 
 Y               CON 0
                 CON 0
