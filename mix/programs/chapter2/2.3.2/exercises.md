@@ -212,7 +212,16 @@
     First, arithmetic operations done within a single node:
 
     - Arithmetic on constants
-    - Handling zero nodes (todo - 0 on left side for +/-, x^0 )
+    - Handling zero nodes (todo: x^0 )
     - Handling one nodes  (todo - 1 on the left (1^x) and one and the right for * and /)
     - Multiplication of constant and a fraction
-    - Double Negatives (todo - subtraction)
+    - Double Negatives 
+    - Collapsing of power (x^y^z = x^y*z) (when the power is on the left, todo- on the right)
+
+    Then, checking for optimizations across the tree:
+
+    - Factoring out terms of X 
+    
+    If none of these apply, we do the following as a second pass:
+
+    - Turn non-constant divisions into the inverse
