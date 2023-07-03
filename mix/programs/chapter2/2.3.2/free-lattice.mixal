@@ -1,0 +1,929 @@
+LLINK           EQU     4:5
+RLINK           EQU     1:2
+RLINKT          EQU     0:2
+TYPE            EQU     3:3
+
+
+MAIN           ORIG    100
+               JMP SETUPMEM
+               JMP SETUPTREE
+               LD1 F1(LLINK)
+               JMP  COPY
+               ENT2 0,1
+               LD1 F2(LLINK)
+               JMP  COPY
+               ENTX 0,1
+               ENT1 0,2
+               ENTA RELATIONAL
+               JMP  TREE2
+
+               ENT3 0,1
+               ENT2 ANSWER
+               JMP  INSERT_LEFT
+
+               ENT1 ANSWER
+               JMP  REDUCE
+
+               ENT1 ANSWER
+               JMP  PRINT_EQ
+               HLT
+
+SETUPMEM    STJ 9F
+            LD1 AVAIL
+1H          ENT2 0,1
+            
+            INC2 2
+            ST2 0,1(LLINK)
+            ENT1 0,2
+            CMP1 =MEMORY+2000=
+            JL   1B
+
+9H          JMP *
+
+SETUPTREE   STJ 9F
+
+            ENT6 2
+            JMP MKVAR
+            ENT2  0,1
+
+            ENT6 3
+            JMP MKVAR
+            ENTA JOIN 
+            ENTX 0,2
+            JMP TREE2
+
+            ENT2 0,1
+            ENT6 1
+            JMP  MKVAR
+            ENTX 0,1
+            ENT1 0,2
+            ENTA MEET
+            JMP  TREE2
+            ENT3  0,1
+
+            ENT3 0,1 
+            ENT2 F1 
+            JMP  INSERT_LEFT
+
+            ENN1 F1
+            ST1  F1(RLINKT)
+            
+            ENT6 1
+            JMP  MKVAR
+            ENT2 0,1
+            ENT6 2
+            JMP  MKVAR
+            ENTX 0,2
+            ENTA MEET
+            JMP  TREE2
+
+            ENT4 0,1
+
+
+            ENT6 1
+            JMP MKVAR
+            ENT2 0,1 
+            
+            ENT6 3
+            JMP  MKVAR
+            ENTX 0,2
+            ENTA MEET
+            JMP  TREE2
+
+            ENTX 0,4
+            ENTA JOIN
+            JMP  TREE2
+
+            ENT3 0,1 
+            ENT2 F2 
+            JMP  INSERT_LEFT
+
+            ENN1 F2
+            ST1  F2(RLINKT)
+            
+            ENN1 ANSWER
+            ST1  ANSWER(RLINKT)
+
+9H          JMP *
+
+COPY            STJ     9F
+* assume I1 is the node to be copied and no other register can be used (or at least restored)
+                ST2     RESTORE2(0:2)
+                ST3     RESTORE3(0:2)
+                ST4     RESTORE4(0:2)
+                ST5     RESTORE5(0:2)
+                ST6     RESTORE6(0:2)
+CREATEROOT      LD2     AVAIL   * root node
+                LDX     0,2(LLINK)
+                STX     AVAIL
+                STZ     0,2
+                ENT6    0,2
+
+C2              LDA     0,1(RLINKT)
+                JANP    C3
+
+                LD3     AVAIL
+                LDX     0,3(LLINK)
+                STX     AVAIL
+                STZ     0,3
+
+                JMP    INSERT_RIGHT
+
+C3              LDA     1,1
+                STA     1,2
+
+                LDA     0,1(TYPE)
+                STA     0,2(TYPE)
+
+C4              LDA     0,1(LLINK)
+                JAZ     C5
+
+                LD3     AVAIL
+                LDX     0,3(LLINK)
+                STX     AVAIL
+                STZ     0,3
+
+                JMP INSERT_LEFT
+
+C5              ENT3 0,1
+                JMP PRE_SUCC
+                ENT1 0,3
+
+                ENT3 0,2
+                JMP PRE_SUCC
+                ENT2 0,3 
+                J2NZ C2  *  check if our algorithm is done, since our new node
+
+                ENT1 0,6
+
+RESTORE2        ENT2     *
+RESTORE3        ENT3     *
+RESTORE4        ENT4     *
+RESTORE5        ENT5     *
+RESTORE6        ENT6     *
+9H              JMP      *
+
+* TREE construction
+
+TREE0           STJ     9F
+                JMP     2F
+TREE1           ST1     3F(0:2)
+                JSJ     1F
+TREE2           STX     3F(0:2)
+3H              ST1     *(RLINKT)
+1H              STJ     9F
+                LDXN    AVAIL
+                JXZ     OVERFLOW
+                STX     0,1(RLINKT)
+                LDX     3B(RLINKT)   * in this case, X is U
+                STA     *+1(0:2)      * copies over root node
+                STX     *(LLINK)
+2H              LD1     AVAIL
+                J1Z     OVERFLOW
+                LDX     0,1(LLINK)
+                STX     AVAIL
+                STA     *+1(0:2)
+                MOVE    *(2)
+                DEC1    2
+9H              JMP     *
+
+
+PRE_SUCC     STJ 9F
+             ENT5 0,3
+S1           LD3 0,3(LLINK)
+             J3P 9F 
+             ENT3 0,5
+S2           LD5 0,3(RLINKT)
+             LD3 0,3(RLINK) 
+             CMP3 0,3(RLINK)
+             JE 9F  *  we are pointing to ourself
+             J5N S2
+9H           JMP *
+
+* I3 is node to insert, I2 is node to insert right of
+INSERT_RIGHT     STJ 9F
+                 LD4 0,2(RLINKT)
+                 ST4 0,3(RLINKT)
+                 STZ 0,3(LLINK)
+                
+                 ST3 0,2(RLINKT)
+9H               JMP * 
+
+
+* I3 is node to insert, I2 is node to insert left of
+INSERT_LEFT  STJ 9F
+            
+             ST3 0,2(LLINK)
+             ENT5 0,3
+1H           LD4 0,5(RLINKT)
+             J4P 2F
+             ENN4 0,2
+             ST4 0,5(RLINKT)
+             JMP 9F
+2H           ENT5 0,4
+             JMP 1B
+              
+9H           JMP *
+
+
+
+* I1 should be the tree to reduce.
+* I6 will track if there are reductions or not
+REDUCE          STJ     9F
+                ST1     1F(0:2)
+1H              ENT1    * 
+                JMP     PRINT_EQ
+                LD1     1B(0:2)
+                ENT6    0
+                ENT2    TRY_REDUCE
+                JMP     TRY_REDUCTION
+                J6NZ    1B
+9H              JMP     *
+
+
+TRY_REDUCTION   STJ     9F
+                ST2     8F(0:2) * this is the functions to try
+                ENT3    0,1
+1H              JMP     PRE_SUCC
+                DEC3    0,1
+                J3Z     9F
+                INC3    0,1
+8H              JMP     * 
+                J6NZ    9F
+2H              DEC3    0,1
+                J3Z     9F
+                INC3    0,1
+                JMP     1B
+9H              JMP     *
+
+* i3 is the node to check, I6 is 1 if a reduction
+TRY_REDUCE      STJ     9F
+                JMP     RULE_1
+                J6Z     RULE_2
+                J6Z     RULE_3
+                J6Z     RULE_4
+                J6Z     RULE_5
+                J6Z     RULE_6
+                J6Z     RULE_AND
+                J6Z     RULE_OR
+9H              JMP     *
+
+* x V Y > W ^ Z
+RULE_1          STJ     9F
+                LD5     0,3(TYPE)
+                CMP5    RELATIONAL(TYPE)
+                JNE     9F
+                LD2     0,3(LLINK)
+                LD5     0,2(TYPE)
+                CMP5    JOIN(TYPE)
+                JNE     9F
+                LD4     0,2(RLINK)
+                LD5     0,4(TYPE)
+                CMP5    MEET(TYPE)
+                JNE     9F
+
+                ST2     R1_JOIN
+                ST4     R1_MEET
+                
+                LDA     1,2
+                LDX     1,4
+                ENT2    LBL_RULE_1
+                JMP     PRINT_REDUC
+
+                LD2     0,3(LLINK)
+
+                ST1     8F(0:2)
+* X V Y  > W
+                ENT1    0,2
+                STZ     0,2(RLINKT)
+                JMP     COPY
+                ENT5    0,1
+                LD4     0,4(LLINK) * W
+                LD6     0,4(RLINKT) * Z
+                STZ     0,4(RLINKT)
+                ENT1    0,4
+                JMP     COPY
+                ENTX    0,5
+                ENTA    RELATIONAL
+                JMP     TREE2
+                ENT5    0,1
+                ST6     0,4(RLINKT)
+
+* X V Y > Z
+                ENT1    0,6
+                JMP     COPY
+                LDX     R1_JOIN
+                ENTA    RELATIONAL
+                JMP     TREE2
+
+                ENTX    0,5
+                ENTA    OR
+                JMP     TREE2
+                ENT5    0,1
+
+* X > W ^ Z
+                LD1     R1_JOIN
+                LD1     0,1(LLINK) * X
+                ENT2    0,1
+                LD4     0,1(RLINK) * Y
+                STZ     0,1(RLINKT)
+                JMP     COPY
+                ST4     0,2(RLINKT)
+                ENT2    0,1
+
+                LD1     R1_MEET
+                JMP     COPY
+
+                ENTX    0,2
+                ENTA    RELATIONAL
+                JMP     TREE2
+
+                ENTX     0,5
+                ENTA     OR
+                JMP      TREE2
+                ENT5     0,1
+
+*  Y > W ^ Z
+BRK             ENT1     0,4 * y
+                JMP      COPY
+                ENTX     0,1
+                LD1      R1_MEET
+                ENTA     RELATIONAL
+                JMP      TREE2
+
+                ST1      0,5(RLINKT)
+
+                LDA      OR(3:5)
+                STA      0,3(3:5)
+                LDA      OR+1
+                STA      1,3
+
+                NOP
+                ENT6     0,3
+                ENT3     0,5
+                ENT2     0,6 
+
+                JMP     INSERT_LEFT
+
+                ENT6    1
+
+8H              ENT1    *
+9H              JMP     *
+R1_JOIN         NOP     *
+R1_MEET         NOP     *
+
+
+RULE_2          STJ     9F
+                LD5     0,3(TYPE)
+                CMP5    RELATIONAL(TYPE)
+                JNE     9F
+                LD2     0,3(LLINK)
+                LD5     0,2(TYPE)
+                CMP5    MEET(TYPE)
+                JNE     9F  
+                LDA     1,2
+                LD4     0,2(RLINK)
+                LDX     1,4
+                ENT2    LBL_RULE_2
+                JMP     PRINT_REDUC
+                ENT6    0
+
+                ST1     8F(0:2)
+
+* X ^ Y > Z
+                LD2    0,3(LLINK)  * 2 is ^ 
+                LD5    0,2(LLINK)  *  five is X
+                LD4    0,5(RLINKT)  * 4 is Y
+
+                LD1    0,3(LLINK)  
+                LD1    0,1(RLINK) * 1 is Z
+                ENT6   0,1
+                JMP    COPY
+                ENTX   0,5  * not copying X
+                ENTA   RELATIONAL
+                JMP    TREE2
+                ENT2   0,1
+                
+
+* not copying z or y in this case
+                ENTX  0,4
+                ENT1  0,6
+                ENTA  RELATIONAL
+                JMP   TREE2
+
+                ST1    0,2(RLINKT)
+                LD1    0,3(LLINK)   * old link
+* now rewrite the top as an and
+                LDA    AND(3:5) 
+                STA    0,3(3:5)
+                LDA    AND+1
+                STA    1,3
+
+
+                ENT6   0,3
+                ENT3   0,2 
+                ENT2   0,6
+
+                JMP   INSERT_LEFT
+
+                LDA    AVAIL
+                STA    0,1(LLINK)
+                ST1    AVAIL
+
+                ENT6   1
+
+8H              ENT1    *
+
+9H              JMP     *
+
+* X > Y V Z
+RULE_3          STJ     9F
+                LD5     0,3(TYPE)
+                CMP5    RELATIONAL(TYPE)
+                JNE     9F
+                LD2     0,3(LLINK) * x
+                LD4     0,2(RLINK) * V node
+                LD5     0,4(TYPE)
+                CMP5    JOIN(TYPE)
+                JNE      9F
+                
+                LDA     1,2
+                LDX     1,4
+                ENT2    LBL_RULE_3
+                JMP     PRINT_REDUC
+
+                LD2     0,3(LLINK)
+
+                ST1     8F(0:2)
+                
+                ENT1    0,2
+* have to make sure we only copy left node
+                STZ     0,1(RLINKT)
+                JMP     COPY
+                ENTX    0,1 
+                ENT6    0,4
+                LD1     0,4(LLINK)  * this points to Y
+                LD4     0,4(LLINK) 
+                LD4     0,4(RLINK)  * this now points to z (since tree 2 will mess with threads)
+                ENTA    RELATIONAL
+                JMP     TREE2  * I1 is now X > y
+                ENT5    0,1
+
+                ENTX    0,2
+                ENT1    0,4 * now points to Z
+                ENTA    RELATIONAL
+                JMP     TREE2       * this points to Y
+                ST1     0,5(RLINKT)
+
+                LDA     AND(3:5)
+                STA     0,3(3:5)
+                LDA     AND+1
+                STA     1,3(3:5)
+
+                ENT2    0,3
+                ENT3    0,5
+
+                JMP     INSERT_LEFT
+                
+                LDA    AVAIL
+                STA    0,6(LLINK)
+                ST6    AVAIL
+
+                ENT6    1 
+
+8H              ENT1    *
+
+9H              JMP     *
+
+* x < Y ^ Z  
+RULE_4          STJ     9F
+                LD5     0,3(TYPE)
+                CMP5    RELATIONAL(TYPE)  
+                JNE     9F
+                LD2     0,3(LLINK)  * x
+                LD5     0,2(TYPE)
+                CMP5    VARIABLE(TYPE)
+                JNE     9F
+                LD4     0,2(RLINK)   * y ^ z
+                LD5     0,4(TYPE)
+                CMP5    MEET(TYPE)
+                JNE     9F
+                
+                LDA     1,2
+                LDX     1,4
+                ENT2    LBL_RULE_4
+                JMP     PRINT_REDUC
+
+                LD2     0,3(LLINK)
+
+                ST1     8F(0:2)
+
+                ENT1    0,2
+                STZ     0,1(RLINKT)
+                JMP     COPY
+                ENTX    0,1
+                LD1     0,4(LLINK)
+                ENT6    0,4
+                LD4     0,1(RLINKT)
+                STZ     0,1(RLINKT)
+                ENTA    RELATIONAL
+                JMP     TREE2
+                ENTX    0,2
+                ENT2    0,1
+
+                ENT1    0,4
+                ENTA    RELATIONAL
+                JMP     TREE2
+                ST1     0,2(RLINKT)
+ 
+                LDA     OR(3:5)
+                STA     0,3(3:5)
+                LDA     OR+1
+                STA     1,3(3:5)
+
+                ENT5    0,2
+                ENT2    0,3
+                ENT3    0,5
+
+                JMP     INSERT_LEFT
+                
+                LDA    AVAIL
+                STA    0,6(LLINK)
+                ST6    AVAIL
+
+                ENT6    1 
+
+8H              ENT1    *
+9H              JMP     *
+
+* X V Y  > z
+RULE_5          STJ     9F
+                LD5     0,3(TYPE)
+                CMP5    RELATIONAL(TYPE)
+                JNE     9F
+                LD2     0,3(LLINK)
+                LD5     0,2(TYPE)
+                CMP5    JOIN(TYPE)
+                JNE     9F
+                LD4     0,2(RLINK)
+                LD5     0,4(TYPE)
+                CMP5    VARIABLE(TYPE)
+                JNE     9F
+                
+                
+                LDA     1,2
+                LDX     1,4
+                ENT2    LBL_RULE_5
+                JMP     PRINT_REDUC
+
+                LD2     0,3(LLINK)
+                ENT6    0,2  * V node
+
+                ST1     8F(0:2)
+
+                ENT1    0,4
+                JMP     COPY
+                LD2     0,2(LLINK)  * x 
+                LD5     0,2(RLINK)  * y
+                ENTX    0,2
+                ENTA    RELATIONAL
+                JMP     TREE2
+                ENT2    0,1
+
+                ENT1    0,4
+                ENTX    0,5
+                ENTA    RELATIONAL
+                JMP     TREE2
+
+                ST1     0,2(RLINK)
+
+                LDA     OR(3:5)
+                STA     0,3(3:5)
+                LDA     OR+1
+                STA     1,3
+
+                ENT5    0,3
+                ENT3    0,2
+                ENT2    0,5
+
+                JMP     INSERT_LEFT
+                 
+                ENT6    1
+8H              ENT1    *
+9H              JMP     *
+
+* x < x
+RULE_6          STJ     9F
+                LD5     0,3(TYPE)
+                CMP5    RELATIONAL(TYPE)
+                JNE     9F
+                LD2     0,3(LLINK)
+                LD5     0,2(TYPE)
+                CMP5    VARIABLE(TYPE)
+                JNE     9F
+                LD4     0,2(RLINK)
+                LD5     0,4(TYPE)
+                CMP5    VARIABLE(TYPE)
+                JNE     9F
+
+                LDA     1,2
+                LDX     1,4
+                ENT2    LBL_RULE_6
+                JMP     PRINT_REDUC
+
+                LD2     0,3(LLINK)
+
+                ST1     8F(0:2)
+
+                LDA     1,2
+                CMPA    1,4
+                JNE     1F
+* its true
+                ENT1    TRUE
+                JMP     2F
+* its false
+1H              ENT1    FALSE
+2H              JMP     COPY
+                ENT4    0,1
+                JMP     REPLACE_ROOT_NODE
+                ENT6    1
+8H              ENT1    *
+9H              JMP     *
+
+
+RULE_AND        STJ     9F
+                LD5     0,3(TYPE)
+                CMP5    AND(TYPE)
+                JNE     9F
+                LD2     0,3(LLINK)
+                LD4     0,2(RLINK)
+                LD5     0,2(TYPE)
+                CMP5    TRUE(TYPE)
+                JE      1F
+                CMP5    FALSE(TYPE)
+                JE      2F
+                JMP     9F
+1H              LD5     0,4(TYPE)
+                CMP5    FALSE(TYPE)
+                JE      2F
+                CMP5    TRUE(TYPE)
+                JE      3F
+                JMP     9F
+                
+2H              ENT5    FALSE
+                JMP     4F
+3H              ENT5    TRUE 
+
+4H              LDA     1,2
+                LDX     1,4
+                ENT2    LBL_RULE_AND
+                JMP     PRINT_REDUC
+
+                ST1     8F(0:2)
+
+                ENT1    0,5
+                JMP     COPY
+                ENT4    0,1
+                JMP     REPLACE_ROOT_NODE
+
+                ENT6    1
+
+8H              ENT1    *
+9H              JMP     *
+
+RULE_OR         STJ     9F
+                LD5     0,3(TYPE)
+                CMP5    OR(TYPE)
+                JNE     9F
+                LD2     0,3(LLINK)
+                LD4     0,2(RLINK)
+                LD5     0,2(TYPE)
+                CMP5    TRUE(TYPE)
+                JE      3F
+                CMP5    FALSE(TYPE)
+                JE      1F
+                JMP     9F
+1H              LD5     0,4(TYPE)
+                CMP5    FALSE(TYPE)
+                JE      2F
+                CMP5    TRUE(TYPE)
+                JE      3F
+                JMP     9F
+                
+2H              ENT5    FALSE
+                JMP     4F
+3H              ENT5    TRUE 
+
+4H              LDA     1,2
+                LDX     1,4
+                ENT2    LBL_RULE_OR
+                JMP     PRINT_REDUC
+
+                ST1     8F(0:2)
+
+                ENT1    0,5
+                JMP     COPY
+                ENT4    0,1
+                JMP     REPLACE_ROOT_NODE
+
+                ENT6    1
+
+8H              ENT1    *
+9H              JMP     *
+
+
+
+* A is left, X is right, 3 is root node, set 6 to 1 if A is text, or 2 if X is text
+PRINT_REDUC     STJ     9F
+                ST2     3F(0:2)
+                ENT2    0,1
+                ENT1    OUTBUF
+3H              MOVE    *(4)
+                STA     OUTBUF+5
+                STX     OUTBUF+8
+                LDA     1,3
+                STA     OUTBUF+6
+                OUT     OUTBUF(18)
+                JMP     CLEAR_OUTBUF
+                ENT1    0,2
+9H              JMP     *
+
+*I3 is the root node, only cleans direct children
+CLEAN_CHILDREN  STJ   9F
+                LD6     0,3(LLINK)  * return memory
+                LDX     AVAIL
+                STX     0,6(LLINK)
+                ST6     AVAIL
+                STZ     0,3(LLINK)
+
+1H              LD6     0,6(RLINKT)
+                J6NP    9F
+                LDX     AVAIL
+                STX     0,6(LLINK)
+                ST6     AVAIL
+                JMP     1B
+
+
+9H               JMP   *
+* Sets the root node, and cleans up memory below
+* at this point, I3 is the root node, A is the value to update
+REPLACE_ROOT_A  STJ     9F
+                STA     1,3
+                STA     3F(0:2)
+                STZ     0,3(TYPE)  * make it a new constant
+
+                JMP     CLEAN_CHILDREN 
+
+9H              JMP     *
+
+
+* Assuming I6 is the tree with an zero right link, clean it up
+CLEANUP_TREE    STJ     9F
+                ENT5    0,6
+                JMP     2F
+SS3             ENT6    0,5
+                LD5N    1,5(RLINKT) 
+                J5Z     9F
+                LDA     AVAIL
+                STA     0,6(LLINK)
+                ST6     AVAIL    * return memory
+SS1             J5NN    1F
+                ENN6    0,5
+SS2             ENT5    0,6
+2H              LD6     0,5(LLINK)
+                J6P     SS2 
+                JMP     SS3 
+                
+9H              JMP     *
+
+*I3 is the root, I4 is the node to copy up
+REPLACE_ROOT_NODE STJ   9F
+                LDA    1,4
+                STA    1,3
+                LDA    0,4(3:5) * tag and left link
+                JMP    CLEAN_CHILDREN
+                STA    0,3(3:5)
+                LD6    0,3(LLINK)
+3H              ENT2   0,6
+                J2Z    9F   *  our left link is empty
+                LD6    0,6(RLINKT)
+                J6NP   4F * are we at our thread
+                JMP    3B
+4H              ST3    0,2(RLINK)
+9H              JMP   *
+
+*I6 is the variable
+MKVAR           STJ    9F
+                ENT1   VARIABLE
+                JMP    COPY
+                ST6    1,1
+9H              JMP    *
+
+PRINTTERM       STJ     9F
+                CMP4    =24=
+                JNE      1F
+                OUT     OUTBUF(18)
+                ENT1    OUTBUF
+                MOVE    EMPTY(24)
+                ENT4    0
+1H              STA     OUTBUF,4
+                INC4    1
+9H              JMP     *
+
+
+PRINT_EQ        STJ     9F
+                ENT4    0
+                ST1     TEMP
+                ENT3    0,1
+1H              JMP     PRE_SUCC
+                CMP3    TEMP 
+                JE      8F
+PRINT_NODE      LDA     1,3
+                JMP     PRINTTERM
+2H              ENTA    0 
+                JMP     PRINTTERM
+3H              JMP     1B
+8H              OUT     OUTBUF(18)
+                JMP     CLEAR_OUTBUF
+9H              JMP     *
+TEMP            CON     0
+                
+CLEAR_OUTBUF    STJ     9F
+                ENT1    OUTBUF
+                MOVE    EMPTY(24)
+9H              JMP     *
+
+OVERFLOW        HLT
+UNDERFLOW       HLT
+
+
+FALSE           CON     0
+                ALF FALSE
+VARIABLE        CON     1*4096
+                ALF      X
+RELATIONAL      CON     2*4096
+                ALF      >
+OR              CON     3*4096
+                ALF     OR 
+AND             CON     4*4096
+                ALF    AND
+JOIN            CON     5*4096
+                ALF      V
+MEET            CON     6*4096
+                CON     10      
+TRUE            CON     7*4096
+                ALF   TRUE
+
+LBL_RULE_1      ALF RULE
+                ALF  1: X 
+                ALF V Y >
+                ALF W ∆ Z 
+
+LBL_RULE_2      ALF RULE
+                ALF  2: X 
+                ALF  ∆ Y > 
+                ALF   Z
+
+LBL_RULE_3      ALF RULE
+                ALF  3: X 
+                ALF  > Y V 
+                ALF   Z
+
+LBL_RULE_4      ALF RULE
+                ALF  4: X 
+                ALF  > Y ∆ 
+                ALF   Z
+
+LBL_RULE_5      ALF RULE
+                ALF  5: X 
+                ALF  V Y < 
+                ALF   Z
+
+LBL_RULE_6      ALF RULE
+                ALF  6: X 
+                ALF  > Y  
+                CON  0
+
+LBL_RULE_AND    ALF RULE
+                ALF  AND: 
+                ALF  X AND  
+                ALF   Y
+
+LBL_RULE_OR     ALF RULE
+                ALF  OR: 
+                ALF  X OR  
+                ALF Y
+
+F1              CON 0
+                CON 0
+F2              CON 0
+                CON 0
+F3              CON 0
+                CON 0
+ANSWER          CON 0
+                CON 0
+OUTBUF          ORIG *+24
+EMPTY           ORIG *+24
+AVAIL           CON MEMORY
+MEMORY          ORIG *+2000
+                END MAIN

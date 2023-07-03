@@ -1,0 +1,118 @@
+N               EQU   9  * one more than the nodes 
+RLINKT          EQU   0:2
+RLINK           EQU   1:2
+LLINK           EQU   4:5
+                ORIG  100
+
+MAIN            JMP   CREATE_TREE
+                JMP   CREATE_LIST
+                JMP   PRINT_ROOT
+                JMP   WALK_LEFT
+                JMP   WALK_RIGHT
+                HLT
+
+CREATE_TREE     STJ   9F
+                ENT1  1           * j
+1H              LD2   PARENT,1    * Parent[j]
+                ENN4  0,2         * for right threads
+                J2NZ  2F
+                ENT6  0,1  * I6 is the root node
+2H              LD3   LOOKUP,2    * children of parent[j]
+                J3NZ  ADD_RIGHT_CHILD
+ADD_LEFT_CHILD  ST4   TREE,1(RLINKT)  * set root node's rlink to this one
+                ST1   TREE,2(LLINK) 
+                JMP   3F
+ADD_RIGHT_CHILD LD5   TREE,3(RLINKT) 
+                ST5   TREE,1(RLINKT)  * set child node's rlink to this one
+                ST1   TREE,3(RLINKT)
+3F              ST1   LOOKUP,2
+                INC1  1
+                CMP1  =N=
+                JNE   1B
+                STZ   TREE,4(RLINKT)
+9H              JMP   *
+
+PRE_SUCC     STJ 9F
+             ENT5 0,1
+S1           LD1 TREE,1(LLINK)
+             J1P 9F 
+             ENT1 0,5
+S2           LD5 TREE,1(RLINKT)
+             LD1 TREE,1(RLINK) 
+             J1Z 9F
+             J5N S2
+9H           JMP *
+
+CREATE_LIST     STJ   9F
+                ENT1  0,6
+1H              ENT3  0,1
+                JMP   PRE_SUCC
+                J1Z   2F
+                ST3   DBL_LIST,1(LLINK) 
+                ST1   DBL_LIST,3(RLINK)
+                JMP   1B
+2H              ST3   DBL_LIST,6(LLINK) 
+                ST6   DBL_LIST,3(RLINK)
+9H              JMP   *
+
+PRINT_ROOT      STJ   9F
+                ENT1  OUTBUF
+                MOVE  LBL_ROOT(3)
+                ENTA  0,4
+                CHAR
+                STX   OUTBUF+4
+                OUT   OUTBUF(18)
+9H              JMP   *
+
+WALK_LEFT       STJ   9F
+                ENT5  0
+                ENT1  0,6
+1H              ENTA  0,1 
+                CHAR
+                STX   OUTBUF,5
+                STZ   OUTBUF+1,5
+                LD1   DBL_LIST,1(LLINK)
+                ENTA  0,1
+                DECA  0,6
+                JAZ   8F   * back at root
+                INC5  2
+                JMP  1B
+8H              OUT  OUTBUF(18)
+9H              JMP   *
+
+WALK_RIGHT      STJ   9F
+                ENT5  0
+                ENT1  0,6
+1H              ENTA  0,1 
+                CHAR
+                STX   OUTBUF,5
+                STZ   OUTBUF+1,5
+                LD1   DBL_LIST,1(RLINK)
+                ENTA  0,1
+                DECA  0,6
+                JAZ   8F   * back at root
+                INC5  2
+                JMP  1B
+8H              OUT  OUTBUF(18)
+9H              JMP   *
+
+
+PARENT          CON  0
+                CON  3
+                CON  8
+                CON  4
+                CON  0
+                CON  4
+                CON  8
+                CON  3
+                CON  4 
+
+LOOKUP          ORIG *+N
+TREE            ORIG *+N
+DBL_LIST        ORIG *+N
+OUTBUF          ORIG *+24
+
+LBL_ROOT        ALF  ROOT
+                ALF  NODE
+                ALF  IS:
+                END  MAIN

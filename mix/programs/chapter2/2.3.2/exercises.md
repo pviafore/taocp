@@ -225,3 +225,55 @@
     If none of these apply, we do the following as a second pass:
 
     - Turn non-constant divisions into the inverse
+
+    I'm not going to go much further than this, because it shows replacing nodes with other nodes, handling nodes at different depths of the tree, replacing nodes with values, and rearranging nodes.
+
+18) Create an efficient algorithm that transforms an array of node-to-parent lookups to a pre-order doubly-linked list.
+
+    For simplicity, I'm keeping the info of the nodes to a single byte, so that a double linked list node is just one word wide.
+
+    Assuming that a table of N words can be used as a lookup (which means linear space considerations), we can create a lookup of node to farthest-right child.
+
+    If it's zero, then you need to insert to the left link and set the thread to root. If it's set, you need to set right link, copying it's right thread to what you just inserted if need to.
+
+    So you iterate through the nodes, looking at their parent and inserting according to the rules above. If you see a zero, then you know that node is a root node -- save if off.
+
+    After this linear time transformation, you have a binary tree representation of the tree, and even better, it's threaded.
+
+    Now, we can pre-order through the binary tree with the help of the threads. You can create a new list of nodes by just doing the pre-order, and saving off the llink/rlink setup. At the very end, set the last node's right link to the root and the root's left link to the current.
+
+    So we have O(n) transformation of the tree, and a O(n) transformation to the tree. We have 2 space allocation of n nodes, one to store the to-child-lookup and one for the doubly linked list.
+
+    If we need to do a in-place, then it's probably worth keeping a stack instead of threads, since we can store more information (such as the right thread of the node, since we might overwrite that as we work.)
+
+    I was trying to think if there's a way to do it without having to create the intermediate tree, but I don't know how we'll know what the next node is in pre-order in just one pass. 
+
+    For the non-in-place double transform method, see [parent-to-preorder.mixal](parent-to-preorder.mixal)
+
+19) Define an algorithm to define ≼ for a free lattice, given the six rules in the book.
+
+    So for this, we're going to have to take two trees and see if something satisfies the relational operator. We can track the operations for the two trees, building a new tree as we go. The new tree can keep track of not just variables but a list of variables: so that when we see a V b ≼ a, we can keep track of a, and b moving forward (a being left link of the root and b being the right link of a)
+
+    We'll start by setting up a tree with a node being ≼ and each formula being a left link and right link (in the binary tree representation of a tree). We'll then go post-order through the tree to see if we have any relation operators, in which case we'll simplify given the rules. 
+
+    Our nodes will be one of the following:
+
+    - Or
+    - And
+    - Relational
+    - Variable-set
+    - Join
+    - Meet
+    - False
+    - True
+
+    I'm going to do a similar reduction algorithm as my differentiations where I will be constantly looping through the tree looking for reductions, until no more reductions are found. By the end of it, you'll get the following: 
+
+    - and nodes
+    - or nodes,
+    - true nodes
+    - false nodes
+
+    Once we get to here, we can do another post-order resolution of boolean logic. 
+
+    See [free-lattice.mixal](free-lattice.mixal).
