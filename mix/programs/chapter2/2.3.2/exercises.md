@@ -277,3 +277,29 @@
     Once we get to here, we can do another post-order resolution of boolean logic. 
 
     See [free-lattice.mixal](free-lattice.mixal).
+
+20) Prove thatif u and v are nodes of a forest, u is a proper ancestor of v iff u precedes v in pre order and u followsw v in post order
+
+    In order to be a proper ancestor, they need to be in the same tree.
+
+    If u precedes v in preorder, then u is either part of the same tree and a root visited first which is u, then v, or v is in a separate tree (traversed after u's tree)
+
+    However, if u follows v in post-order, then either u is in the same tree (nodes in the tree are visited after the root, so if v is visited first, u may be a root of it), or u is in a following tree. 
+
+    If v is in a separate tree, then u would precede v in post-order (since we have to traverse our tree first).But, since it doesn't, we have to assume they are in the same tree.
+
+21) How would we do ternary operators in the differentiation routine?
+
+    Assuming commutative property of terms, you could *fold* the terms together. Say you had a root node R which contained a ternary operator (say +). The left link would be the first operand, and there would be a chain of rlinks for each operand. You would calculate the first two, and store it into the first llink, and then calculate the llink and the second rlink, then llink and the third rlink, storing in your llink the entire way. When you are done, you copy up that value to your root node R, and clean up all the children.
+
+22) When talking about embedding trees in one another, prove that T can be embedded into T' if T has just one more node, or if they both have more than one node and either T is in the leftmost of T', T is in the rest of T', or left(T) is in left(T') and rest(T) is in rest(T')
+
+    So for adding one more node:
+
+    Inserting a node into the T' will not change the order of nodes in pre-order and post-order - at most it will insert a new node between existing nodes.
+
+    Now, for more than one node, I don't know how to tackle this. If your entire tree is in the left subtree (and this recurses) then it's easy to say yes, it's in there. If it's in the rest of the tree, then it's also easy to say, yup, because the insertion of extra nodes will not change order of pre-order and post-order in these cases.
+
+    However, if the root node is needed for embedding in the left subtree case, then you have to check both left and rest, to make sure you can handle nodes in between the root node of T and l(T)
+
+    I have no idea if the converse holds, but I suspect not.
