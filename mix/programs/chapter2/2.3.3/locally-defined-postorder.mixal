@@ -1,0 +1,82 @@
+* Locally defined function with post-order degree representation of tree
+DEGREE          EQU     2:3
+INFO            EQU     4:5
+N               EQU     10
+MAIN            ORIG    100
+                JMP     SETUP_TREE
+                ENT6    STACK
+                ENT2    SUM
+                JMP     VISIT_TREE
+1H              CMP6    =STACK=
+                JE      9F
+                LDA     -1,6
+                DEC6    1
+                CHAR
+                STX     OUTBUF
+                OUT     OUTBUF(18)
+                JMP     1B
+9F              HLT
+
+SETUP_TREE      STJ     9F
+* setup infos
+                ENTA    1
+                STA     TREE(INFO)
+                ENTA    2
+                STA     TREE+1(INFO)
+                ENTA    3
+                STA     TREE+2(INFO)
+                ENTA    12 
+                STA     TREE+3(INFO)
+                ENTA    4
+                STA     TREE+4(INFO)
+                ENTA    5
+                STA     TREE+5(INFO)
+                ENTA    8 
+                STA     TREE+6(INFO)
+                ENTA    6 
+                STA     TREE+7(INFO)
+                ENTA    11 
+                STA     TREE+8(INFO)
+                ENTA    7 
+                STA     TREE+9(INFO)
+*setup degrees
+                ENTA    1 
+                STA     TREE+2(DEGREE)
+                STA     TREE+5(DEGREE)
+                STA     TREE+7(DEGREE)
+                ENTA    2 
+                STA     TREE(DEGREE)
+                ENTA    3
+                STA     TREE+4(DEGREE)
+9H              JMP     *
+
+VISIT_TREE      STJ     9F
+                ENT1    N-1
+                ST2     2F(0:2)
+1H              J1N     9F
+2H              JMP     *
+                LD3     TREE,1(DEGREE)
+                DEC6    0,3
+                STA     0,6
+                INC6    1
+                DEC1    1
+                JMP     1B
+9H              JMP     *
+
+* just sums up nodes
+* I1 is the node index of tree, I6 is the stack (do not remove it in the ldf)
+SUM             STJ     9F
+                LDA     TREE,1(INFO)
+                LD3     TREE,1(DEGREE)
+                ENT5    -1,6
+1H              J3Z     9F
+                ADD     0,5
+                DEC5    1
+                DEC3    1
+                JMP     1B
+9H              JMP     *
+
+TREE            ORIG    *+10
+STACK           ORIG    *+1000
+OUTBUF          ORIG    *+24
+                END     MAIN
