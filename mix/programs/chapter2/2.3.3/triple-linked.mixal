@@ -1,0 +1,163 @@
+* converts a list of nodes with parents listed into a triply linked tree
+LCHILD          EQU     2:3
+RLINK           EQU     4:5
+INFO            EQU     2:3
+PARENT          EQU     4:5
+
+MAIN            ORIG    *+100
+                JMP     SETUP_NODES
+                JMP     CONVERT_TRIP
+                JMP     PRINT_TRIP
+                HLT
+
+SETUP_NODES     STJ     9F
+                ENTA    1
+                STA     NODEA(INFO)                
+                ENTA    2
+                STA     NODEB(INFO)                
+                ENTA    3
+                STA     NODEC(INFO)                
+                ENTA    4
+                STA     NODED(INFO)                
+                ENTA    5
+                STA     NODEE(INFO)                
+                ENTA    6
+                STA     NODEF(INFO)                
+                ENTA    7
+                STA     NODEG(INFO)                
+                ENTA    8 
+                STA     NODEH(INFO)                
+                ENTA    11
+                STA     NODEJ(INFO)                
+                ENTA    12
+                STA     NODEK(INFO)                
+9H              JMP     *
+
+CONVERT_TRIP    STJ     9F
+                LD6     FIRST   * I6 will track the linked list of remaining nodes to insert
+                STZ     FIRST
+
+1H              J6Z     9F
+                LD5     0,6(PARENT)  * I5 is the parents
+                J5Z     ADD_ROOT
+* the parent exists
+                LDA     1,5(LCHILD)
+                JAZ     ADD_LCHILD
+                JMP     ADD_RLINK
+ADD_LCHILD      ST6     1,5(LCHILD)
+                JMP     NEXT_NODE
+ADD_RLINK       LD4     1,5(LCHILD)
+2H              LD3     1,4(RLINK)   * loop through rlinkis until it's null
+                J3Z     3F
+                ENT4    0,3
+                JMP     2B
+3H              ST6     1,4(RLINK)
+                JMP     NEXT_NODE
+ADD_ROOT        LD4     FIRST
+                J4Z     SET_FIRST
+2H              LD3     1,4(RLINK)
+                J3Z     3F
+                ENT4    0,3
+                JMP     2B
+3H              ST6     1,4(RLINK)
+                JMP     NEXT_NODE
+SET_FIRST       ST6     FIRST
+NEXT_NODE       LD5     1,6(RLINK)
+                STZ     1,6(RLINK)
+                ENT6    0,5
+                JMP     1B
+
+9H              JMP     *
+
+* pre-order printing of tree
+PRINT_TRIP      STJ     9F
+                LD1     FIRST
+1H              J1Z     9F
+2H              ENT2    0,1
+                LD1     1,1(LCHILD)   * descend down left
+                J1NZ    2B
+                ENT1    0,2
+3H              JMP     PRINT_NODE
+                LD2     1,1(RLINK)
+                J2Z     4F   *  go to the left of the rchild
+                ENT1    0,2
+                JMP     2B
+* rchild was empty, go to parent
+4H              LD1     0,1(PARENT)
+                J1Z     9F
+                JMP     3B
+9H              JMP     *
+
+* I1 is the node
+PRINT_NODE      STJ     9F
+                LDA     NODE
+                STA     OUTBUF
+                LDA     0,1(INFO)
+                STA     OUTBUF+1(2:2)
+
+                LDA     PARENT_TXT
+                STA     OUTBUF+3
+                LDA     PARENT_TXT+1
+                STA     OUTBUF+4
+                LD2     0,1(PARENT)
+                J2Z     PRINT_LCHILD
+                LDA     0,2(INFO)
+                STA     OUTBUF+4(4:4)
+            
+PRINT_LCHILD    LDA     LCHILD_TXT 
+                STA     OUTBUF+6
+                LDA     LCHILD_TXT+1
+                STA     OUTBUF+7
+                LD2     1,1(LCHILD)
+                J2Z     PRINT_RLINK
+                LDA     0,2(INFO)
+                STA     OUTBUF+7(4:4)
+            
+PRINT_RLINK     LDA     RLINK_TXT 
+                STA     OUTBUF+9
+                LD2     1,1(RLINK)
+                J2Z     PRINT_IT_OUT
+                LDA     0,2(INFO)
+                STA     OUTBUF+10(3:3)
+
+PRINT_IT_OUT    OUT     OUTBUF(18) 
+                ENT2    0,1
+                ENT1    OUTBUF
+                MOVE    EMPTY(24)
+                ENT1    0,2
+9H              JMP     *
+
+
+NODEA           CON     0
+                CON     0
+NODEB           CON     NODEA
+                CON     NODEA 
+NODEC           CON     NODEA
+                CON     NODEB 
+NODED           CON     0
+                CON     NODEC 
+NODEE           CON     NODED
+                CON     NODED 
+NODEF           CON     NODED
+                CON     NODEE 
+NODEG           CON     NODED
+                CON     NODEF 
+NODEH           CON     NODEE
+                CON     NODEG 
+NODEJ           CON     NODEF
+                CON     NODEH 
+NODEK           CON     NODEC
+                CON     NODEJ 
+
+FIRST           CON     NODEK
+OUTBUF          ORIG    *+24
+EMPTY           ORIG    *+24
+NODE            ALF NODE
+                CON 0
+PARENT_TXT      ALF PAREN
+                ALF T
+LCHILD_TXT      ALF LCHIL
+                ALF D
+RLINK_TXT       ALF RLINK
+                CON 0
+                END MAIN
