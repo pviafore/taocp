@@ -406,7 +406,7 @@ fn _parse_modifier(spl: Vec<&str>, default: u8, program_data: &ProgramData) -> u
         if modifier_split.len() > 1 {
             let modifier: Vec<&str> = modifier_split[1].strip_suffix(')').unwrap().split(':').collect();
             if modifier.len() == 2 {
-                modifier[0].parse::<u8>().unwrap() * 8 + modifier[1].parse::<u8>().unwrap()
+                modifier[0].parse::<u8>().unwrap() * 8 + modifier[1].parse::<u8>().expect(&format!("Invalid digit {}", modifier[1]))
             }
             else {
                 match program_data.symbol_table.get(modifier[0]) {

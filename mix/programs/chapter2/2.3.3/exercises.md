@@ -44,3 +44,47 @@
         - Can it be added as a lchild? If so, add it. Set it's rlink as null
         - Add it as a rlink along the chain of the parent's lchild's rlink (And set your rlink as null)
         - If it has a null parent and first is set, then set it as the first's rlink chain end.
+
+7)  What classes would appear in the book if the relation $9 \equiv 3$ was never given?
+
+    {1,5} {6,8,9}, {3, 7, 2, 4},
+
+8)  Design an algorithm that determines if two elements are equivalent, given Algorithm E has already run and set up the table
+
+    I'm not going to write this MIX program because it's very trivial.
+    Essentially, if you are looking for equivalence for j and k, you just compare if the parents for each node (going up the chain for each) resolve to the same value.
+
+9)  Show the table and diagram of all equivalence classes after running all the input
+
+
+    $ 1 \equiv 5,  6 \equiv 8, 7 \equiv 2,   9 \equiv 8,   3 \equiv 7,   4 \equiv 2,  9 \equiv 3 $
+
+    ```
+    PARENT[k]  5  0  2  2  0  8  2  2  8  
+    k          1  2  3  4  5  6  7  8  9
+    ```
+
+
+    ```
+            5                  2
+            |               / / \ \
+            1               3 4  7 8
+                                  / \
+                                6    9
+    ```
+
+10) How can you make the class equivalence more efficient than n^2
+
+    So if you have input of $i \equiv j$, sort the list by $i$ and make sure that $i \lt j$.  
+
+    Now, (after an $ n \log{n} $ operation), we can start constructing the tree. Due to the sorted nature, we should have far fewer tree merges. We also can allocate some additional space to track "top node", so that each node caches which node is the top. When we merge a tree T1 into T2 (when a leaf node of both of them share an equivalence class), we will just update T2's top node's top node to point to T1's T1. Then to check equivalence or not, you hop through top nodes (updating as you go to fix any later issues).
+
+11) Design an algorithm that will figure out how to overlay arrays of data, so to minimize space, given equivalence class of array indices
+
+    The idea is that for some equivalence class $x[i] \equiv y[j]$, we do the following:
+
+    1. Check if y has a parent. If not, set y's parent to x, and delta to $i - j$. If $ i \gt j$, check if y's end is past x's UBD. If so, update x's UBD.
+
+    2.  If y has a parent, compare it's parent with x's parent (walking up the chain as needed). Sum up the parent's offsets + x and subtract y to get the current delta. If they share the same parent at the top, make sure that delta that is already set matches, otherwise you have conflicting information.
+
+        Check [array_overlap.mixal](array_overlap.mixal)
