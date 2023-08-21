@@ -390,7 +390,7 @@ fn _parse_modifier(spl: Vec<&str>, default: u8, program_data: &ProgramData) -> u
                 else {
                     match program_data.symbol_table.get(modifier[0]) {
                         Some(val) => *val as u8,
-                        None => modifier[0].parse::<u8>().expect(&format!("Invalid symbol: {}", modifier[0]))
+                        None => modifier[0].parse::<u8>().expect(&format!("Invalid symbol: {} in {:?}", modifier[0], spl))
                     }
                 }
             }

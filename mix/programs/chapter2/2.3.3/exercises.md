@@ -88,3 +88,44 @@
     2.  If y has a parent, compare it's parent with x's parent (walking up the chain as needed). Sum up the parent's offsets + x and subtract y to get the current delta. If they share the same parent at the top, make sure that delta that is already set matches, otherwise you have conflicting information.
 
         Check [array_overlap.mixal](array_overlap.mixal)
+
+12) After the algorithm of adding terminates, is Q0 always the address of the root fo the sum? Has P and Q been set to their original values?
+
+    Yes, A11 always ensures that Q is at the root. However, the original term may have been erased in Q (P will still the same), so it's not guaranteed.
+
+
+13) Give a proof that EXP(P) = EXP(Q) and CV(UP(P)) = CV(UP(Q)) at the beginning of step A8
+
+    First, you can check out [add_poly.mixal](add_poly.mixal) to see how add is done.
+
+    So, how do we get to step A8? We've either deleted a zero term right after adding in A3, or we've detected a zero polynomial after deleting a row.
+
+    So if we've added a node in A3, we know that either this was the first insert, or an insert after we went to the right. In either case, we start at A1. In A1 we either go all the way to the bottom (the node above will be a leaf node). If $CV(Q) \lt CV(P)$, then we are going to insert a new node that CV(Q) to the value of CV(P). If they are equal, then that proves that we have CV(P) == CV(Q). Since P and Q then immediately go down one level in either A1 or A2, we have CV(UP(P)) == CV(UP(Q)). 
+
+    On the first insert, we know the left hand side will be all zeroes, so we know that the EXP(P) == EXP(Q) == 0. On subsequent inserts, we advance to the left of our row until we find the right place where the exponent should go. If there is no place where they match, we insert a node to the right with the right exponent so that they do match (moving upwards if needed).
+
+14) Formally prove or disprove the validity of Algorithm A
+
+    This isn't going to be a full formal proof (in fact, nowhere close), but here's what we have to prove individually for Algorithm A to be valid:
+
+    - Every node of P is added into Q
+    - When a term is added, it is added into the right place (see exercise 13)
+    - Deleted terms were terms that have a CV of 0 and a non-zero exponent (step A3) or the only zero / zero term in a child (step A9)
+
+    So we need to show that every node of P is used.
+
+    So for A1, we go all the way down for each node. Then after inserting, we move P to the left, circling all the way around. Once we have a row done, we do step A6 to move upward. This will hit every node with the combination (go all the way down, then circle around left, and go up, then go left again.) You can see something similar in add_poly.mixal where I print hte polynomial for hitting every node.
+
+    Sorry it's nowhere close to a proof, but proofs unfortunately aren't my thing.
+
+15) Design an algorithm to compute the product of two polynomials
+
+    First, we are going to iterate every constant node of P with non zero EXP and CV. For each of these nodes, we are going to iterate every constant node of Q with non zero EXP and CV, giving us a (P,Q)-tuple. Each constant node with this property has a 1:1 relation with a term in the polynomial.
+
+    For each pq-tuple, we need to compute the product. First we'll copy the UP chain of the P polynomial, inserting in any zero terms if needed to make it a valid polynomial. This isolates all the specific variables of the term to just this polynomial and represents a specific term. 
+
+    Then, starting at the bottom, we look at Q and P in concert, variable by variable. We multiply CVs of constants and add EXP of like variables. If there is a gap in the EXP (there is a relational aspect to the variable names, remember), then we just add the term of Q in (Similar to a downward insertion). 
+
+    Once we have this product of two terms represented as a polynomial, we just add it to the polynomial called M.
+
+    Check out [multiply_poly.mixal](multiply_poly.mixal)

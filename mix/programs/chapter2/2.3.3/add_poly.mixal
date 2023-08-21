@@ -1,0 +1,594 @@
+* add two polynomials in doubly-linked ring structures
+LEFT        EQU     2:3
+RIGHT       EQU     4:5
+EXP         EQU     0:1
+UP          EQU     2:3
+DOWN        EQU     4:5
+CV          EQU     0:5
+MAIN        ORIG    100
+            JMP     SETUPMEM
+            JMP     SETUP_TREES
+            LD1     POLY1
+            LD2     POLY2
+            JMP     ADD_POLY
+            LD1     POLY2
+            JMP     PRINT_POLY
+            HLT
+
+SETUPMEM    STJ 9F
+            LD1 AVAIL
+1H          ENT2 0,1
+            
+            INC2 3
+            ST2 0,1(RIGHT)
+            ENT1 0,2
+            CMP1 =MEMORY+2000=
+            JL   1B
+9H          JMP *
+
+
+SETUP_TREES STJ     9F
+            LD1     AVAIL
+            LDA     0,1(RIGHT)
+            STA     AVAIL
+
+            ENTA    29         * top node of z
+            STA     2,1(CV)
+            ST1     0,1(LEFT)
+            ST1     0,1(RIGHT)
+
+            ST1     POLY1
+
+            LD2     AVAIL      * z^0
+            LDA     0,2(RIGHT)
+            STA     AVAIL
+
+            ENTA    27
+            STA     2,2(CV)
+            ST1     1,2(UP)
+            ST2     1,1(DOWN)
+
+            LD3     AVAIL      * z^1
+            LDA     0,3(RIGHT)
+            STA     AVAIL
+
+            ST3     0,2(RIGHT)
+            ST2     0,3(LEFT)
+            ST1     1,3(UP)
+
+            ENTA    28
+            STA     2,3(CV)
+            ENTA    1
+            STA     1,3(EXP)
+
+            LD4     AVAIL      * z^3
+            LDA     0,4(RIGHT)
+            STA     AVAIL
+
+            ST1     1,4(UP)
+            ST3     0,4(LEFT)
+            ST4     0,3(RIGHT)
+            ST2     0,4(RIGHT)
+            ST4     0,2(LEFT)
+
+            ENTA    27
+            STA     2,4(CV)
+            ENTA    3
+            STA     1,4(EXP)
+
+            LD1     AVAIL   * 3 * z^0 * x^0
+            LDA     0,1(RIGHT)
+            STA     AVAIL
+
+            ST1     1,2(DOWN)
+            ST2     1,1(UP)
+            ENTA    3
+            STA     2,1(CV)
+
+            LD3     AVAIL       * 1 * z^0 * x^2
+            LDA     0,3(RIGHT)
+            STA     AVAIL
+
+            ST2     1,3(UP)
+            ST3     0,1(RIGHT)
+            ST3     0,1(LEFT)
+            ST1     0,3(RIGHT)
+            ST1     0,3(LEFT)
+
+            ENTA    2
+            STA     1,3(EXP)
+            ENTA    1
+            STA     2,3(CV)
+
+            LD1     0,2(RIGHT)
+
+            LD2     AVAIL        * 0* y^0 * z^1
+            LDA     0,2(RIGHT)
+            STA     AVAIL
+
+            ST2     1,1(DOWN)
+            ST1     1,2(UP)
+
+            LD3     AVAIL        * yz
+            LDA     0,3(RIGHT)
+            STA     AVAIL
+
+            ST2     0,3(LEFT)
+            ST2     0,3(RIGHT)
+            ST3     0,2(LEFT)
+            ST3     0,2(RIGHT)
+            ST1     1,3(UP)
+
+            ENTA    1
+            STA     1,3(EXP)
+            ENTA    27
+            STA     2,3(CV)
+
+
+            LD1    AVAIL          * 0*xyz
+            LDA    0,1(RIGHT)
+            STA    AVAIL
+
+            ST3    1,1(UP)
+            ST1    1,3(DOWN)
+
+
+            LD2    AVAIL          * xyz
+            LDA    0,2(RIGHT)
+            STA    AVAIL
+
+            ST2    0,1(LEFT)
+            ST2    0,1(RIGHT)
+            ST1    0,2(LEFT)
+            ST1    0,2(RIGHT)
+            ST3    1,2(UP)
+
+            ENTA   1
+            STA    1,2(EXP)
+            STA    2,2(CV)
+
+            LD1    1,3(UP)
+            LD1    0,1(RIGHT)
+
+            LD2    AVAIL          * z^3 * x^0
+            LDA    0,2(RIGHT)
+            STA    AVAIL
+
+            ST1    1,2(UP)
+            ST2    1,1(DOWN)
+            ENTA   1
+            STA    2,2(CV)
+
+            LD3    AVAIL
+            LDA    0,3(RIGHT)
+            STA    AVAIL
+
+            ST3    0,2(LEFT)
+            ST3    0,2(RIGHT)
+            ST2    0,3(LEFT)
+            ST2    0,3(RIGHT)
+
+            ST1    1,3(UP)
+
+            ENTA   -3
+            STA    2,3(CV)
+            ENTA   1
+            STA    1,3(EXP)
+
+
+*second polynomial
+
+            LD1    AVAIL   * z
+            LDA    0,1(RIGHT)
+            STA    AVAIL
+
+            ENTA   29
+            STA    2,1(CV)
+            ST1    0,1(LEFT)
+            ST1    0,1(RIGHT)
+
+            ST1    POLY2
+
+            LD2    AVAIL      * z^0
+            LDA    0,2(RIGHT)
+            STA    AVAIL
+
+            ST2    1,1(DOWN)
+            ST1    1,2(UP)
+
+            ENTA   28
+            STA    2,2(CV)
+
+            LD3    AVAIL        *z^1 
+            LDA    0,3(RIGHT)
+            STA    AVAIL
+
+            ST1    1,3(UP)
+
+            ST2    0,3(LEFT)
+            ST3    0,2(RIGHT)
+            ENTA   1
+            STA    1,3(EXP)
+            ENTA   28
+            STA    2,3(CV)
+
+            LD4    AVAIL          * z^3
+            LDA    0,4(RIGHT)
+            STA    AVAIL
+
+            ST4    0,2(LEFT)
+            ST2    0,4(RIGHT) 
+            ST3    0,4(LEFT)
+            ST4    0,3(RIGHT)
+
+            ST1    1,4(UP)
+            ENTA   3
+            STA    1,4(EXP)
+            ENTA   27
+            STA    2,4(CV)
+
+            LD1    AVAIL        * y^0 * z^0
+            LDA    0,1(RIGHT)
+            STA    AVAIL
+
+            ST1    1,2(DOWN)
+            ST2    1,1(UP)
+            ENTA   27
+            STA    2,1(CV)
+
+            LD3    AVAIL          * y^1 * z^0
+            LDA    0,3(RIGHT)
+            STA    AVAIL
+
+            ST3    0,1(RIGHT)
+            ST3    0,1(LEFT)
+            ST1    0,3(LEFT)
+            ST1    0,3(RIGHT)
+            ST2    1,3(UP)
+
+            ENTA   1
+            STA    1,3(EXP)
+            ENTA   27
+            STA    2,3(CV)
+
+            LD2    AVAIL       * x^0 y^0 z^0
+            LDA    0,2(RIGHT)
+            STA    AVAIL
+
+            ST2    1,1(DOWN)
+            ST1    1,2(UP)
+
+            LD3    AVAIL        * -x^2
+            LDA    0,3(RIGHT)
+            STA    AVAIL
+
+            ST1    1,3(UP)
+            ST3    0,2(LEFT)
+            ST3    0,2(RIGHT)
+            ST2    0,3(LEFT)
+            ST2    0,3(RIGHT)
+
+            ENTA   2
+            STA    1,3(EXP)
+            ENTA   -1
+            STA    2,3(CV)
+
+            LD1    0,1(RIGHT)
+
+            LD2    AVAIL     * z^0 y
+            LDA    0,2(RIGHT)
+            STA    AVAIL
+
+            ST2    1,1(DOWN)
+            ST1    1,2(UP)
+
+            LD3    AVAIL    *  xy
+            LDA    0,3(RIGHT)
+            STA    AVAIL
+
+            ST2    0,3(LEFT)
+            ST2    0,3(RIGHT)
+            ST3    0,2(LEFT)
+            ST3    0,2(RIGHT)
+
+            ST1    1,3(UP)
+
+            ENTA   1
+            STA    1,3(EXP)
+            ENTA   1
+            STA    2,3(CV)
+
+            LD1    1,1(UP)
+            LD1    0,1(RIGHT)
+
+            LD2    AVAIL     * z^1 y^0
+            LDA    0,2(RIGHT)
+            STA    AVAIL
+
+            ST1    1,2(UP)
+            ST2    1,1(DOWN)
+
+            LD3    AVAIL     * z^1y^1
+            LDA    0,3(RIGHT)
+            STA    AVAIL
+
+            ST1    1,3(UP)
+
+            ST2    0,3(LEFT)
+            ST2    0,3(RIGHT)
+            ST3    0,2(LEFT)
+            ST3    0,2(RIGHT)
+
+            ENTA   1
+            STA    1,3(EXP)
+            ENTA   27 
+            STA    2,3(CV)
+
+            LD1    AVAIL      * z^1y^1x^0
+            LDA    0,1(RIGHT)
+            STA    AVAIL
+
+            ST1    1,3(DOWN)
+            ST3    1,1(UP)
+
+            LD2    AVAIL      * -xyz
+            LDA    0,2(RIGHT)
+            STA    AVAIL
+
+            ST2   0,1(LEFT)
+            ST2    0,1(RIGHT)
+            ST1    0,2(LEFT)
+            ST1    0,2(RIGHT)
+
+            ST3    1,2(UP)
+
+            ENTA   1
+            STA    1,2(EXP)
+            ENTA   -1
+            STA    2,2(CV)
+
+            LD1    1,3(UP)
+            LD1    0,1(RIGHT)
+
+            LD2    AVAIL     * z^3x^0
+            LDA    0,2(RIGHT)
+            STA    AVAIL
+
+            ST1    1,2(UP)
+            ST2    1,1(DOWN)
+            ENTA   -1
+            STA    2,2(CV)
+
+            LD3    AVAIL      * 3xz^3
+            LDA    0,3(RIGHT)
+            STA    AVAIL
+
+            ST3    0,2(LEFT)
+            ST3    0,2(RIGHT)
+            ST2    0,3(LEFT)
+            ST2    0,3(RIGHT)
+
+            ST1    1,3(UP)
+
+            ENTA   1
+            STA    1,3(EXP)
+            ENTA   3
+            STA    2,3(CV)
+
+9H          JMP     *
+
+
+* I1 is P and I2 is Q
+ADD_POLY    STJ     9F
+A1          LDA     1,1(DOWN)
+            JANZ    A1A         * is DOWN(P) == null
+1H          LD3     1,2(DOWN)   * set Q <- DOWN(Q) until DOWN(Q) is null
+            J3Z     A3
+            ENT2    0,3
+            JMP     1B
+A1A         LDA     1,2(DOWN)
+            JAZ     A2
+            LDA     2,2(CV)
+            CMPA    2,1(CV)
+            JL      A2
+            JG      A1B
+* CV(P) == CV(Q)      ( we are looking for something that matches variables)
+            LD1     1,1(DOWN)
+            LD2     1,2(DOWN)
+            JMP     A1
+A1B         LD2     1,2(DOWN)
+            JMP     A1
+
+A2          LD3     AVAIL    * R
+            LDA     0,3(RIGHT)
+            STA     AVAIL
+            LD4     1,2(DOWN)  * S
+            J4Z    A2A
+1H          ST3     1,4(UP)   * set the up links to R for all nodes in s and siblings
+            LD4     0,4(RIGHT)
+            LDA     1,4(EXP)
+            JANZ    1B
+A2A         ST2     1,3(UP)
+            LDA     1,2(DOWN)
+            STA     1,3(DOWN)
+            ST3     0,3(LEFT)
+            ST3     0,3(RIGHT)
+            LDA     2,2(CV)
+            STA     2,3(CV)
+            LDA     2,1(CV)
+            STA     2,2(CV)
+            ST3     1,2(DOWN)
+            JMP     A1
+A3          LDA     2,2(CV)
+            ADD     2,1(CV)
+            STA     2,2(CV)   * add CV's together
+            LDX     1,2(EXP)
+            JANZ    1F
+            JXNZ    A8
+1H          JXZ     A7
+A4          LD1     0,1(LEFT)
+            LDA     1,1(EXP)
+            JAZ     A6
+1H          LD2     0,2(LEFT)
+            LDA     1,2(EXP)
+            CMPA    1,1(EXP)
+            JG      1B
+            JE      A1
+A5          LD3     AVAIL    * R
+            LDA     0,3(RIGHT)
+            STA     AVAIL
+            LDA     1,2(UP)
+            STA     1,3(UP)
+            ST2     0,3(LEFT)
+            LD4     0,2(RIGHT)
+            ST4     0,3(RIGHT)
+            LD4     0,4(LEFT)
+            ST3     0,4(RIGHT)
+            LDA     1,1(EXP)
+            STA     1,3(EXP)
+            ENT2    0,3
+            JMP     A1    
+A6          LD1     1,1(UP)
+A7          LDA     1,1(UP)
+            JAZ     A11
+1H          LD4     1,2(UP)
+            LDA     2,4(CV)
+            LD4     1,1(UP)
+            CMPA    2,4(CV)
+            JE      A4 
+            LD2     1,2(UP)
+            JMP     1B
+A8          ENT3    0,2     *    R
+            LD2     0,3(RIGHT)
+            LD4     0,3(LEFT)   * S
+            ST4     0,2(LEFT)
+            ST2     0,4(RIGHT)
+            STZ     0,3
+            STZ     1,3
+            STZ     2,3
+            LDA     AVAIL
+            STA     0,3(RIGHT)
+            ST3     AVAIL
+            LD3     0,1(LEFT)
+            LDA     1,3(EXP)
+            JANZ    A4
+            DEC4    0,2   *( is Q = S)
+            J4NZ    A4
+A9          ENT3    0,2     * R
+            LD2     1,2(UP)
+            LDA     1,3(DOWN)
+            STA     1,2(DOWN)
+            LDA     2,3(CV)
+            STA     2,2(CV)
+            STZ     0,3
+            STZ     1,3
+            STZ     2,3
+            LDA     AVAIL
+            STA     0,3(RIGHT)
+            ST3     AVAIL
+            LD4     1,2(DOWN)     * S
+            J4Z     A10
+1H          ST2     1,4(UP)
+            LD4     0,4(RIGHT)
+            LDA     1,4(EXP)
+            JANZ    1B
+A10         LDA     1,2(DOWN)
+            JANZ    A6
+            LDA     2,2(CV)
+            JANZ    A6
+            LDA     1,2(EXP)
+            JAZ     A6
+            LD1     1,1(UP)
+            JMP     A8
+A11         LD3     1,2(UP)
+            J3Z     9F
+            ENT2    0,3
+            JMP     A11
+9H          JMP     *
+            
+PRINT_POLY  STJ     9F
+1H          JMP     PRINT_NODE
+            ENT2    0,1
+            LD1     1,1(DOWN)
+            J1NZ    1B
+            ENT1    0,2
+3H          LD1     0,1(RIGHT)
+            LDA     1,1(EXP)
+            JANZ    2F
+            LD1     1,1(UP)
+            J1Z     9F
+            JMP     3B
+2H          JMP     1B 
+
+9H          JMP     *
+
+PRINT_NODE  STJ     9F
+            LDA     ADDRESS
+            STA     OUTBUF
+            ENTA    0,1
+            CHAR   
+            STX     OUTBUF+1
+
+            LDA     UP_LBL
+            STA     OUTBUF+3
+            LDA     1,1(UP)
+            CHAR
+            STX     OUTBUF+4
+
+            LDA     DOWN_LBL
+            STA     OUTBUF+6
+            LDA     1,1(DOWN)
+            CHAR
+            STX     OUTBUF+7
+            
+            LDA     LEFT_LBL
+            STA     OUTBUF+9
+            LDA     0,1(LEFT)
+            CHAR
+            STX     OUTBUF+10
+            
+            LDA     RIGHT_LBL
+            STA     OUTBUF+12
+            LDA     0,1(RIGHT)
+            CHAR
+            STX     OUTBUF+13
+
+            LDA     EXP_LBL
+            STA     OUTBUF+15
+            LDA     1,1(EXP)
+            CHAR
+            STX     OUTBUF+16
+            JANN     1F
+            ENTA     45
+            STA      OUTBUF+16(1:1)
+
+1H          LDA     CV_LBL
+            STA     OUTBUF+18
+            LDA     2,1(CV)
+
+            LDX     1,1(DOWN)
+            JXNZ    1F
+            CHAR
+            SLAX    5
+
+1H          STA     OUTBUF+19
+            JANN    1F
+            ENTA    45
+            STA     OUTBUF+19(1:1)
+1H          OUT     OUTBUF(18)
+
+9H          JMP     *
+
+AVAIL       CON     MEMORY
+MEMORY      ORIG    *+2000
+POLY1       CON     0
+POLY2       CON     0
+OUTBUF      ORIG    *+24
+ADDRESS     ALF ADDR
+UP_LBL      ALF UP
+DOWN_LBL    ALF DOWN
+LEFT_LBL    ALF LEFT
+RIGHT_LBL   ALF RIGHT
+EXP_LBL     ALF EXP
+CV_LBL      ALF CV
+            END     MAIN
