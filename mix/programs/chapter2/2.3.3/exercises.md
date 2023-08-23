@@ -129,3 +129,124 @@
     Once we have this product of two terms represented as a polynomial, we just add it to the polynomial called M.
 
     Check out [multiply_poly.mixal](multiply_poly.mixal)
+
+16) Prove the validity of bottom-up locally defined function
+
+    We need to prove the following:
+
+    * Every node is visited
+    * Every node is visited after its leaves
+    * The $N$ nodes on the stack are the $N$ children of the current node, where $N$ is the degree
+
+    Post-order verifies the first two, so let's focus on the third part.
+
+    Given a terminal node, $N$ is zero, so it's easy to see that meets the criteria, since you're not pulling any nodes from the stack.
+
+    Becasue the left tree and right tree are visited independently, you know the nodes of the left tree will always be before the nodes on the right tree. That means that in no way will your right tree nodes get mixed into the stack before the left tree nodes. Furthermore, if the nodes preceding you are $N_1, N_2,...N_k$ there is some $N_m$ that is the last node in the left tree, and due to postorder, means that it is your left child.
+
+    We can look at this recursively to know that our algorithm is valid, as long as we pop the $DEGREE$ number of nodes and push one back on.
+
+    17) Write a top-down locally defined function algorithm
+
+        We still have post order with degrees, which complicates things.
+
+        I feel like we have to go right-to-left so that we always hit the parent first. So what if I pushed a copy of the node for every degree, and pop the stack every advancement. When I calculate a result, I need to push the new value all the way through the stack if it's zero (it's a terminal node and shouldn't be used for any other calculation). So if we have 
+
+        ```
+        0 0 1 0 1 0 3 2
+        K H E J F G D A
+        ```
+
+        ```
+        - Calc/push A *2                 AA
+        - Pop-A -> Calc/push D *3        DDDA
+        - Pop-D -> Calc/push-through G   DDAG
+        - Pop-D -> Calc/push F           FDAG
+        - Pop-F -> Calc/push-through J   DAGJ
+        - Pop-D -> Calc/push E           EAGJ
+        - Pop-E -> Calc/push-through H   AGJH
+        - Pop-A -> Calc/push-through K   GJHK
+        ```
+
+        What's left on the stack is the terminal nodes in reverse order (which is the order they were visited on).
+        We do have to push-through the stack, which does mean it's closer to a $O(n^2)$ algorithm. You could use another stack to store the terminal node values (remember, if the degree is zero, then we know it's terminal) and pop it back out to get them in left-to-right order and keep it $O(n)
+
+        Now, unfortunately, this wouldn't work with a forest, because the stack would be non-empty for the next node of the forest, so you'd have to know when you are done with a forest.
+
+        For easy sakes, in my program, I'll just output if it's a terminal node.
+
+        See [locally-defined-function-topdown.mixal](locally-defined-function-topdown.mixal).
+
+18) Convert an info/rlink/preorder table to a Info/degree/postorder
+
+    I suspect I'll need a stack to know when a family level is done.
+
+    For instance, with 
+
+    ```
+    A B C K
+    5 3 0 0
+    ```
+
+    I know that A's sibling will be at 5 and B's sibling will be at C.
+
+    I also think I'll have some swapping shenanigans. For instance, with the above, I probably put A as the first node of the degree table, and also on the stack. 
+
+    B comes next, and since I know that it's not the sibling of A, then it must be a child, and come before. Put in B in the second place and swap B and A. Increment A's child
+
+    Then C will come next, and I know it's B's sibling. That means that I put C after the B (but before A since I know A isn't the sibling). Update A's info
+
+    Then K will come next. I know that this is the last node, and it has to be C's, not B's, since it came after C (I can track previous parent in a stack too I guess, popping it on a zero) Swap K with A and then C, and update C's
+
+    In essence, when I have a node, I have to put it at the end, swap it left until it's just before it's parent, and update the parent's number.
+
+    A little more formally:
+
+    - Start at the left node, and we are going to iterate for each node
+    - Place this node at the end of the list
+    - Swap left until we are just to the left of our parent. Update the parent's degree by 1
+    - If there is a rlink, Push the node on the stack, along with where it's rlink is. Everything between the current node and rlink is a descendent of the current node.
+
+    See [rlink-to-degree.mixal](rlink-to-degree.mixal).
+
+19) Given the descendants of each node listed in pre-order, can we prove some math things?
+
+    a) The index of a node + the number of descendants is less than or equal to the total number of nodes. Then, any node between the index and the index+descendants also has it's number of descendants + its index is less than the original index + descendants.
+
+    The key part of this is that we're in pre-order: If a node has zero descendents than, index + 0 is less than or equal to N, since the index is less than or equal to n.
+
+    If the node has non-zero number of descendents, then that many nodes must follow it. Since we're in pre-order, we're guaranteed that many nodes follow it, and we won't go past the total number of nodes.
+
+    Now, for any number between these limits, it will be x nodes past our original index. At most, it can have $D_k - x$ descendents where $D_k$ is the descendents of the kth Node. This is because we know that $k+x$ is a descendent of $k$. So even in the worst case, where we have a straight linked list as a child, we will still have $D_k -x$ possible slots left to go, so that means at worst, $j+D_j \le k+D_k $.
+
+    b) Prove that a sequence of numbers satisfying a) will be the list of descendents of the forest
+
+    Say we have a sequence of numbers $d_1,d_2,d_3...,d_n$. Let $d_i$ be the first node of a forest. We can partition this forest after $d_i$ nodes, since anything past $i$ is not a descendent. We can apply this definition recursively to the rest of the trees in the forest as well as the sub trees starting at $d_{i+1}$. Since the first node will have the largest number of descendents, it is the root of that tree, and recursively, we have pre-order sequence of descendants.
+
+    c) Prove that for two forests, we can make a third forest that is the minimum for each node in each respective forest.
+
+    I'm a little more stuck on this one. If we have a forest with some numbers, such as 
+
+    ```
+    A B C D
+    3 0 1 0
+    ```
+
+    Once we have the first node, all the descendents can be what's shown, or they can be anything less (they can't be anything more, as that would invalidate part a)
+
+    So, given two forests, we pick the smallest of the first node at that position. We'll either pick the existing descendents from that forest, or if the other forest has smaller descendants on a per-node basis, we can use that just fine. For example
+
+    ```
+                A                  E
+              /   \              / | \  \
+            B      C            F  G  H  I
+                   |
+                   D
+    ```
+
+    We will effectively swap out A's descendants with E's first three, and that will be fine.
+
+    Now we will have to look at the next first node in the forest. Note that this could be part of previous sub-tree, but if that happens, we'll just pull those nodes up and make it into it's own tree in the forest (assuming it has a smaller descendant count than whatever non-sub-tree we picked)
+
+    Pretty much, this works becasue in cases where we break up a tree, we can always throw the remaining nodes of a tree up as separate trees in a forest. In fact, in the worst case, every tree in teh forest will be a single node,
+

@@ -1,0 +1,140 @@
+* convert a table of nodes from node/rlink/preorder to node/degree/postorder
+N               EQU     10
+INFO            EQU     0:2
+RLINK           EQU     4:5
+DEGREE          EQU     4:5
+MAIN            ORIG    100
+
+
+                JMP     SETUP_TABLES
+                JMP     RLINK_TO_DEG
+                JMP     PRINT_TABLE
+
+                HLT
+
+SETUP_TABLES    STJ     9F
+                ENTA    1
+                STA     TABLE1+1(INFO)
+                ENTA    2
+                STA     TABLE1+2(INFO)
+                ENTA    3
+                STA     TABLE1+3(INFO)
+                ENTA    12
+                STA     TABLE1+4(INFO)
+                ENTA    4
+                STA     TABLE1+5(INFO)
+                ENTA    5
+                STA     TABLE1+6(INFO)
+                ENTA    8
+                STA     TABLE1+7(INFO)
+                ENTA    6
+                STA     TABLE1+8(INFO)
+                ENTA    11
+                STA     TABLE1+9(INFO)
+                ENTA    7
+                STA     TABLE1+10(INFO)
+
+                ENTA    5
+                STA     TABLE1+1(RLINK)
+                ENTA    3
+                STA     TABLE1+2(RLINK)
+                ENTA    8
+                STA     TABLE1+6(RLINK)
+                ENTA    10
+                STA     TABLE1+8(RLINK)
+
+9H              JMP     *
+
+RLINK_TO_DEG    STJ     9F
+                ENT6    1 * iteration variable
+                ENT5    STACK  * stack
+1H              CMP6    =N+1=
+                JE      9F
+
+PLACE_NODE      LDA     TABLE1,6(INFO)
+                STA     TABLE2,6(INFO)
+
+SWAP_LEFT       CMP5    =STACK=
+                JE      PUSH_NODE
+
+                LD1     -1,5(INFO)   * I1 is the ancestor
+                LD2     -1,5(RLINK)
+                DEC2    0,6   * check if we are the next sibling
+                J2NZ    3F   * yes, look at next parent
+
+* we are at the next sibling, which means we need to go up a level to find the parent
+                DEC5    1
+                JMP     SWAP_LEFT
+                 
+
+3H              ENT4    0,6        * for iterating on the swap
+SWAP_LOOP       LDA     TABLE2,4
+                LDX     TABLE2-1,4
+                STX     TABLE2,4
+                STA     TABLE2-1,4
+
+                CMP1    TABLE2,4(INFO)
+                JNE     2F  *  to see if the parent was swapped
+
+                LDA     TABLE2,4(DEGREE)
+                INCA    1
+                STA     TABLE2,4(DEGREE)
+                JMP     PUSH_NODE
+
+2H              DEC4    1
+                JMP     SWAP_LOOP
+* we should push only if we are a parent.
+* If we have a rlink that's more than one past our current node, 
+* or if we don't have an rlink, check if our parent's rlink is more than one past current
+PUSH_NODE       LDA      TABLE1,6(RLINK)
+                DECA     1
+                DECA     0,6
+                JAZ      8F  * if you are zero that means we should not be pushing
+                
+                CMP5    =STACK=
+                JE      7F
+
+                LDA      -1,5(RLINK) * is there room between us and the parent's next sibling
+                DECA     1
+                DECA     0,6
+                JAZ      8F
+
+7H              LDA     TABLE1,6
+                STA     0,5
+                INC5    1
+
+* update the last rlink to be the next node not in this tree
+8H              LDA     -1,5(RLINK)
+                JANZ     8F    * we already have a rlink set
+                CMP5    =STACK+1=
+                JNE      7F
+                ENTX    N+1
+                JMP     UPDATE_RLINK
+7H              LDX     -2,5(RLINK)
+
+UPDATE_RLINK    STX     -1,5(RLINK)
+8H              INC6    1
+                JMP     1B
+
+9H              JMP     *
+
+PRINT_TABLE     STJ     9F
+                ENT1    1
+1H              CMP1    =N+1=
+                JE      9F
+                LDA     TABLE2,1(INFO)
+                STA     OUTBUF
+                LDA     TABLE2,1(DEGREE)
+                CHAR
+                STX     OUTBUF+2
+                OUT     OUTBUF(18)
+                INC1    1
+                JMP     1B
+
+9H              JMP     *
+
+TABLE1          ORIG    *+11
+TABLE2          ORIG    *+11
+OUTBUF          ORIG    *+24
+STACK           ORIG    *+11
+                END     MAIN

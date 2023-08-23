@@ -1,0 +1,75 @@
+* Locally defined function with post-order degree representation of tree
+* but calculate things top-down
+DEGREE          EQU     2:3
+INFO            EQU     4:5
+N               EQU     10
+MAIN            ORIG    100
+                JMP     SETUP_TREE
+                ENT6    STACK
+                JMP     VISIT_TREE
+9F              HLT
+
+SETUP_TREE      STJ     9F
+* setup infos
+                ENTA    2
+                STA     TREE(INFO)
+                ENTA    12
+                STA     TREE+1(INFO)
+                ENTA    3
+                STA     TREE+2(INFO)
+                ENTA    1 
+                STA     TREE+3(INFO)
+                ENTA    8
+                STA     TREE+4(INFO)
+                ENTA    5
+                STA     TREE+5(INFO)
+                ENTA    11
+                STA     TREE+6(INFO)
+                ENTA    6
+                STA     TREE+7(INFO)
+                ENTA    7 
+                STA     TREE+8(INFO)
+                ENTA    4 
+                STA     TREE+9(INFO)
+*setup degrees
+                ENTA    1 
+                STA     TREE+2(DEGREE)
+                STA     TREE+5(DEGREE)
+                STA     TREE+7(DEGREE)
+                ENTA    2 
+                STA     TREE+3(DEGREE)
+                ENTA    3
+                STA     TREE+9(DEGREE)
+9H              JMP     *
+
+VISIT_TREE      STJ     9F
+                ENT6    STACK
+                ENT5    N-1
+1H              J5N     9F
+                ENTA    0
+                CMP6    =STACK=
+                JE      PUSH_NODES
+                LDA     -1,6
+                DEC6    1 
+
+PUSH_NODES      LD1     TREE,5(DEGREE)
+                ADD     TREE,5(INFO) * just for adding it up , you could compute here
+                J1NZ    2F
+                CHAR
+                SLAX    5
+                STA     OUTBUF
+                OUT     OUTBUF(18)
+2H              J1Z     3F
+                STA     0,6
+                INC6    1
+                DEC1    1
+                JMP     2B
+
+3F              DEC5    1
+                JMP     1B
+9H              JMP     *
+
+TREE            ORIG    *+10
+STACK           ORIG    *+1000
+OUTBUF          ORIG    *+24
+                END     MAIN
