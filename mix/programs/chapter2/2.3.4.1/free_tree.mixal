@@ -1,0 +1,145 @@
+* takes a list of edges and prints out free tree subset
+N               EQU     7
+M               EQU     7
+INFO            EQU     4:5
+IS_MARKED       EQU     1:1
+NODE1           EQU     2:3
+NODE2           EQU     4:5
+TREE_NUM        EQU     1:1
+
+MAIN            ORIG    100
+
+                JMP     SETUP_DATA
+                JMP     FREE_TREE
+                JMP     PRINT_EDGES
+
+                HLT
+
+
+SETUP_DATA      STJ     9F
+                ENTA    1
+                STA     EDGES(NODE1)
+                STA     EDGES+5(NODE2)
+                STA     NODES(INFO)
+
+                ENTA    2
+                STA     EDGES(NODE2)
+                STA     EDGES+2(NODE1)
+                STA     EDGES+4(NODE1)
+                STA     NODES+1(INFO)
+
+                ENTA    3
+                STA     EDGES+5(NODE1)
+                STA     EDGES+1(NODE2)
+                STA     NODES+2(INFO)
+
+                ENTA    4
+                STA     EDGES+1(NODE1)
+                STA     EDGES+2(NODE2)
+                STA     EDGES+3(NODE2)
+                STA     NODES+3(INFO)
+
+                ENTA    5
+                STA     EDGES+4(NODE2)
+                STA     EDGES+3(NODE1)
+                STA     NODES+4(INFO)
+
+* delete these two nodes edges / nodes and update N/M 
+* to get a valid free tree
+
+                ENTA    6
+                STA     EDGES+6(NODE2)
+                STA     NODES+5(INFO)
+
+                ENTA    7
+                STA     EDGES+6(NODE1)
+                STA     NODES+6(INFO)
+9H              JMP     *
+
+FREE_TREE       STJ     9F
+                ENT6    0
+                ENT5    1   * the tree that we're part of
+* go through each edge and mark nodes
+MARK_NODES      LD1     EDGES,6(NODE1)
+                LD2     EDGES,6(NODE2)
+                LDA     NODES-1,1(TREE_NUM)
+                LDX     NODES-1,2(TREE_NUM)
+                JAZ     EMPTY_NODE_1
+                JXZ     EMPTY_NODE_2
+                CMPA    NODES-1,2(TREE_NUM)
+                JE      IS_CYCLE  *  was a cycle
+                JMP     COLLAPSE_TREES  * different tree numbers
+EMPTY_NODE_1    JXZ     BOTH_EMPTY
+                STX     NODES-1,1(TREE_NUM)
+                JMP     ITER_EDGE
+BOTH_EMPTY      ST5     NODES-1,1(TREE_NUM)
+                ST5     NODES-1,2(TREE_NUM)
+                JMP     INC_TREE_NUM
+EMPTY_NODE_2    STA     NODES-1,2(TREE_NUM)
+                JMP     ITER_EDGE 
+* 1 is the left node, 2 is the right node
+COLLAPSE_TREES  ENT4    0
+                CMPA    NODES-1,2(TREE_NUM)  
+                JL      1F
+                ENT3    0,1
+                ENT1    0,2
+                ENT2    0,1
+* at this point, I1 is the smaller number and I2 is the larger
+1H              LDA     NODES-1,1(TREE_NUM)
+                LDX     NODES-1,2(TREE_NUM)
+2H              CMPX    NODES,4(TREE_NUM) 
+                JNE     3F
+                STA     NODES,4(TREE_NUM)
+3H              INC4    1
+                CMP4    =M=
+                JNE     2B
+                JMP     ITER_EDGE
+IS_CYCLE        STZ     EDGES,6
+                JMP     ITER_EDGE
+INC_TREE_NUM    INC5    1
+ITER_EDGE       INC6    1
+                CMP6    =M=
+                JNE     MARK_NODES
+
+
+                ENT6    0
+1H              LDA    NODES,6(TREE_NUM)
+                DECA   1
+                JANZ   NOT_POSSIBLE
+                INC6   1
+                CMP6   =N=
+                JNE    1B
+
+9H              JMP     *
+
+NOT_POSSIBLE    LDA     IMPOSSIBLE
+                STA     OUTBUF
+                LDA     IMPOSSIBLE+1
+                STA     OUTBUF+1
+                OUT     OUTBUF(18)
+                HLT
+
+PRINT_EDGES     STJ     9F
+                ENT6    0
+1H              LDA     EDGES,6(NODE1)
+                JAZ     2F    * the edge was not needed
+                STA     OUTBUF
+                LDA     ARROW
+                STA     OUTBUF+2
+                LDA     EDGES,6(NODE2)
+                STA     OUTBUF+3
+                OUT     OUTBUF(18)
+2H              INC6    1
+                CMP6    =M=
+                JNE     1B
+
+9H              JMP     *
+
+OUTBUF          ORIG    *+24
+IMPOSSIBLE      ALF IMPOS
+                ALF SIBLE
+ARROW           ALF <--->
+
+NODES           ORIG    *+7
+EDGES           ORIG    *+7
+                END     MAIN
