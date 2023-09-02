@@ -1,0 +1,348 @@
+N               EQU        9
+C               EQU        36
+COST            EQU        1:1
+NODE1           EQU        2:3
+NODE2           EQU        4:5
+INFO            EQU        2:5
+VISITED         EQU        1:1
+* Note that rather than do the reshuffle, I'm going to just mark things visited
+
+
+MAIN            ORIG        100
+                JMP         SETUP_DATA
+                JMP         PRIM
+                HLT
+
+* note that I'm using the sum of x^2 + y^2 as a distance (rather than deal with floats)
+SETUP_DATA      STJ         9F
+                ENT1        8
+
+1H              ENTA        1,1
+                STA         NODES,1(INFO)  * Save the node as i1 + 1
+                DEC1        1
+                J1NN        1B
+
+
+                ENTA        4  * T1 / T2
+                STA         COSTS(COST)
+                ENTA        1
+                STA         COSTS(NODE1)
+                ENTA        2
+                STA         COSTS(NODE2)
+
+                ENTA        2  * T1 / T3
+                STA         COSTS+1(COST)
+                ENTA        1
+                STA         COSTS+1(NODE1)
+                ENTA        3
+                STA         COSTS+1(NODE2)
+
+                ENTA        17  * T1 / T4
+                STA         COSTS+2(COST)
+                ENTA        1
+                STA         COSTS+2(NODE1)
+                ENTA        4
+                STA         COSTS+2(NODE2)
+
+                ENTA        5  * T1 / T5
+                STA         COSTS+3(COST)
+                ENTA        1
+                STA         COSTS+3(NODE1)
+                ENTA        5
+                STA         COSTS+3(NODE2)
+
+                ENTA        8  * T1 / T6
+                STA         COSTS+4(COST)
+                ENTA        1
+                STA         COSTS+4(NODE1)
+                ENTA        6
+                STA         COSTS+4(NODE2)
+
+                ENTA        10  * T1 / T7
+                STA         COSTS+5(COST)
+                ENTA        1
+                STA         COSTS+5(NODE1)
+                ENTA        7
+                STA         COSTS+5(NODE2)
+
+                ENTA        25  * T1 / T8
+                STA         COSTS+6(COST)
+                ENTA        1
+                STA         COSTS+6(NODE1)
+                ENTA        8
+                STA         COSTS+6(NODE2)
+
+                ENTA        29  * T1 / T9
+                STA         COSTS+7(COST)
+                ENTA        1
+                STA         COSTS+7(NODE1)
+                ENTA        9
+                STA         COSTS+7(NODE2)
+
+                ENTA        10  * T2 / T3
+                STA         COSTS+8(COST)
+                ENTA        2
+                STA         COSTS+8(NODE1)
+                ENTA        3
+                STA         COSTS+8(NODE2)
+
+                ENTA        5  * T2 / T4
+                STA         COSTS+9(COST)
+                ENTA        2
+                STA         COSTS+9(NODE1)
+                ENTA        4
+                STA         COSTS+9(NODE2)
+
+                ENTA        5  * T2 / T5
+                STA         COSTS+10(COST)
+                ENTA        2
+                STA         COSTS+10(NODE1)
+                ENTA        5
+                STA         COSTS+10(NODE2)
+
+                ENTA        4  * T2 / T6
+                STA         COSTS+11(COST)
+                ENTA        2
+                STA         COSTS+11(NODE1)
+                ENTA        6
+                STA         COSTS+11(NODE2)
+
+                ENTA        18  * T2 / T7
+                STA         COSTS+12(COST)
+                ENTA        2
+                STA         COSTS+12(NODE1)
+                ENTA        7
+                STA         COSTS+12(NODE2)
+
+                ENTA        17  * T2 / T8
+                STA         COSTS+13(COST)
+                ENTA        2
+                STA         COSTS+13(NODE1)
+                ENTA        9
+                STA         COSTS+13(NODE2)
+
+                ENTA        25  * T2 / T9
+                STA         COSTS+14(COST)
+                ENTA        2
+                STA         COSTS+14(NODE1)
+                ENTA        9
+                STA         COSTS+14(NODE2)
+
+                ENTA        25  * T3 / T4
+                STA         COSTS+15(COST)
+                ENTA        3
+                STA         COSTS+15(NODE1)
+                ENTA        4
+                STA         COSTS+15(NODE2)
+
+                ENTA        5  * T3 / T5
+                STA         COSTS+16(COST)
+                ENTA        3
+                STA         COSTS+16(NODE1)
+                ENTA        5
+                STA         COSTS+16(NODE2)
+
+                ENTA        10  * T3 / T6
+                STA         COSTS+17(COST)
+                ENTA        3
+                STA         COSTS+17(NODE1)
+                ENTA        6
+                STA         COSTS+17(NODE2)
+
+                ENTA        4  * T3 / T7
+                STA         COSTS+18(COST)
+                ENTA        3
+                STA         COSTS+18(NODE1)
+                ENTA        7
+                STA         COSTS+18(NODE2)
+
+                ENTA        25  * T3 / T8
+                STA         COSTS+19(COST)
+                ENTA        3
+                STA         COSTS+19(NODE1)
+                ENTA        8
+                STA         COSTS+19(NODE2)
+
+                ENTA        25  * T3 / T9
+                STA         COSTS+20(COST)
+                ENTA        3
+                STA         COSTS+20(NODE1)
+                ENTA        9
+                STA         COSTS+20(NODE2)
+
+                ENTA        10  * T4 / T5
+                STA         COSTS+21(COST)
+                ENTA        4
+                STA         COSTS+21(NODE1)
+                ENTA        5
+                STA         COSTS+21(NODE2)
+                
+                ENTA        5  * T4 / T6
+                STA         COSTS+22(COST)
+                ENTA        4
+                STA         COSTS+22(NODE1)
+                ENTA        6
+                STA         COSTS+22(NODE2)
+
+                ENTA        29 * T4 / T7
+                STA         COSTS+23(COST)
+                ENTA        4
+                STA         COSTS+23(NODE1)
+                ENTA        7
+                STA         COSTS+23(NODE2)
+
+                ENTA        10  * T4 / T8
+                STA         COSTS+24(COST)
+                ENTA        4
+                STA         COSTS+24(NODE1)
+                ENTA        8
+                STA         COSTS+24(NODE2)
+
+                ENTA        20  * T4 / T9
+                STA         COSTS+25(COST)
+                ENTA        4
+                STA         COSTS+25(NODE1)
+                ENTA        2
+                STA         COSTS+25(NODE2)
+                
+                ENTA        1  * T5 / T6
+                STA         COSTS+26(COST)
+                ENTA        5
+                STA         COSTS+26(NODE1)
+                ENTA        6
+                STA         COSTS+26(NODE2)
+
+                ENTA        5  * T5 / T7
+                STA         COSTS+27(COST)
+                ENTA        5
+                STA         COSTS+27(NODE1)
+                ENTA        7
+                STA         COSTS+27(NODE2)
+
+                ENTA        8  * T5 / T8
+                STA         COSTS+28(COST)
+                ENTA        5
+                STA         COSTS+28(NODE1)
+                ENTA        8
+                STA         COSTS+28(NODE2)
+
+                ENTA        10  * T5 / T9
+                STA         COSTS+29(COST)
+                ENTA        5
+                STA         COSTS+29(NODE1)
+                ENTA        9
+                STA         COSTS+29(NODE2)
+
+                ENTA        10  * T6 / T7
+                STA         COSTS+30(COST)
+                ENTA        6
+                STA         COSTS+30(NODE1)
+                ENTA        7
+                STA         COSTS+30(NODE2)
+                
+                ENTA        5  * T6 / T8
+                STA         COSTS+31(COST)
+                ENTA        6
+                STA         COSTS+31(NODE1)
+                ENTA        8
+                STA         COSTS+31(NODE2)
+
+                ENTA        9  * T6 / T9
+                STA         COSTS+32(COST)
+                ENTA        6
+                STA         COSTS+32(NODE1)
+                ENTA        9
+                STA         COSTS+32(NODE2)
+                
+                ENTA        17  * T7 / T8
+                STA         COSTS+33(COST)
+                ENTA        7
+                STA         COSTS+33(NODE1)
+                ENTA        8
+                STA         COSTS+33(NODE2)
+
+                ENTA        13  * T7 / T9
+                STA         COSTS+34(COST)
+                ENTA        7
+                STA         COSTS+34(NODE1)
+                ENTA        9
+                STA         COSTS+34(NODE2)
+
+                ENTA        2  * T8 / T9
+                STA         COSTS+35(COST)
+                ENTA        8
+                STA         COSTS+35(NODE1)
+                ENTA        9
+                STA         COSTS+35(NODE2)
+9H              JMP         *
+
+PRIM            STJ         9F
+
+MST1            LD6        =N-1=  * this is the last node
+                ENTA        1
+                STA         NODES,6(VISITED) * mark as visited
+                DEC6        1
+
+MST2            J6N         9F * we have no more nodes to check
+                ENT5        0
+                ENT1        1
+                ENT2        COSTS
+                ENTX        4095   * large cost
+1H              CMP5        =C=
+                JE          MST3
+
+                LD3         COSTS,5(NODE1)
+                DEC3        1
+                LD3         NODES,3(VISITED)
+                LD4         COSTS,5(NODE2)
+                DEC4        1
+                LD4         NODES,4(VISITED)
+                J3Z         FIRST_UNVISITED   * I3 should be the unconnected node
+                J4NZ        NEXT_COST   * both are visited
+                LD3         COSTS,5(NODE2)
+                JMP         COMPARE_COST
+FIRST_UNVISITED J4Z         NEXT_COST * both are unvisited
+                LD3         COSTS,5(NODE1)
+COMPARE_COST    CMPX        COSTS,5(COST)
+                JLE         NEXT_COST
+                LDX         COSTS,5(COST)
+                ENT2        COSTS,5
+                ENT1        0,3
+NEXT_COST       INC5        1
+                JMP         1B
+* at this point, I1 contains the node index that needs to be marked.
+* I2 will be the cost that was picked
+MST3            LDA         COST_LABEL
+                STA         OUTBUF
+                LDA         0,2(COST)
+                CHAR
+                STX         OUTBUF+1
+
+                LDA         NODE1_LABEL
+                STA         OUTBUF+4
+                LDA         0,2(NODE1)
+                CHAR
+                STX         OUTBUF+6
+
+                LDA         NODE2_LABEL
+                STA         OUTBUF+8
+                LDA         0,2(NODE2) 
+                CHAR
+                STX         OUTBUF+10
+                OUT         OUTBUF(18)
+
+                ENTA        1
+                STA         NODES-1,1(VISITED) 
+
+MST4            DEC6        1
+                JMP         MST2
+9H              JMP         *
+
+COSTS           ORIG        *+36
+NODES           ORIG        *+9
+OUTBUF          ORIG        *+24
+COST_LABEL      ALF COST
+NODE1_LABEL     ALF NODE1
+NODE2_LABEL     ALF NODE2
+
+                END         MAIN
