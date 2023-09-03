@@ -1,0 +1,78 @@
+* reroots an oriented tree to be a free tree with a new root
+
+N               EQU     9
+NEW_ROOT        EQU     1
+INFO            EQU     4:5
+PARENT          EQU     2:3
+
+MAIN            ORIG    100
+                JMP     SETUP_DATA
+                JMP     PRINT_PARENTS
+                STZ     OUTBUF
+                STZ     OUTBUF+2
+                OUT     OUTBUF(18)
+                JMP     REROOT  
+                JMP     PRINT_PARENTS
+                HLT
+
+SETUP_DATA      STJ     9F
+                ENTA    9
+                STA     PARENTS+1(PARENT)
+                STA     PARENTS+2(PARENT)
+                ENTA    19
+                STA     PARENTS+9(INFO)
+                ENTA    1
+                STA     PARENTS+3(PARENT)
+                STA     PARENTS+1(INFO)
+                ENTA    2
+                STA     PARENTS+4(PARENT)
+                STA     PARENTS+5(PARENT)
+                STA     PARENTS+6(PARENT)
+                STA     PARENTS+2(INFO)
+                ENTA    3
+                STA     PARENTS+3(INFO)
+                ENTA    4
+                STA     PARENTS+7(PARENT)
+                STA     PARENTS+8(PARENT)
+                STA     PARENTS+4(INFO)
+                ENTA    5
+                STA     PARENTS+5(INFO)
+                ENTA    6
+                STA     PARENTS+6(INFO)
+                ENTA    7
+                STA     PARENTS+7(INFO)
+                ENTA    8
+                STA     PARENTS+8(INFO)
+9H              JMP     *
+
+REROOT          STJ     9F
+P1              ENT1    NEW_ROOT   * N
+                ENT3    0    * L
+P2              LD4     PARENTS,1(PARENT)
+                J4Z     P2A
+                ENT2    0,1 * X
+                ENT1    0,4
+                ST3     PARENTS,2(PARENT)
+                ENT3    0,2
+                JMP     P2
+P2A             ST3     PARENTS,1(PARENT)
+9H              JMP     *
+
+PRINT_PARENTS   STJ     9F
+                ENT1    N
+1H              J1Z     9F
+                LDA     PARENTS,1(INFO)
+                STA     OUTBUF
+
+                LDA     PARENTS,1(PARENT)
+                CHAR    
+                STX     OUTBUF+2
+                OUT     OUTBUF(18)
+                DEC1    1
+                JMP     1B
+9H              JMP     *
+
+
+PARENTS         ORIG    *+10 * N + 1
+OUTBUF          ORIG    *+24
+                END     MAIN
