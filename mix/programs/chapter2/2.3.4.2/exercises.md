@@ -74,3 +74,22 @@
     - P2. If PARENT(N) == 0, set PARENT(N) to L and terminate. Otherwise, X = N, N = PARENT(N), PARENT(X) = L, L = X and repeat P2.
 
     See [reroot.mixal](reroot.mixal)
+
+
+11) Change the algorithm from last section that determines free tree, and have it print out free trees and all fundamental cycles.
+
+    So, we can use the previous algorithm to determine free-tree, which also checks if a cycle is present (Both nodes are connected already when checking edges.)  However, we can store these arcs in a new list for after the tree is built.
+
+    Then for each edge that's in a cycle, we can do the following (assuming arc from a to b).
+
+    We can re-root the tree so that a is the root. Then, we can start at b and just walk parents until we get to a. So we have a->b and then the links from b->a which is a cycle.
+
+    I do have to tweak the algorithm to store parents along the way though when I figure out the free tree.
+
+    However, after a day of thinking about this, I realized this only works if it's an oriented tree, and we have no guarantee that we are.
+
+    So what we can do is just do BFS on a connected node to find out where the cycles are. Honestly, I don't feel like doing a BFS with dynamic storage in mix, so I looked at the back to get a hint.
+
+    I saw in the back that it mentioned 2.3.3E, which is the equivalence tree, so it seems like we want to get it so that each oriented sub-tree is separate, but I didn't know how to join them. So, what Knuth suggests in the answers is to connect the root to the other trees, but indicate that the link is going a different way. The key is always propagating the connection up to the root of each tree, and we assume cycles will make their way to the root. We will reroot nodes to make sure that cycles will always bubble up to them.
+
+    See [cycles.mixal](cycles.mixal)

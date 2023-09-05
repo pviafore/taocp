@@ -1,0 +1,134 @@
+* Uses Knuth answer's to detect cycles
+
+N               EQU     5
+E               EQU     6
+NODE1           EQU     2:3
+NODE2           EQU     4:5
+
+MAIN            ORIG    100
+                JMP     SETUP_DATA
+                JMP     CYCLES
+                HLT
+
+SETUP_DATA      STJ     9F
+                ENTA    1
+                STA     EDGES(NODE1)
+                STA     EDGES+4(NODE1)
+                ENTA    2
+                STA     EDGES+1(NODE1)
+                ENTA    3
+                STA     EDGES(NODE2)
+                STA     EDGES+1(NODE2)
+                STA     EDGES+2(NODE1)
+                STA     EDGES+3(NODE1)
+                ENTA    4
+                STA     EDGES+2(NODE2)
+                STA     EDGES+4(NODE2)
+                STA     EDGES+5(NODE1)
+                ENTA    5
+                STA     EDGES+3(NODE2)
+                STA     EDGES+5(NODE2) 
+9H              JMP     *
+
+CYCLES          STJ     9F
+                ENT6    0
+1H              CMP6    =E=
+                JE      9F
+
+                LD1     EDGES,6(NODE1) * J
+C1              LD2     P,1  * k
+                STZ     P,1
+                LD3     S,1 * s
+C2              J2Z     C3
+                LD4     P,2  * m
+                LDX     S,2  * T
+                ST1     P,2
+                ENNA    0,3
+                STA     S,2
+                STX     *+1(0:2)
+                ENT3    * 
+                ENT1    0,2
+                ENT2    0,4
+                JMP     C2
+C3              LD1     EDGES,6(NODE2)
+2H              LD3     P,1
+                J3Z     C4
+                ENT1    0,3
+                JMP     2B
+C4              CMP1    EDGES,6(NODE1)
+                JE      C5
+                LD2     EDGES,6(NODE1)
+                ST1     P,2
+                ENTA    1
+                STA     S,2
+                ENTA    0,2
+                CHAR
+                STX     OUTBUF
+                LDA     COMMA
+                STA     OUTBUF+1
+                ENTA    0,1
+                CHAR
+                STX     OUTBUF+2
+                OUT     OUTBUF(18)
+                JMP     NEXT_EDGE
+C5              LDA     CYCLE
+                STA     OUTBUF
+
+                LD1     EDGES,6(NODE1)
+                LD2     EDGES,6(NODE2)
+                ENTA    0,1
+                CHAR
+                STX     OUTBUF+2
+                LDA     COMMA
+                STA     OUTBUF+3
+                ENTA    0,2
+                CHAR
+                STX     OUTBUF+4
+                ENT5    5
+
+C6              LD3     P,2
+                J3Z     PRINT
+                ENTX    0
+                CMPX    S,2
+                JG      PRINT_NEG
+                JMP     PRINT_POS
+PRINT_NEG       LDA     MINUS
+                STA     OUTBUF,5
+                LDA     P,2
+                CHAR
+                STX     OUTBUF+1,5
+                LDA     COMMA
+                STA     OUTBUF+2,5
+                ENTA    0,2
+                CHAR
+                STX     OUTBUF+3,5
+                INC5    4
+                JMP     C6A
+PRINT_POS       LDA     PLUS
+                STA     OUTBUF,5
+                ENTA    0,2
+                CHAR
+                STX     OUTBUF+1,5
+                LDA     COMMA
+                STA     OUTBUF+2,5
+                LDA     P,2
+                CHAR    
+                STX     OUTBUF+3,5
+C6A             LD2     P,2
+                JMP     C6  
+PRINT           OUT     OUTBUF(18)
+
+
+NEXT_EDGE       INC6    1
+                JMP     1B
+9H              JMP     *
+
+P               ORIG    *+6
+S               ORIG    *+6
+EDGES           ORIG    *+E
+COMMA           ALF ,
+MINUS           ALF    -
+PLUS            ALF    +
+CYCLE           ALF CYCLE
+OUTBUF          ORIG    *+24
+                END     MAIN
