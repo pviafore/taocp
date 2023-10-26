@@ -641,7 +641,7 @@ impl Computer {
             1 => base - raw_value as i32,
             2 => raw_value as i32,
             3 => -1 * raw_value as i32,
-            _ => panic!("Invalid code for Address Transfer")
+            _ => panic!("Invalid code for Address Transfer: {:?}", instruction.to_string())
         };
         if bits == 30 && (value >= (1 << bits) || value <= -1 * (1 << bits)) {
             self.overflow = true;

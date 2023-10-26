@@ -1,0 +1,102 @@
+* Convert canonical representation to tree
+
+N           EQU     10
+MAIN        ORIG    100
+            JMP     SETUPDATA
+            JMP     CANONICAL
+            JMP     PRINTDATA
+            HLT
+
+
+SETUPDATA   STJ      9F
+            ENTA     1
+            STA      CANREP
+            STA      CANREP+5
+            ENTA     3
+            STA      CANREP+1
+            STA      CANREP+6
+            STA      CANREP+8
+            ENTA     10 
+            STA      CANREP+2
+            STA      CANREP+4
+            ENTA     5
+            STA      CANREP+3
+            STA      CANREP+7
+9H          JMP      *
+
+
+* we will build up a child count in the tree map, using
+* negative numbers to indicate that it's a child count
+* once we know the parent, we'll update with a positive number
+CANONICAL   STJ      9F
+            ENT1     N-2
+1H          LD2      CANREP,1
+            LDA      TREE-1,2
+            INCA     1
+            STA      TREE-1,2
+            DEC1     1
+            J1NN     1B
+
+* negates everything
+NEG         ENT1     N-2
+1H          LDAN     TREE,2
+            STA      TREE,2
+            DEC1     1
+            J1NN     1B
+
+BUILD       ENT1     0
+1H          LD2      CANREP,1
+            ENT6     0
+
+2B          LD3      TREE,6
+            J3P      7F          
+            J3NZ     7F
+
+* set the parent of the current node
+* as it's our youngest terminal node
+MARK        ST2      TREE,6 
+            LDA      TREE-1,2  * parent count
+            DECA     1   * move the parent count closer to 0
+            STA      TREE-1,2
+            JMP      8F
+
+7F          INC6     1
+            CMP6     =N=
+            JNE      2B
+            
+8H          INC1     1
+            CMP1     =N=
+            JNE      1B
+9H          JMP      *
+
+
+PRINTDATA   STJ      9F
+            ENT1     N-1
+1H          LDA      NODE
+            STA      OUTBUF
+            ENTA     0,1
+            INCA     1
+            CHAR
+            STX      OUTBUF+1
+            LDA      PARENT
+            STA      OUTBUF+3
+            LDA      PARENT+1
+            STA      OUTBUF+4
+            LDA      TREE,1
+            CHAR
+            STX      OUTBUF+5
+            OUT      OUTBUF(18)
+            DEC1     1
+            J1NN     1B
+9H          JMP      *
+
+TREE        ORIG    *+N
+CANREP      ORIG    *+N
+
+NODE        ALF NODE
+PARENT      ALF PAREN
+            ALF T
+
+OUTBUF      ORIG *+24
+
+            END     MAIN
