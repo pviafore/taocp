@@ -78,3 +78,14 @@ True, you must handle every terminal node before handling a parent node. so the 
     First, make a pass through the list to see which are terminal nodes. Then we can put those into a list (a priority queue would be fastest, but I don't feel like it). For the smallest node in the list to the element in canonical order, set the parent node, and decrement a child count. If the child count is zero, set it as a terminal node. Then rescan the list and repeat. As a matter of fact, we can use a child count to track whether we are a terminal or not (0 or not.)
 
     See [canonical.mixal](canonical.mixal)
+
+
+26) Draw the (3,2,4),(1,4,2) construction, figure out k, given the following: t=8, colors are RYBRYBRBB and RYBYYBY, and the index sequence is 3; 1,2,3,1; 2,4
+
+
+Okay, so assuming that 1=red,2=yellow ane 3 = blue, then we know that
+ there are 3 red nodes, 2 yellow, and 4 blue (9 total). We also know that 1 arc to parent is red, 4 arcs to parents are yellow, and 2 arcts to parents are blue. We have 9 nodes and 7 arcs (the graph is disjointed).
+
+ Vertex 8 is blue, then we know that the last element in the sequence is 2,4, which means that the 1st blue node in parents is the the 2nd  blue node in k, k+1, etc. Th 2nd blue node in parents is the 4th blue node in k, k+1, etc.
+
+ At this point, I'm not really sure how to take this information and figure out what position t is.

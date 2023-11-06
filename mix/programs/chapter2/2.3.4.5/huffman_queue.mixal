@@ -1,0 +1,141 @@
+* Create a minimum weighted path given a list of weights
+
+MAIN        ORIG    100
+            JMP     BUILD_DATA
+            JMP     HUFFMANQ
+            JMP     PRINT_TREE
+            HLT
+
+BUILD_DATA  STJ     9F
+            ENTA    -16
+            STA     WEIGHTS
+            ENTA    -9
+            STA     WEIGHTS+1
+            ENTA    -4
+            STA     WEIGHTS+2
+            ENTA    -1
+            STA     WEIGHTS+3
+            ENTA    1
+            STA     WEIGHTS+5
+            ENTA    4
+            STA     WEIGHTS+6
+            ENTA    9
+            STA     WEIGHTS+7
+            ENTA    16
+            STA     WEIGHTS+8 
+9H          JMP     *
+
+HUFFMANQ    STJ     9F
+* copy weights over
+            ENT1    A+8
+            MOVE    WEIGHTS(9) 
+            ENT1    QUEUE1
+            ENT6    8
+            ENT5    0
+1B          ENTA    8,6
+            STA     QUEUE1,5
+            INC5    1
+            DEC6    1
+            J6NN    1B
+
+            ENT6    8  * Queue 1 pointer
+            ENT5    -1  * Queue 2 pointer
+            ENT4    7  * A pointer
+* find the two smallest weights in the queues
+* I1 is the first weight
+* I2 is the second weight
+FIND_WEIGHT  JMP    POP_WEIGHT
+             ENT2   0,1
+             JMP    POP_WEIGHT
+
+             LDA   A,1
+             ADD   A,2
+             STA   A,4
+             ST1   L,4
+             ST2   R,4
+             INC5  1
+             ST4   QUEUE2,5
+
+             DEC4  1
+             J4NN  FIND_WEIGHT
+9H          JMP     *
+
+* will put the index of A in into register I1 (uses I1)
+* expects Q1 pointer to be in I6, Q2 pointer to be in I5
+POP_WEIGHT  STJ     9F
+            J6N     2F  * no first queue anymore
+            LD1     QUEUE1,6
+            LDA     A,1 
+            J5N     3F  * noithing in second queue
+            LD1     QUEUE2,5
+            CMPA    A,1
+            JG      2F
+3H          LD1     QUEUE1,6  * reload Queue1 in to 1
+            STZ     QUEUE1,6
+            DEC6    1
+            JMP     9F
+2H          LD1     QUEUE2,5
+            STZ     QUEUE2,5
+            DEC5    1
+9H          JMP     *  
+
+PRINT_TREE  STJ     9F
+            ENT6    0
+1H          LDA     NODE
+            STA     OUTBUF
+            ENTA    0,6
+            INCA    1
+            CHAR
+            STX     OUTBUF+1
+            LDA     WEIGHT
+            STA     OUTBUF+3
+            LDA     WEIGHT+1
+            STA     OUTBUF+4
+            LDA     A,6
+            CHAR   
+            STX     OUTBUF+5
+            JAP     2F
+            LDA     MINUS
+            STA     OUTBUF+5(1:1)
+            STZ     OUTBUF+7
+            STZ     OUTBUF+8
+            STZ     OUTBUF+10
+            STZ     OUTBUF+12
+2H          CMP6    =8=
+            JGE     8F 
+            LDA     LEFT
+            STA     OUTBUF+7
+            LDA     L,6
+            INCA    1
+            CHAR
+            STX     OUTBUF+8
+            LDA     RIGHT
+            STA     OUTBUF+10
+            LDA     R,6
+            INCA    1
+            CHAR
+            STX     OUTBUF+12
+8H          OUT     OUTBUF(18)
+            INC6    1
+            CMP6    =17=
+            JNE     1B
+9H          JMP     *
+
+WEIGHTS     ORIG    *+10
+SENTINEL1   CON     0
+QUEUE1      ORIG    *+10
+SENTINEL2   CON     0
+QUEUE2      ORIG    *+10
+A           ORIG    *+20
+L           ORIG    *+10
+R           ORIG    *+10
+OUTBUF      ORIG    *+24
+NODE        ALF NODE
+WEIGHT      ALF WEIGH
+            ALF T
+LEFT        ALF LEFT
+RIGHT       ALF RIGHT
+MINUS       ALF      -
+
+
+            END     MAIN
