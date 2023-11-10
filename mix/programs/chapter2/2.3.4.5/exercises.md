@@ -178,3 +178,21 @@ I also realized that it's probably half of the trees where this happens, so let'
     So we can maintain two queues, as suggested in the text. As part of this, I'll have to know what nodes I'm putting in which place so that the tree is appropriately ordered. The nice thing is that I'm building from the bottom up, so I can shuffle things around if I need to.
 
     See [huffman_queue.mixal](huffman_queue.mixal).
+
+14) Show that a huffman tree after k steps will have m-k binary trees in a forest that have minimum weight across all m-k forests.
+
+    I think we can kinda see this by induction. With one node, you are picking the two smallest weights. 
+    This is a single binary tree in the forest, and there is no smaller tree by definition of huffman picks. Now, we need to pick two new weights. If we are continuing on the tree, we know that the binary tree will be minimal. But let's say that a new tree is formed. If it's there exists a more minimal forest out there, we would need smaller values than what we have, which is impossible, since we've picked the 4 smallest values. 
+
+15) Show that a huffman like construction will also minimize $l+w$ and $wx^l$, where w is weight and l is length.
+
+    For w+l cases, we are trying to minimnize the maximum length. The maximum length will need to go to the lowest weight (we're still picking lowest weights), because if we were to pick a larger weight, we can always minimize further by picking a lower weight( even a large weight compared to a low length won't make that much of a difference.) The big reason why is that each length is different by each other by 1 (a tree of 5 deep can have nodes that are 4 deep). This means we are never more than one away, and since we aren't doing fractional weights (or if we were, we could scale them to integers), then the weights will scale linearly.
+
+    For hte $wx^l$, it's similar. $x^l$ will only get bigger (and way bigger faster than any multiplication) so that the multiplication of w is not going to be a factor in the long run.
+
+16) If we have two sets of weights, and and the sum of the first is less than the sum of the second, prove that the minimum weight path of the first is less than the minimum path of the second.
+
+
+    I am not totally sure how to solve this, but I feel like it will be something along the lines of if one weight in the first is really big, another weight in the first has to be really small to balance it out. If weights 1 had 100 and 1 for instance, and the other one had 51 and 51, you still would have similar trees satisfying this condition. Now let's examine if that 1 and 100 are five levels apart, The truth is, the 1 will be very far buried in a tree, and it's impact as it goes through the length multiplications will be far less than the not-as-small number in weights two. At least, for some level this will be true, and the deeper the tree, the more the gap will expand. From here there, I don't know how to actually prove that.
+
+17) Higher math one that I don't understand, skipping this one.

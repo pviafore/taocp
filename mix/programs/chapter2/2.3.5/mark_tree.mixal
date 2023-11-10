@@ -1,0 +1,107 @@
+* Uses Algorithm e for marking memory in a tree
+
+MARK            EQU     1:1
+ALINK           EQU     2:3
+BLINK           EQU     4:5
+
+MAIN            ORIG    100
+                JMP     SETUP_DATA
+                JMP     MARK_NODE
+                JMP     PRINT
+                HLT
+
+SETUP_DATA      STJ     9F
+                ENTA    NODEB
+                STA     NODEA(ALINK)
+                ENTA    NODEC
+                STA     NODEB(BLINK)
+                ENTA    NODED
+                STA     NODEC(ALINK)
+                ENTA    NODEE
+                STA     NODED(ALINK)
+
+9H              JMP     *
+
+
+*I1 is T, P is I2, Q is I3
+MARK_NODE       STJ     9F
+E1              ENT1    0
+                ENT2    NODEA
+DOWN_LEFT       J2Z     GO_UP
+                LD3     0,2(ALINK)   
+                ST1     0,2(ALINK)
+                ENT1    0,2
+                ENT2    0,3
+                JMP     DOWN_LEFT  * go down left again
+VISIT           ENTA    1
+                STA     0,2(MARK)
+DOWN_ONE_RIGHT  LD3     0,2(BLINK)
+                J3Z     GO_UP
+                ST1     0,2(BLINK)
+                ENT1    0,2
+                ENT2    0,3
+                JMP     DOWN_LEFT
+GO_UP           ENT3    0,2
+                ENT2    0,1
+                LDA     0,2(MARK)
+                JANZ    MARKED    
+NOT_MARKED      LD1     0,2(ALINK)  * restore left link
+                ST3     0,2(ALINK)
+                JMP     VISIT  * mark as visited and go down right link
+MARKED          LD1     0,2(BLINK)  * restore right link
+                ST3     0,2(BLINK)
+                J1NZ    GO_UP
+9H              JMP     *
+
+PRINT           STJ     9F
+                ENT1    0
+1H              LDA     NODE
+                STA     OUTBUF
+                ENTA    NODEA,1
+                DECA    NODEA-1
+                STA     OUTBUF+1
+
+                LDA     MARK_LBL
+                STA     OUTBUF+3
+
+                LDA     NODEA,1(MARK)
+                CHAR
+                STX     OUTBUF+4
+
+                LDA     ALINK_LBL
+                STA     OUTBUF+6
+
+                LDA     NODEA,1(ALINK)
+                STZ     OUTBUF+8
+                JAZ     2F
+                DECA    NODEA-1
+                STA     OUTBUF+8
+
+2H              LDA     BLINK_LBL
+                STA     OUTBUF+10
+
+                LDA     NODEA,1(BLINK)
+                STZ     OUTBUF+12
+                JAZ     3F
+                DECA    NODEA-1
+                STA     OUTBUF+12
+
+3H              OUT     OUTBUF(18)
+                INC1    1
+                CMP1    =5=
+                JNE     1B
+
+9H              JMP     *
+
+OUTBUF          ORIG    *+24
+NODE            ALF NODE
+MARK_LBL        ALF MARK 
+ALINK_LBL       ALF ALINK
+BLINK_LBL       ALF BLINK
+NODEA           CON     0
+NODEB           CON     0
+NODEC           CON     0
+NODED           CON     0
+NODEE           CON     0
+ONE             CON     1
+                END     MAIN

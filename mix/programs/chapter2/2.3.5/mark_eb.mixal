@@ -1,0 +1,166 @@
+* Uses Algorithm E for marking memory with external stack support
+
+MARK            EQU     0:0
+ATOM            EQU     1:1
+ALINK           EQU     2:3
+BLINK           EQU     4:5
+
+MAIN            ORIG    100
+                JMP     SETUP_DATA
+                JMP     MARK_NODE
+                JMP     PRINT
+                HLT
+
+SETUP_DATA      STJ     9F
+                ENTA    NODEB
+                STA     NODEA(ALINK)
+                ENTA    NODEC
+                STA     NODEB(BLINK)
+                STA     NODEE(ALINK)
+                ENTA    NODED
+                STA     NODEC(ALINK)
+                STA     NODEE(BLINK)
+                ENTA    NODEE
+                STA     NODED(ALINK)
+
+9H              JMP     *
+
+
+*I1 is T, P is I2, Q is I3, Stack poitner is I6
+MARK_NODE       STJ     9F
+E1              ENT1    0
+                ENT2    NODEA
+                ENT6    STACK
+E2              ENNA    0
+                STA     0,2(MARK)
+E3              LDA     0,2(ATOM)
+                JAP     E6           
+E4              LD3     0,2(ALINK)
+                J3Z     E5  * Q is null link
+                LDA     0,3(MARK)
+                LDX     ONE(5:5)
+                SLAX    5
+                JAN     E5  * MARK(Q) != 0
+                ENTA    1
+                STA     0,2(ATOM)
+                CMP6    =SENTINEL=  * is stack full
+                JE      E4A
+                ST2     0,6
+                INC6    1
+                ENT2    0,3
+                JMP     E2
+E4A             ST1     0,2(ALINK)
+                ENT1    0,2
+                ENT2    0,3
+                JMP     E2
+E5              LD3     0,2(BLINK)
+                J3Z     E6  * Q is null link
+                LDA     0,3(MARK)
+                LDX     ONE(5:5)
+                SLAX    5
+                JAN     E6  * MARK(Q) != 0
+                CMP6    =SENTINEL=  * is stack full
+                JE      E5A
+                ST2     0,6
+                INC6    1
+                ENT2    0,3
+                JMP     E2
+E5A             ST1     0,2(BLINK)
+                ENT1    0,2
+                ENT2    0,3
+                JMP     E2
+E6              J1NZ    4F 
+                CMP6    =STACK=
+                JE      9F
+4F              ENT3    0,1
+                LDA     0,3(ATOM)
+                JAZ     RESTORE_BLINK
+RESTORE_ALINK   STZ     0,3(ATOM)
+                CMP6    =SENTINEL= * is the stack full
+                JE      E6A
+                LD1     -1,6
+                DEC6    1
+                JMP     E5
+E6A             LD1     0,3(ALINK)
+                ST2     0,3(ALINK)
+                ENT2    0,3
+                J1NZ    E5
+                LD2     -1,6
+                DEC6    1
+                JMP     E5
+RESTORE_BLINK   CMP6    =SENTINEL= * is stack full 
+                JE      E6B
+                LD2     -1,6
+                DEC6    1
+                JMP     E6
+E6B             LD1     0,3(BLINK)
+                ST2     0,3(BLINK)
+                ENT2    0,3
+
+                J1NZ    E6
+                LD2     -1,6
+                DEC6    1
+                JMP     E6
+9H              JMP     *
+
+PRINT           STJ     9F
+                ENT1    0
+1H              LDA     NODE
+                STA     OUTBUF
+                ENTA    NODEA,1
+                DECA    NODEA-1
+                STA     OUTBUF+1
+
+                LDA     MARK_LBL
+                STA     OUTBUF+3
+
+
+                LDA     NODEA,1(MARK)
+                LDX     ONE(5:5)
+                SLAX    5
+                ENT6    0
+                JAP     4F  
+                ENT6    1
+4H              ENTA    0,6
+                CHAR
+                STX     OUTBUF+4
+
+                LDA     ALINK_LBL
+                STA     OUTBUF+6
+
+                LDA     NODEA,1(ALINK)
+                STZ     OUTBUF+8
+                JAZ     2F
+                DECA    NODEA-1
+                STA     OUTBUF+8
+
+2H              LDA     BLINK_LBL
+                STA     OUTBUF+10
+
+                LDA     NODEA,1(BLINK)
+                STZ     OUTBUF+12
+                JAZ     3F
+                DECA    NODEA-1
+                STA     OUTBUF+12
+
+3H              OUT     OUTBUF(18)
+                INC1    1
+                CMP1    =5=
+                JNE     1B
+
+9H              JMP     *
+
+OUTBUF          ORIG    *+24
+NODE            ALF NODE
+MARK_LBL        ALF MARK 
+ALINK_LBL       ALF ALINK
+BLINK_LBL       ALF BLINK
+NODEA           CON     0
+NODEB           CON     0
+NODEC           CON     0
+NODED           CON     0
+NODEE           CON     0
+ONE             CON     1
+STACK           ORIG    *+2
+SENTINEL        CON     0
+                END     MAIN
