@@ -1,0 +1,133 @@
+* Uses Algorithm e for marking memory
+
+MARK            EQU     0:0
+SIZE            EQU     1:5
+LINK            EQU     4:5
+
+MAIN            ORIG    100
+                JMP     SETUP_DATA
+                JMP     MARK_NODE
+                JMP     PRINT
+                HLT
+
+SETUP_DATA      STJ     9F
+                ENTA    2
+                STA     NODEA(SIZE)
+                ENTA    NODEB
+                STA     NODEA+1(LINK)
+                ENTA    NODEC
+                STA     NODEA+2(LINK)
+
+                ENTA    1
+                STA     NODEC(SIZE)
+                ENTA    NODED
+                STA     NODEC+1(LINK)
+
+                ENTA    2
+                STA     NODED(SIZE)
+                ENTA    NODEE
+                STA     NODED+1(LINK)
+                ENTA    NODED
+                STA     NODED+2(LINK) 
+
+                ENTA    1
+                STA     NODEE(SIZE)
+
+                ENTA    NODEC
+                STA     NODEE+1(LINK)
+
+9H              JMP     *
+
+
+*I1 is T, P is I2, Q is I3
+MARK_NODE       STJ     9F
+E1              ENT1    0
+                ENT2    NODEA
+MARK_E2         ENNA    0
+                STA     0,2(MARK)
+* Move P to the last node ( we are at a new list head)
+GOTO_LAST       LD4     0,2(SIZE)
+                INC2    0,4
+* if it's marked, go up one
+CHECK_MARK      LDA     0,2(MARK)
+                LDX     ONE
+                SLAX    5
+                JAN     GO_UP
+GO_DOWN         LD3     0,2(LINK)
+                LDA     0,3(MARK)
+                LDX     ONE
+                SLAX    5
+                JAN     GO_LEFT  *  our child is marked
+                ST1     0,2(LINK)
+                ENT1    0,2
+                ENT2    0,3
+                JMP     MARK_E2
+* if we are marked we have to go up
+GO_UP           J1Z     9F *  T is zero, terminate     
+                ENT3    0,2
+                ENT2    0,1
+                LD1     0,2(LINK)
+                ST3     0,2(LINK)
+
+* if we are going up, we are not going up to a list head, so decrement by one
+GO_LEFT         DEC2    1
+* if we're marked, go up by one again, otherwise, go back down
+                JMP     CHECK_MARK
+9H              JMP     *
+
+PRINT           STJ     9F
+                ENT1    NODEA
+                ENT2    1
+                JMP     PRINT_NODE
+                
+                ENT1    NODEB
+                ENT2    2
+                JMP     PRINT_NODE
+                
+                ENT1    NODEC
+                ENT2    3
+                JMP     PRINT_NODE
+                
+                ENT1    NODED
+                ENT2    4
+                JMP     PRINT_NODE
+                
+                ENT1    NODEE
+                ENT2    5
+                JMP     PRINT_NODE
+9H              JMP     *
+
+* I1 is the node's index,
+* I2 is the node number
+PRINT_NODE      STJ     9F
+1H              LDA     NODE
+                STA     OUTBUF
+                ENTA    0,2
+                STA     OUTBUF+1
+
+                LDA     MARK_LBL
+                STA     OUTBUF+3
+
+                LDA     0,1(MARK)
+                LDX     ONE(5:5)
+                SLAX    5
+                ENT6    0
+                JAP     4F  
+                ENT6    1
+4H              ENTA    0,6
+                CHAR
+                STX     OUTBUF+4
+                OUT     OUTBUF(18)
+
+9H              JMP     *
+
+OUTBUF          ORIG    *+24
+NODE            ALF NODE
+MARK_LBL        ALF MARK 
+NODEA           ORIG    *+3
+NODEB           ORIG    *+1
+NODEC           ORIG    *+2
+NODED           ORIG    *+3
+NODEE           ORIG    *+2
+ONE             CON     1
+                END     MAIN

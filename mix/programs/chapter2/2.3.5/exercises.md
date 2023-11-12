@@ -32,3 +32,9 @@ Do we always go up the right way? Yes, because we build a linked list of parents
     Do an in-order traversal using a stack of nodes pointed above. Only mark the node when you visit it, this way, you know whether to check right link (not marked yet) or go to parent ( you have already been marked).
 
     See [mark_tree.mixal](mark_tree.mixal).
+
+8)  Design a marking algorithm that deals with variable sided links/nodes
+
+    When we descend to a node, instead of setting up the stack to point to list head, move all the way to the last node (Since we know the size). Then, whenever we go up the stack, we restore the link, decrement the position by node size. If we are already marked (current list head), we go up again, otherwise, we alter the link to set up the stack and descend down current link.
+
+    See [mark_variable.mixal](mark_variable.mixal)
