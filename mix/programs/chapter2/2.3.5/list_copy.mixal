@@ -1,0 +1,256 @@
+* Copy list entirely
+S               EQU     0:0
+T               EQU     1:1
+REF             EQU     2:3
+RLINK           EQU     4:5
+MAIN            ORIG    100
+                JMP     SETUP_DATA
+                JMP     COPY_LIST
+                JMP     PRINT_LIST_NODES
+                HLT
+
+SETUP_DATA      STJ     9F
+* set up links
+                ENT1    LIST1
+                ST1     LIST1+12(REF)
+                ENT1    LIST1+1
+                ST1     LIST1(RLINK)
+                ENT1    LIST1+2
+                ST1     LIST1+1(RLINK)
+                ENT1    LIST1+3
+                ST1     LIST1+2(RLINK)
+                ENT1    LIST1+4
+                ST1     LIST1+3(RLINK)
+                ENT1    LIST1+5
+                ST1     LIST1+1(REF)
+                ST1     LIST1+12(REF)
+                ST1     LIST1+9(REF)
+                ENT1    LIST1+6
+                ST1     LIST1+5(RLINK)
+                ENT1    LIST1+7
+                ST1     LIST1+6(RLINK)
+                ENT1    LIST1+8
+                ST1     LIST1+3(REF)
+                ENT1    LIST1+9
+                ST1     LIST1+8(RLINK)
+                ENT1    LIST1+10
+                ST1     LIST1+6(REF)
+                ENT1    LIST1+11
+                ST1     LIST1+7(REF)
+                ENT1    LIST1+12
+                ST1     LIST1+11(RLINK)
+                ENT1    LIST1+13
+                ST1     LIST1+12(RLINK)
+* set up atoms
+                ENT1    2
+                ST1     LIST1+2(T)
+                ST1     LIST1+2(REF)
+
+* set up non-list heads
+                ENTA    1
+                STA     LIST1+1(T)
+                STA     LIST1+3(T)
+                STA     LIST1+4(T)
+                STA     LIST1+6(T)
+                STA     LIST1+7(T)
+                STA     LIST1+9(T)
+                STA     LIST1+12(T)
+                STA     LIST1+13(T)
+9H              JMP     *
+
+*I1 is used to track the current node in the original tree
+*I2 is the last node you came from in the original tree, that node will have
+*I3 is the current node in new tree
+*I4 is the last node you came from in the original tree 
+*T set to zero if you did ref, or one if you did rlink
+*I6 is where we copy memory from
+* we are using REF to mark which nodes we've already seen to avoid cycles.
+COPY_LIST       STJ     9F
+                ENT6    LIST2+1
+                ENT1    LIST1
+                ENT3    LIST2
+                ENT4    0
+                ENT2    0
+CHECK_LIST_HEAD  ENTA    1
+                 STA     0,1(REF)
+
+GO_RIGHT        LD5     0,1(RLINK)
+                J5Z     BACK_TO_LH_AND_UP
+                ST2     0,1(RLINK)
+                ENT2    0,1
+                ENT1    0,5 
+
+                ENT5    0,3
+                ST4     0,3(RLINK)
+                ENT3    0,6
+                INC6    1
+                ENT4    0,5
+
+                LDA     0,1(T)
+                STA     0,3(T)
+                DECA    1
+                JAZ    GO_DOWN
+                LDA     0,1(REF)
+                STA     0,3(REF)
+                JMP     GO_RIGHT
+
+GO_DOWN         LD5     0,1(REF)
+                J5Z     GO_RIGHT
+
+                LDA     0,5(REF)
+                JANZ    GO_RIGHT  * we've seen it already
+
+                LDA     0,5(REF)
+                INCA    1 
+                STA     0,5(REF) * mark it as seen
+
+                ST2     0,1(REF)
+                ENT2    0,1
+                ENT1    0,5
+
+                ENT5    0,3
+                ST4     0,3(REF)
+                ENT3    0,6
+                INC6    1
+                ENT4    0,5
+
+                JMP     GO_RIGHT
+
+BACK_TO_LH_AND_UP LDA   0,1(T)
+                  JAZ   GO_UP  * we are back at a list head
+                  LD5   0,2(RLINK)
+                  ST1   0,2(RLINK)
+                  ENT1  0,2
+                  ENT2  0,5
+
+                  LD5   0,4(RLINK)
+                  ST3   0,4(RLINK)
+                  ENT3  0,4
+                  ENT4  0,5
+                  JMP   BACK_TO_LH_AND_UP
+GO_UP           LD5    0,4(REF)
+                ST3    0,4(REF)
+                ENT3   0,4
+                ENT4   0,5
+                
+                J2Z    8F
+                LD5    0,2(REF)
+                ST1    0,2(REF)
+                ENT1   0,2
+                ENT2   0,5
+
+                JMP   GO_RIGHT 
+* fall through to ending                   
+
+8H              JMP     RESTORE_TREE
+9H              JMP     *
+
+RESTORE_TREE     STJ     9F
+                 ENT1    LIST1
+                 ENT2    0
+                 STZ     0,1(REF) 
+RGO_RIGHT        LD5     0,1(RLINK)
+                J5Z     RBACK_TO_LH_AND_UP
+                ST2     0,1(RLINK)
+                ENT2    0,1
+                ENT1    0,5 
+
+                LDA     0,1(T)
+                DECA    1
+                JAZ    RGO_DOWN
+                LDA     0,1(REF)
+                JMP     RGO_RIGHT
+
+RGO_DOWN        LD5     0,1(REF)
+                J5Z     RGO_RIGHT
+
+                LDA     0,5(REF)
+                JAZ     RGO_RIGHT  * we've seen it already
+
+                STZ     0,5(REF)  * mark it as visited 
+
+                ST2     0,1(REF)
+                ENT2    0,1
+                ENT1    0,5
+
+                JMP     RGO_RIGHT
+
+RBACK_TO_LH_AND_UP LDA   0,1(T)
+                  JAZ   RGO_UP  * we are back at a list head
+                  LD5   0,2(RLINK)
+                  ST1   0,2(RLINK)
+                  ENT1  0,2
+                  ENT2  0,5
+
+                  JMP   RBACK_TO_LH_AND_UP
+RGO_UP           J2Z    9F
+                LD5    0,2(REF)
+                ST1    0,2(REF)
+                ENT1   0,2
+                ENT2   0,5
+
+                JMP   RGO_RIGHT 
+
+
+9H               JMP     *
+
+PRINT_LIST_NODES STJ     9F
+                ENT1    0
+1H              LDA     NODE
+                STA     OUTBUF
+
+                ENTA    0,1
+                CHAR
+                STX     OUTBUF+1
+
+                LDA     T_LBL
+                STA     OUTBUF+2
+                LDA     LIST2,1(T)
+                CHAR
+                STX     OUTBUF+3
+
+                LDA     REF_LBL
+                STA     OUTBUF+4
+
+                STZ     OUTBUF+5
+                LDA     LIST2,1(REF)
+                JAZ     3F
+                LDX     LIST2,1(T)
+                CMPX    =2=
+                JGE     2F
+                
+                DECA    LIST2
+                CHAR 
+                STX     OUTBUF+5(1:4)
+                JMP     3F
+
+2H              STA     OUTBUF+5(1:4)
+
+3H              LDA     RLINK_LBL
+                STA     OUTBUF+6
+               
+                STZ     OUTBUF+7
+                LDA     LIST2,1(RLINK)
+                JAZ     4F
+
+                DECA    LIST2
+                CHAR
+                STX     OUTBUF+7(2:5)
+
+4H              OUT     OUTBUF(18)
+                INC1    1
+                CMP1    =14=
+                JNE     1B
+
+9H              JMP     *
+
+LIST1           ORIG *+14
+LIST2           ORIG *+14
+NODE            ALF NODE
+T_LBL           ALF    T
+REF_LBL         ALF   REF
+RLINK_LBL       ALF RLINK
+
+OUTBUF          ORIG *+24
+
+                END     MAIN
