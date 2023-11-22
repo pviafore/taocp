@@ -72,6 +72,8 @@ Do we always go up the right way? Yes, because we build a linked list of parents
 
     See [list_check](list_check.mixal)
 
+    Note ( after reading the answer in the back, my algorithm is too restrictive -> there may be cases where different nodes may have an equivalence even if they aren't pointing to the same thing.)
+
 12) How can you do garbage collection in real-time, with strict limits on list operation runtime?
 
     In order to do this, you have to be able to chunk the operations into smaller atoms. Then for each operation on a list you can do a little more garbage collection to speed things up.
