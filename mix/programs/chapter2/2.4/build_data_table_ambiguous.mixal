@@ -1,4 +1,4 @@
-* Algorithm A  for building data table
+* Algorithm A for building a data table
 
 LEVEL       EQU     1:2
 LINK        EQU     4:5
@@ -23,20 +23,18 @@ LOAD_DATA   STJ     9F
             STA     DATA(LEVEL)
             STA     DATA+7(LEVEL)
 
-            ENTA    2
-            STA     DATA+5(LEVEL)
-            STA     DATA+11(LEVEL)
-
             ENTA    3
             STA     DATA+1(LEVEL)
             STA     DATA+4(LEVEL)
+            STA     DATA+5(LEVEL)
 
             ENTA    4
             STA     DATA+6(LEVEL)
-            STA     DATA+10(LEVEL)
 
             ENTA    5
             STA     DATA+8(LEVEL)
+            STA     DATA+10(LEVEL)
+            STA     DATA+11(LEVEL)
 
             ENTA    7
             STA     DATA+2(LEVEL)
@@ -44,14 +42,15 @@ LOAD_DATA   STJ     9F
 
             ENTA    8
             STA     DATA+8(LEVEL)
-            STA     DATA+14(LEVEL)
 
             ENTA    9
             STA     DATA+12(LEVEL)
             STA     DATA+13(LEVEL)
+            STA     DATA+14(LEVEL)
 
             ENTA    SYMTABLE
             STA     DATA(LINK)
+            STA     DATA+7(LINK)
             
             ENTA    SYMTABLE+1
             STA     DATA+1(LINK)
@@ -63,7 +62,6 @@ LOAD_DATA   STJ     9F
 
             ENTA    SYMTABLE+3 
             STA     DATA+3(LINK)
-            STA     DATA+13(LINK)
 
             ENTA    SYMTABLE+4
             STA     DATA+4(LINK) 
@@ -72,6 +70,7 @@ LOAD_DATA   STJ     9F
             ENTA    SYMTABLE+5
             STA     DATA+5(LINK) 
             STA     DATA+8(LINK) 
+            STA     DATA+13(LINK)
 
             ENTA    SYMTABLE+6
             STA     DATA+6(LINK)
@@ -79,7 +78,6 @@ LOAD_DATA   STJ     9F
             STA     DATA+9(LINK)
 
             ENTA    SYMTABLE+7
-            STA     DATA+7(LINK)
 
 
 9H          JMP     *
@@ -104,41 +102,24 @@ A3          LD2     DATA,5(LINK)  * P
 A4          LDA     -1,6(LEVEL)  * L1
             LD2     -1,6(LINK)  * P1
             J2Z     A6
-            CMPA    DATA,5(LEVEL)   * is L1 >= L            
+            CMPA    DATA,5(LEVEL)   * 
             JGE     A5
-
-A4A         ST4     1,2(CHILD) 
+            ST4     1,2(CHILD) 
             JMP     A6
-A5          CMPA    DATA,5(LEVEL) * is L1 > L
-            JG      A5B
+A5          CMPA    DATA,5(LEVEL)
+            JL      ERROR  * 
             JE      A5A
-            STZ     0,6
             DEC6    1
             LDA     -1,6(LEVEL) * L1
             JMP     A5
-* at this point, we are lower than our previous level.
-* if this is in between the values, treat it as a sibling.
-* If it's at or less than the next node on the stack, then that means
-* we need to remove from the stack
-A5B         CMP6     =STACK+1=
-            JE       A5A  * only one element on stack 
-            ENT3    -1,6 
-            LDX     DATA,5(LEVEL)
-            CMPX    -1,3(LEVEL)
-            JG      A5A * we are greater than previous number, we're a sibling.
-            DEC6    1
-            LDA     -1,6(LEVEL)
-            LD2     -1,6(LINK)
-            JMP     A5
-
 A5A         LD2     -1,6(LINK)
             ST4     1,2(SIB)
-            STZ     0,6
             DEC6    1
             LD2     -1,6(LINK)
 A6          ST2     0,4(PARENT)
             STZ     1,4(CHILD)
             STZ     1,4(SIB)
+            JMP     CHECK_AMBIG
 A7          LD2     DATA,5(LEVEL)
             ST2     0,6(LEVEL)
             ST4     0,6(LINK)
@@ -147,13 +128,40 @@ A7          LD2     DATA,5(LEVEL)
 
 9H          JMP     *
 
+ERROR       HLT
 
-ERROR       LDA ERROR_LBL
-            STA OUTBUF
-            OUT OUTBUF(18)
+* I5 is the location for input
+* I4 is the current entry in data table
+CHECK_AMBIG STJ     9F
+            ST2     RESTORE(0:2)
+            ST1     RESTORE+1(0:2)
+            ST3     RESTORE+2(0:2)
+
+C1          LD1     0,4(PARENT) * parent
+            LD2     0,4(PREV) * prev
+C2          J1Z     RESTORE   * no parent
+            LDX     0,1(NAME)
+C3          J2Z     C7   * no prev
+            LD3     0,2(PARENT) * parentprev   
+            J3Z     C6 
+C4          CMPX    0,3(NAME)
+            JE      AMBIGUOUS
+C5          LD3     0,3(PARENT)
+            J3NZ    C4
+C6          LD2     0,2(PREV)
+            JMP     C3
+C7          LD1     0,1(PARENT)
+            JMP     C2
+AMBIGUOUS   LDA     AMBIG_LBL
+            STA     OUTBUF
+            LDA     AMBIG_LBL+1
+            STA     OUTBUF+1
+            OUT     OUTBUF(18)
             HLT
-
-ERROR_LBL   ALF ERROR
+RESTORE     ENT2    * 
+            ENT1    *
+            ENT3    *
+9H          JMP     *
 
 SHOW_TABLE  STJ     9F
             ENT1    0
@@ -189,7 +197,7 @@ SHOW_TABLE  STJ     9F
 2H          STZ     OUTBUF+5
             LDA     DATATABLE,1(NAME)
             STA     OUTBUF+5(3:3)
-
+            
             LDA     DATATABLE+1,1(CHILD)
             STZ     OUTBUF+6
             JAZ     2F
@@ -208,7 +216,7 @@ SHOW_TABLE  STJ     9F
             CHAR
             STX     OUTBUF+7(2:5)
 
-2H          OUT     OUTBUF(18)
+2H         OUT     OUTBUF(18)
 
             INC1    2
             JMP     1B
@@ -239,6 +247,8 @@ SYMTABLE    ORIG    *+10
 PREV_LBL    ALF PREV
 PARENT_LBL  ALF   PARE
             ALF NT
+AMBIG_LBL   ALF AMBIG
+            ALF OUS
 NAME_LBL    ALF NAME
 CHILD_LBL   ALF CHILD
 SIB_LBL     ALF    SIB

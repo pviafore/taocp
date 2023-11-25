@@ -1,7 +1,9 @@
-* Algorithm A  for building data table
+* Algorithm B for reference checking
 
 LEVEL       EQU     1:2
 LINK        EQU     4:5
+INFO        EQU     2:3
+RLINK       EQU     4:5
 
 NAME        EQU     1:1
 PREV        EQU     2:3
@@ -14,6 +16,8 @@ MAIN        ORIG    100
 
             JMP     LOAD_DATA
             JMP     BUILD_TABLE
+            ENT1    REFERENCE
+            JMP     REFCHECK
             JMP     SHOW_TABLE
             HLT
 
@@ -23,32 +27,30 @@ LOAD_DATA   STJ     9F
             STA     DATA(LEVEL)
             STA     DATA+7(LEVEL)
 
-            ENTA    2
-            STA     DATA+5(LEVEL)
-            STA     DATA+11(LEVEL)
-
             ENTA    3
             STA     DATA+1(LEVEL)
             STA     DATA+4(LEVEL)
+            STA     DATA+5(LEVEL)
 
             ENTA    4
             STA     DATA+6(LEVEL)
-            STA     DATA+10(LEVEL)
 
             ENTA    5
             STA     DATA+8(LEVEL)
+            STA     DATA+10(LEVEL)
+            STA     DATA+11(LEVEL)
 
             ENTA    7
             STA     DATA+2(LEVEL)
             STA     DATA+3(LEVEL)
 
             ENTA    8
-            STA     DATA+8(LEVEL)
-            STA     DATA+14(LEVEL)
+            STA     DATA+9(LEVEL)
 
             ENTA    9
             STA     DATA+12(LEVEL)
             STA     DATA+13(LEVEL)
+            STA     DATA+14(LEVEL)
 
             ENTA    SYMTABLE
             STA     DATA(LINK)
@@ -81,6 +83,20 @@ LOAD_DATA   STJ     9F
             ENTA    SYMTABLE+7
             STA     DATA+7(LINK)
 
+            ENTA    6
+            STA     REFERENCE(INFO)
+            ENTA    REFERENCE+1
+            STA     REFERENCE(RLINK)
+
+            ENTA    2
+            STA     REFERENCE+1(INFO)
+            ENTA    REFERENCE+2
+            STA     REFERENCE+1(RLINK)
+
+            ENTA    7
+            STA     REFERENCE+2(INFO)
+            ENTA    0
+            STA     REFERENCE+2(RLINK)
 
 9H          JMP     *
 
@@ -104,36 +120,18 @@ A3          LD2     DATA,5(LINK)  * P
 A4          LDA     -1,6(LEVEL)  * L1
             LD2     -1,6(LINK)  * P1
             J2Z     A6
-            CMPA    DATA,5(LEVEL)   * is L1 >= L            
+            CMPA    DATA,5(LEVEL)   * 
             JGE     A5
-
-A4A         ST4     1,2(CHILD) 
+            ST4     1,2(CHILD) 
             JMP     A6
-A5          CMPA    DATA,5(LEVEL) * is L1 > L
-            JG      A5B
+A5          CMPA    DATA,5(LEVEL)
+            JL      ERROR  * 
             JE      A5A
-            STZ     0,6
             DEC6    1
             LDA     -1,6(LEVEL) * L1
             JMP     A5
-* at this point, we are lower than our previous level.
-* if this is in between the values, treat it as a sibling.
-* If it's at or less than the next node on the stack, then that means
-* we need to remove from the stack
-A5B         CMP6     =STACK+1=
-            JE       A5A  * only one element on stack 
-            ENT3    -1,6 
-            LDX     DATA,5(LEVEL)
-            CMPX    -1,3(LEVEL)
-            JG      A5A * we are greater than previous number, we're a sibling.
-            DEC6    1
-            LDA     -1,6(LEVEL)
-            LD2     -1,6(LINK)
-            JMP     A5
-
 A5A         LD2     -1,6(LINK)
             ST4     1,2(SIB)
-            STZ     0,6
             DEC6    1
             LD2     -1,6(LINK)
 A6          ST2     0,4(PARENT)
@@ -146,7 +144,6 @@ A7          LD2     DATA,5(LEVEL)
             JMP     A2
 
 9H          JMP     *
-
 
 ERROR       LDA ERROR_LBL
             STA OUTBUF
@@ -189,7 +186,7 @@ SHOW_TABLE  STJ     9F
 2H          STZ     OUTBUF+5
             LDA     DATATABLE,1(NAME)
             STA     OUTBUF+5(3:3)
-
+            
             LDA     DATATABLE+1,1(CHILD)
             STZ     OUTBUF+6
             JAZ     2F
@@ -208,7 +205,7 @@ SHOW_TABLE  STJ     9F
             CHAR
             STX     OUTBUF+7(2:5)
 
-2H          OUT     OUTBUF(18)
+2H         OUT     OUTBUF(18)
 
             INC1    2
             JMP     1B
@@ -231,9 +228,67 @@ PRINT_HEADER STJ    9F
              OUT    OUTBUF(18)
 9H           JMP    *
 
+* I1 is the address of P0
+REFCHECK    STJ     9F 
+B1          ENT2    0   * Q
+            LD6     0,1(INFO)  
+            LD3     SYMTABLE,6  * P
+B2          J3Z     PRINT_REF 
+            ENT4    0,3   * S
+            ENT5    0,1   * k 
+B3          LDA     0,5(RLINK)
+            JANZ    B4  * more nodes to look at in our list
+            J2NZ    ERROR
+            ENT2    0,3
+            LD3     0,3(PREV)
+            JMP     B2
+B4          LD5     0,5(RLINK)
+B5          LD4     0,4(PARENT)
+            J4NZ    B6
+            LD3     0,3(PREV)
+            JMP     B2
+B6          JMP     CHECK_SYMTABLE
+            JANZ    B3
+            JMP     B5 
+PRINT_REF   J2Z     PRINT_NF
+            ENTA    0,2
+            DECA    DATATABLE
+            SRAX    5
+            DIV     =2=
+            CHAR
+            STX     OUTBUF 
+            JMP     8F
+PRINT_NF    LDA     NOT_FOUND
+            STA     OUTBUF
+            LDA     NOT_FOUND+1
+            STA     OUTBUF+1
+8F          OUT     OUTBUF(18)
+            STZ     OUTBUF
+            STZ     OUTBUF+1
+9H          JMP     *
+
+* I4 is current node,
+* I5 is the pointer into the symtable
+CHECK_SYMTABLE  STJ   9F
+                ST1   RESTORE_CS(0:2)
+                ENTA  0
+                LD1   0,5(INFO)
+                LD1   SYMTABLE,1(LINK)
+1H              J1Z   RESTORE_CS
+                DEC1  0,4
+                J1Z   FOUNDIT
+                INC1  0,4
+                LD1   0,1(PREV)
+                JMP   1B
+
+FOUNDIT         ENTA  1
+RESTORE_CS      ENT1  *
+9H              JMP   *
+
 DATA        ORIG    *+16
 STACK       ORIG    *+20
 DATATABLE   ORIG    *+32
+REFERENCE   ORIG    *+5
 SYMTABLE    ORIG    *+10
 
 PREV_LBL    ALF PREV
@@ -242,5 +297,7 @@ PARENT_LBL  ALF   PARE
 NAME_LBL    ALF NAME
 CHILD_LBL   ALF CHILD
 SIB_LBL     ALF    SIB
+NOT_FOUND   ALF   NOT
+            ALF FOUND
 OUTBUF      ORIG *+24
             END     MAIN
