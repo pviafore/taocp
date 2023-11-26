@@ -125,4 +125,24 @@
 
     See [build_data_table_scope.mixal](build_data_table_scope.mixal)
 
+14) Write Algorithm C with PREV/SCOPE links.
+
+    This should be the same as Algorithm C with the following modifications:
+
+    - Checking if a child is null: Is your scope the same as yourself
+    
+    - Going to a child:  you push the current PQ onto the stack, and move one node down from both
+
+    - Are they equal? (Move to the prev for each node, and if they end up equal, then yes)
+
+    - Is sibling null? Does your scope equal the scope of your parent (which is on the stack)
+
+    - Set to sibling: Add 1 to your current scope 
+
+    - Reset to first child: Look at your parent on the stack, and add one to it.
+
+    - Go to parent: Pop Stack
+
+    See [move_corresponding_scope.mixal](move_corresponding_scope.mixal).
+
      

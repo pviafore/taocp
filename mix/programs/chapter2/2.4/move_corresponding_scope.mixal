@@ -1,0 +1,303 @@
+* Algorithm A for building a data table
+
+LEVEL       EQU     1:2
+LINK        EQU     4:5
+
+NAME        EQU     1:1
+PREV        EQU     2:3
+PARENT      EQU     4:5
+SCOPE       EQU     4:5
+CHILD       EQU     2:3
+SIB         EQU     4:5
+
+
+MAIN        ORIG    100
+
+            JMP     LOAD_DATA
+            JMP     BUILD_TABLE
+            JMP     MOVECORR
+            JMP     SHOW_TABLE
+            HLT
+
+
+LOAD_DATA   STJ     9F
+            ENTA    1
+            STA     DATA(LEVEL)
+            STA     DATA+7(LEVEL)
+
+            ENTA    3
+            STA     DATA+1(LEVEL)
+            STA     DATA+4(LEVEL)
+            STA     DATA+5(LEVEL)
+
+            ENTA    4
+            STA     DATA+6(LEVEL)
+
+            ENTA    5
+            STA     DATA+8(LEVEL)
+            STA     DATA+10(LEVEL)
+            STA     DATA+11(LEVEL)
+
+            ENTA    7
+            STA     DATA+2(LEVEL)
+            STA     DATA+3(LEVEL)
+
+            ENTA    8
+            STA     DATA+9(LEVEL)
+
+            ENTA    9
+            STA     DATA+12(LEVEL)
+            STA     DATA+13(LEVEL)
+            STA     DATA+14(LEVEL)
+
+            ENTA    SYMTABLE
+            STA     DATA(LINK)
+            
+            ENTA    SYMTABLE+1
+            STA     DATA+1(LINK)
+            STA     DATA+10(LINK)
+
+            ENTA    SYMTABLE+2
+            STA     DATA+2(LINK)
+            STA     DATA+11(LINK)
+
+            ENTA    SYMTABLE+3 
+            STA     DATA+3(LINK)
+            STA     DATA+13(LINK)
+
+            ENTA    SYMTABLE+4
+            STA     DATA+4(LINK) 
+            STA     DATA+12(LINK) 
+
+            ENTA    SYMTABLE+5
+            STA     DATA+5(LINK) 
+            STA     DATA+8(LINK) 
+
+            ENTA    SYMTABLE+6
+            STA     DATA+6(LINK)
+            STA     DATA+14(LINK)
+            STA     DATA+9(LINK)
+
+            ENTA    SYMTABLE+7
+            STA     DATA+7(LINK)
+
+            ENTA    5+DATATABLE 
+            STA     P0
+            ENTA    8+DATATABLE
+            STA     Q0
+
+9H          JMP     *
+
+
+BUILD_TABLE STJ     9F
+A1          ENT6    STACK
+            STZ     0,6  * stack pointer
+            INC6    1
+            ENT5    -1    * input pointer (L,P)
+            ENT4    DATATABLE-1    * data table pointer (Q)
+A2          INC5    1
+            INC4    1 
+            LDA     DATA,5 
+            JAZ     A8 
+A3          LD2     DATA,5(LINK)  * P
+            LDA     0,2(LINK)
+            STA     0,4(PREV)
+            ST4     0,2(LINK)
+            DEC2    SYMTABLE-1
+            ST2     0,4(NAME)
+            INC2    SYMTABLE-1
+A4          LDA     -1,6(LEVEL)  * L1
+            LD2     -1,6(LINK)  * P1
+            J2Z     A6  
+            CMPA    DATA,5(LEVEL)   * 
+            JGE     A5  
+            JMP     A6  
+A5          CMPA    DATA,5(LEVEL) * we are a parent
+            LD2     -1,6(LINK)
+            JL      ERROR  * 
+            JE      A5A  
+            LDX     0,2(SCOPE)
+            JXNZ    5F
+            ST3     0,2(SCOPE)
+5H          DEC6    1
+            LDA     -1,6(LEVEL) * L1
+            JMP     A5  
+A5A         LD2     -1,6(LINK)
+            LDX     0,2(SCOPE)
+            JXNZ    A5B 
+            ST3     0,2(SCOPE)
+A5B         DEC6    1
+            LD2     -1,6(LINK)
+A6          NOP
+A7          LD2     DATA,5(LEVEL)
+            ST2     0,6(LEVEL)
+            ENT3    0,4
+            ST4     0,6(LINK)
+            J2NZ     A7A
+
+A7A         INC6    1
+            JMP     A2  
+A8          DEC4    1  * cleans up the stack
+1H          CMP6    =STACK+1=
+            JE      9F
+            LD2     -1,6(LINK)
+            ST4     0,2(SCOPE)
+
+            DEC6    1
+            JMP     1B
+
+9H          JMP     *
+
+
+ERROR       HLT
+
+SHOW_TABLE  STJ     9F
+
+            ENT1    0        
+            STZ     OUTBUF
+            STZ     OUTBUF+5
+            OUT     EMPTY(18)
+            OUT     EMPTY(18)
+            LDA     PREV_LBL 
+            STA     OUTBUF+2
+            LDA     SCOPE_LBL 
+            STA     OUTBUF+3
+            OUT     OUTBUF(18)
+
+1H          LDA     DATATABLE,1 
+            JAZ     9F
+            
+            ENTA    0,1
+            CHAR
+            STX     OUTBUF
+           
+            STZ     OUTBUF+2
+            LDA     DATATABLE,1(PREV)
+            JAZ     2F
+            DECA    DATATABLE
+            CHAR
+            STX     OUTBUF+2(2:5)
+
+2H          STZ     OUTBUF+3
+            LDA     DATATABLE,1(SCOPE)
+            JAZ     2F
+            DECA    DATATABLE
+            CHAR
+            STX     OUTBUF+3(2:5)
+
+2H          OUT     OUTBUF(18)
+
+            INC1    1
+            JMP     1B
+
+9H          JMP     *
+
+PRINT_HEADER STJ    9F
+             LDA    PREV_LBL
+             STA    OUTBUF+2
+             LDA    PARENT_LBL
+             STA    OUTBUF+3
+             LDA    PARENT_LBL+1
+             STA    OUTBUF+4
+             LDA    NAME_LBL
+             STA    OUTBUF+5 
+             LDA    CHILD_LBL
+             STA    OUTBUF+6
+             LDA    SIB_LBL
+             STA    OUTBUF+7(2:5)
+             OUT    OUTBUF(18)
+9H           JMP    *
+
+
+MOVECORR    STJ    9F
+C1          LD1    P0
+            LD2    Q0
+            ENT6   STACK
+            STZ    STACK
+C2          CMP1   0,1(SCOPE)
+            JE     C2A
+            CMP2   0,2(SCOPE)
+            JE     C2A
+
+            ST1    0,6(1:2)  * push on stack and go down.
+            ST2    0,6(3:4)
+            INC1   1
+            INC2   1
+            INC6   1
+            JMP    C3
+
+C2A         ENTA   0,1
+            DECA   DATATABLE
+            CHAR
+            STX    OUTBUF
+
+            ENTA   0,2
+            DECA   DATATABLE
+            CHAR
+            STX    OUTBUF+3
+            OUT    OUTBUF(18)
+            JMP    C5
+
+C3          ENT4   0,1
+
+1H          ENT3   0,4
+            LD4    0,3(PREV)
+            J4NZ   1B  * go until I4 is zero,
+
+            ENT4   0,2
+1H          J4Z    2F  * we did find a match
+            CMP3   0,4(PREV) 
+            JE     C2  - we matched names
+            LD4    0,4(PREV)
+            JMP    1B
+
+2H          LD3    0,2(SCOPE)  * is sibling null
+            LD3    0,3(SCOPE)
+            CMP3   0,2(SCOPE)
+            JE    C4
+
+            LD2    0,2(SCOPE) * go to sibling
+            INC2   1
+            JMP    C3
+
+C4          LD3    0,1(SCOPE) * is P sibling null
+            LD3    0,3(SCOPE) * child SCOPE
+            CMP3   0,1(SCOPE)
+            JE    C4A
+
+            LD1    0,1(SCOPE)
+            INC1   1 
+
+            LD2    -1,6(3:4)
+            INC2    1
+
+            JMP    C3
+
+C4A         LD1    -1,6(1:2)
+            LD2    -1,6(4:5)
+            DEC6   1
+C5          CMP1   P0
+            JE     9F
+            JMP    C4
+9H          JMP    *
+
+
+
+DATA        ORIG    *+16
+STACK       ORIG    *+20
+DATATABLE   ORIG    *+32
+SYMTABLE    ORIG    *+10
+P0          CON     0
+Q0          CON     0
+
+PREV_LBL    ALF PREV
+PARENT_LBL  ALF   PARE
+            ALF NT
+NAME_LBL    ALF NAME
+CHILD_LBL   ALF CHILD
+SIB_LBL     ALF    SIB
+SCOPE_LBL   ALF SCOPE
+OUTBUF      ORIG *+24
+EMPTY       ORIG *+24
+
+            END     MAIN
