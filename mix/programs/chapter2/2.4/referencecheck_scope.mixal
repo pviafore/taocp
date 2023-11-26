@@ -1,0 +1,308 @@
+* Algorithm A for building a data table
+
+LEVEL       EQU     1:2
+LINK        EQU     4:5
+INFO        EQU     2:3
+RLINK       EQU     4:5
+
+NAME        EQU     1:1
+PREV        EQU     2:3
+SCOPE       EQU     4:5
+
+
+MAIN        ORIG    100
+
+            JMP     LOAD_DATA
+            JMP     BUILD_TABLE
+            JMP     REFCHECK
+            JMP     SHOW_TABLE
+            HLT
+
+
+LOAD_DATA   STJ     9F
+            ENTA    1
+            STA     DATA(LEVEL)
+            STA     DATA+7(LEVEL)
+
+            ENTA    3
+            STA     DATA+1(LEVEL)
+            STA     DATA+4(LEVEL)
+            STA     DATA+5(LEVEL)
+
+            ENTA    4
+            STA     DATA+6(LEVEL)
+
+            ENTA    5
+            STA     DATA+8(LEVEL)
+            STA     DATA+10(LEVEL)
+            STA     DATA+11(LEVEL)
+
+            ENTA    7
+            STA     DATA+2(LEVEL)
+            STA     DATA+3(LEVEL)
+
+            ENTA    8
+            STA     DATA+9(LEVEL)
+
+            ENTA    9
+            STA     DATA+12(LEVEL)
+            STA     DATA+13(LEVEL)
+            STA     DATA+14(LEVEL)
+
+            ENTA    SYMTABLE
+            STA     DATA(LINK)
+            
+            ENTA    SYMTABLE+1
+            STA     DATA+1(LINK)
+            STA     DATA+10(LINK)
+
+            ENTA    SYMTABLE+2
+            STA     DATA+2(LINK)
+            STA     DATA+11(LINK)
+
+            ENTA    SYMTABLE+3 
+            STA     DATA+3(LINK)
+            STA     DATA+13(LINK)
+
+            ENTA    SYMTABLE+4
+            STA     DATA+4(LINK) 
+            STA     DATA+12(LINK) 
+
+            ENTA    SYMTABLE+5
+            STA     DATA+5(LINK) 
+            STA     DATA+8(LINK) 
+
+            ENTA    SYMTABLE+6
+            STA     DATA+6(LINK)
+            STA     DATA+14(LINK)
+            STA     DATA+9(LINK)
+
+            ENTA    SYMTABLE+7
+            STA     DATA+7(LINK)
+
+            ENTA    6
+            STA     REFERENCE(INFO)
+            ENTA    REFERENCE+1
+            STA     REFERENCE(RLINK)
+
+            ENTA    5
+            STA     REFERENCE+1(INFO)
+            ENTA    REFERENCE+2
+            STA     REFERENCE+1(RLINK)
+
+            ENTA    0
+            STA     REFERENCE+2(INFO)
+            ENTA    0
+            STA     REFERENCE+2(RLINK)
+
+
+9H          JMP     *
+
+
+BUILD_TABLE STJ     9F
+A1          ENT6    STACK
+            STZ     0,6  * stack pointer
+            INC6    1
+            ENT5    -1    * input pointer (L,P)
+            ENT4    DATATABLE-1    * data table pointer (Q)
+A2          INC5    1
+            INC4    1 
+            LDA     DATA,5 
+            JAZ     A8 
+A3          LD2     DATA,5(LINK)  * P
+            LDA     0,2(LINK)
+            STA     0,4(PREV)
+            ST4     0,2(LINK)
+            DEC2    SYMTABLE-1
+            ST2     0,4(NAME)
+            INC2    SYMTABLE-1
+A4          LDA     -1,6(LEVEL)  * L1
+            LD2     -1,6(LINK)  * P1
+            J2Z     A6  
+            CMPA    DATA,5(LEVEL)   * 
+            JGE     A5  
+            JMP     A6  
+A5          CMPA    DATA,5(LEVEL) * we are a parent
+            LD2     -1,6(LINK)
+            JL      ERROR  * 
+            JE      A5A  
+            LDX     0,2(SCOPE)
+            JXNZ    5F
+            ST3     0,2(SCOPE)
+5H          DEC6    1
+            LDA     -1,6(LEVEL) * L1
+            JMP     A5  
+A5A         LD2     -1,6(LINK)
+            LDX     0,2(SCOPE)
+            JXNZ    A5B 
+            ST3     0,2(SCOPE)
+A5B         DEC6    1
+            LD2     -1,6(LINK)
+A6          NOP
+A7          LD2     DATA,5(LEVEL)
+            ST2     0,6(LEVEL)
+            ENT3    0,4
+            ST4     0,6(LINK)
+            J2NZ     A7A
+
+A7A         INC6    1
+            JMP     A2  
+A8          DEC4    1  * cleans up the stack
+1H          CMP6    =STACK+1=
+            JE      9F
+            LD2     -1,6(LINK)
+            ST4     0,2(SCOPE)
+
+            DEC6    1
+            JMP     1B
+
+9H          JMP     *
+
+
+ERROR       HLT
+
+SHOW_TABLE  STJ     9F
+
+            ENT1    0        
+            STZ     OUTBUF
+            STZ     OUTBUF+5
+            OUT     EMPTY(18)
+            OUT     EMPTY(18)
+            LDA     PREV_LBL 
+            STA     OUTBUF+2
+            LDA     SCOPE_LBL 
+            STA     OUTBUF+3
+            OUT     OUTBUF(18)
+
+1H          LDA     DATATABLE,1 
+            JAZ     9F
+            
+            ENTA    0,1
+            CHAR
+            STX     OUTBUF
+           
+            STZ     OUTBUF+2
+            LDA     DATATABLE,1(PREV)
+            JAZ     2F
+            DECA    DATATABLE
+            CHAR
+            STX     OUTBUF+2(2:5)
+
+2H          STZ     OUTBUF+3
+            LDA     DATATABLE,1(SCOPE)
+            JAZ     2F
+            DECA    DATATABLE
+            CHAR
+            STX     OUTBUF+3(2:5)
+
+2H          OUT     OUTBUF(18)
+
+            INC1    1
+            JMP     1B
+
+9H          JMP     *
+
+PRINT_HEADER STJ    9F
+             LDA    PREV_LBL
+             STA    OUTBUF+2
+             LDA    PARENT_LBL
+             STA    OUTBUF+3
+             LDA    PARENT_LBL+1
+             STA    OUTBUF+4
+             LDA    NAME_LBL
+             STA    OUTBUF+5 
+             LDA    CHILD_LBL
+             STA    OUTBUF+6
+             LDA    SIB_LBL
+             STA    OUTBUF+7(2:5)
+             OUT    OUTBUF(18)
+9H           JMP    *
+
+* I1 is the address of P0
+REFCHECK    STJ     9F 
+* Initialize
+B1          ENT1    REFERENCE
+            LD2     0,1(INFO) * we have the symtable index
+            LD2     SYMTABLE,2(LINK) * get the first child node
+            ENTA    0
+* load the datable ready for traversing (and the stack)
+B2          J2Z     PRINT_REF * we've gone through everything 
+            ENT6    STACK * Stack pointer
+            STZ     0,6
+            ENT3    DATATABLE  * first entry in datatable
+            ENT4    0,1
+* check if the node is in the tree
+B3          DEC3    0,2   * is our current node equal to the child node?
+            CMP3    =0=
+            INC3    0,2  * restore I3
+            JE      B5   * we have a match
+            JG      ERROR * we should not have a current node greater than child
+            CMP2    0,3(SCOPE)
+            JLE     B4
+* get to next tree
+            LD3     0,3(SCOPE)
+            INC3    1
+            JMP     B3
+* We're in the tree            
+B4          ST3     0,6 * push into the stack
+            INC6    1
+            INC3    1
+            JMP     B3
+* we have found the child node, now compare stack and parent reference
+* I4 is the reference and I6 is stack pointer
+B5          LD4     0,4(RLINK)
+            J4Z     B5A   * reference is empty, we have a complete match
+1H          CMP6    =STACK=
+            JE      B6   * stack is empty, go to next node 
+            LD5     0,4(INFO)
+            LD5     SYMTABLE,5
+* iterate through the prev links to see if we have a match
+2H          J5Z     3F  * we did not match this parent, pop the stack and try again          
+            CMP5    -1,6 * do we match the parent?
+            JE      B5B  * we found a match, go to next ref
+            LD5     0,5(PREV)
+            JMP     2B  * try the next node
+3H          DEC6    1
+            JMP     1B
+B5B         DEC6    1
+            JMP     B5
+B5A         JANZ    ERROR
+            ENTA    0,2  * save off A
+* go to the next child node
+B6          LD2     0,2(PREV)
+            JMP    B2
+
+PRINT_REF   JAZ     PRINT_NF
+            DECA    DATATABLE
+            CHAR
+            STX     OUTBUF 
+            JMP     8F
+PRINT_NF    LDA     NOT_FOUND
+            STA     OUTBUF
+            LDA     NOT_FOUND+1
+            STA     OUTBUF+1
+8F          OUT     OUTBUF(18)
+            STZ     OUTBUF
+            STZ     OUTBUF+1
+9H          JMP     *
+
+
+DATA        ORIG    *+16
+STACK       ORIG    *+20
+DATATABLE   ORIG    *+32
+SYMTABLE    ORIG    *+10
+
+PREV_LBL    ALF PREV
+PARENT_LBL  ALF   PARE
+            ALF NT
+NAME_LBL    ALF NAME
+CHILD_LBL   ALF CHILD
+SIB_LBL     ALF    SIB
+SCOPE_LBL   ALF SCOPE
+NOT_FOUND   ALF   NOT
+            ALF FOUND
+OUTBUF      ORIG *+24
+EMPTY       ORIG *+24
+REFERENCE   ORIG    *+5
+
+            END     MAIN

@@ -106,6 +106,14 @@
 
 12) Write Algorithm B with PREV/SCOPE links.
 
+    So we need to be able to walk through parent nodes given a node. I could do a linear scan of the data table tracking a stack to know what my parent is, but that's a lot of work. So, what can we do with our scope node?
+
+    So given a child node, we can figure out what tree it is (and what it's parents are) by the following: Look in the current tree (starting with first node in datatable). If the child node is in this tree (between addrses and scope), then recurse into the first child, keeping a stack of parents. If the child node is to the right go to the next child. Stop when you find the node, and then compare your stack to your reference list to see if they match.
+
+    Then go to the previous child node and try again, checking to see if you have found any matches or not.
+
+
+    See [referencecheck_scope.mixal](referencecheck_scope.mixal)
      
 13) Write Algorithm A with PREV/SCOPE links.
 
