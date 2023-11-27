@@ -145,4 +145,12 @@
 
     See [move_corresponding_scope.mixal](move_corresponding_scope.mixal).
 
-     
+15) Write Algorithm A with no external stack.
+
+    So the hint is that sibling nodes of what's on the stack are null, so I imagine this is very much something like trees where you use the sibling nodes as a stack. But we have to store the level as well, and I don't have enough space in there. So how can I know if we are in same level or not?
+
+    I could use the name as a storage of the level (and use the trick from exercise 10 to determine equivalence) and then do another linear scan to set the names at the end?
+
+    I've been using one index in as a name, but if I were using two (as the book intends), I could use one as a level and one as an offset into the symbol table (which should fit in one node, assuming less than 64 symbols).
+
+    I think I'm going to use the first idea (the one with the additional linear scan) at the end.  See [build_data_table_nostack.mixal](build_data_table_nostack.mixal) 

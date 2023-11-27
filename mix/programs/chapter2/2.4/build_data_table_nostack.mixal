@@ -83,24 +83,24 @@ LOAD_DATA   STJ     9F
 9H          JMP     *
 
 BUILD_TABLE STJ     9F
-A1          ENT6    STACK
-            STZ     0,6  * stack pointer
-            INC6    1
+A1          ENT6    0 
             ENT5    -1    * input pointer (L,P)
             ENT4    DATATABLE-2    * data table pointer (Q)
 A2          INC5    1
             INC4    2
             LDA     DATA,5 
-            JAZ     9F
+            JAZ     A8 
 A3          LD2     DATA,5(LINK)  * P
             LDA     0,2(LINK)
             STA     0,4(PREV)
             ST4     0,2(LINK)
             DEC2    SYMTABLE-1
-            ST2     0,4(NAME)
             INC2    SYMTABLE-1
-A4          LDA     -1,6(LEVEL)  * L1
-            LD2     -1,6(LINK)  * P1
+A4          ENTA    0
+            ENT2    0
+            J6Z     A6
+            LDA     0,6(NAME)
+            ENT2    0,6
             J2Z     A6
             CMPA    DATA,5(LEVEL)   * 
             JGE     A5
@@ -109,22 +109,47 @@ A4          LDA     -1,6(LEVEL)  * L1
 A5          CMPA    DATA,5(LEVEL)
             JL      ERROR  * 
             JE      A5A
-            DEC6    1
-            LDA     -1,6(LEVEL) * L1
+            ENT3    0,6
+            LD6     1,6(SIB)
+            STZ     1,3(SIB) 
+            LDA     0,6(NAME)
             JMP     A5
-A5A         LD2     -1,6(LINK)
+A5A         LD3     1,6(LINK)
+            ENT2    0,6
             ST4     1,2(SIB)
-            DEC6    1
-            LD2     -1,6(LINK)
+            ENT6    0,3
+            ENT2    0,6
 A6          ST2     0,4(PARENT)
             STZ     1,4(CHILD)
             STZ     1,4(SIB)
 A7          LD2     DATA,5(LEVEL)
-            ST2     0,6(LEVEL)
-            ST4     0,6(LINK)
-            INC6    1
+            ST6     1,4(SIB)
+            ST2     0,4(NAME)
+            ENT6    0,4
             JMP     A2
 
+A8          DEC4    2
+A8A         J6Z     A9 
+            LD3     1,6(SIB)
+            STZ     1,6(SIB)
+            ENT6    0,3
+            JMP     A8A
+
+
+A9          ENT1    SYMTABLE
+1H          LDA     0,1
+            JAZ     9F
+            LD2     0,1(LINK)
+2H          J2Z     3F
+
+            ENT3    0,1
+            DEC3    SYMTABLE-1
+            ST3     0,2(NAME)
+
+            LD2     0,2(PREV)
+            JMP     2B
+3H          INC1    1
+            JMP     1B
 9H          JMP     *
 
 ERROR       HLT
