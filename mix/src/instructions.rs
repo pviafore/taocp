@@ -222,7 +222,7 @@ fn to_opcode(val: u8) -> OpCode {
         2 => OpCode::SUB,
         3 => OpCode::MUL,
         4 => OpCode::DIV,
-        5 => OpCode::HaltNumChar,
+        5 => OpCode::Special,
         6 => OpCode::Shift,
         7 => OpCode::MOVE,
         8 => OpCode::LDA,
@@ -293,7 +293,7 @@ pub enum OpCode {
     SUB = 2,
     MUL = 3,
     DIV = 4,
-    HaltNumChar = 5,
+    Special = 5,
     Shift = 6,
     MOVE = 7,
     LDA = 8,
@@ -356,7 +356,7 @@ pub enum OpCode {
 
 pub fn str_to_opcode(line: &str) -> OpCode {
     match line {
-        "HLT" | "NUM" | "CHAR" => OpCode::HaltNumChar,
+        "HLT" | "NUM" | "CHAR" | "XOR" => OpCode::Special,
         "ADD" => OpCode::ADD,
         "SUB" => OpCode::SUB,
         "MUL" => OpCode::MUL,

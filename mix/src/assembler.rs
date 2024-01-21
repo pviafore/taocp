@@ -217,6 +217,7 @@ fn parse_address_string(op: &str, address_string: &str, line_index: usize, progr
     if spl.len() == 0 || spl[0] == "" {
         match op {
             "HLT" => (arch::HalfWord::new(), 0, 2),
+            "XOR" => (arch::HalfWord::new(), 0, 5),
             "NOP" => (arch::HalfWord::new(), 0, 0),
             "NUM" => (arch::HalfWord::new(), 0, 0),
             "CHAR" => (arch::HalfWord::new(), 0, 1),
@@ -340,6 +341,7 @@ fn _get_modifier(op: &str, spl: Vec<&str>, program_data: &ProgramData) -> u8 {
         "HLT" => 2,
         "NUM" => 0,
         "CHAR" => 1,
+        "XOR" => 5,
         "SLA" => 0,
         "SRA" => 1,
         "SLAX" => 2,
@@ -480,6 +482,7 @@ mod tests {
     #[test]
     fn test_to_instruction() {
         assert_eq!(to_instruction(" HLT", 0, &ProgramData::new()), arch::Word::from_values(true, 0,0,0,2,5));
+        assert_eq!(to_instruction(" XOR 100,1", 0, &ProgramData::new()), arch::Word::from_values(true, 1,36,1,5,5));
         assert_eq!(to_instruction(" NOP", 0, &ProgramData::new()), arch::Word::from_values(true, 0,0,0,0,0));
         assert_eq!(to_instruction(" ADD 100,1(2:5)", 0, &ProgramData::new()), arch::Word::from_values(true, 1,36,1,21,1));
         assert_eq!(to_instruction(" ADD 100", 0, &ProgramData::new()), arch::Word::from_values(true, 1,36,0,5,1));

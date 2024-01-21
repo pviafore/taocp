@@ -32,7 +32,7 @@ fn get_time_to_run(instruction: Instruction) -> u32{
         OpCode::STJ => 2,
         OpCode::STZ => 2,
         OpCode::Shift => 2,
-        OpCode::HaltNumChar => 10, // halt will actually not take any time at all since we stop
+        OpCode::Special => if instruction.modification() == 5 { 2 } else {10}, // halt will actually not take any time at all since we stop
         OpCode::MUL => 10,
         OpCode::DIV => 12,
         OpCode::MOVE => 1 + 2 * instruction.modification() as u32,

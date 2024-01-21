@@ -98,7 +98,7 @@ impl Computer {
             instructions::OpCode::SUB => Computer::sub,
             instructions::OpCode::MUL => Computer::mul,
             instructions::OpCode::DIV => Computer::div,
-            instructions::OpCode::HaltNumChar => Computer::halt_num_char,
+            instructions::OpCode::Special => Computer::special,
             instructions::OpCode::Shift => Computer::shift,
             instructions::OpCode::MOVE => Computer::mov,
             instructions::OpCode::LDA => Computer::loada,
@@ -448,10 +448,7 @@ impl Computer {
     }
 
     fn readmem(&self, instruction:Instruction) -> arch::Word {
-        let address = instruction.address().read() + self.get_offset(instruction.index_specification());
-        if address < 0 || address >= 4000 {
-            panic!("Address {} cannot be negative or out of range", address)
-        }
+        let address = self.get_indexed_address(instruction);
         let (l,r) = instruction.field_modifier();
         self.memory[address as usize].read_partial_as_word(l,r)
     }
@@ -877,7 +874,7 @@ impl Computer {
 
     }
 
-    fn halt_num_char(&mut self, instruction: Instruction) {
+    fn special(&mut self, instruction: Instruction) {
         if instruction.modification() == 2 {
             self.is_halted = true;
         }
@@ -911,6 +908,10 @@ impl Computer {
             self.registers.x.bytes[2] = arch::Byte::new(30 + ((value / 100) % 10) as u8);
             self.registers.x.bytes[3] = arch::Byte::new(30 + ((value / 10) % 10) as u8);
             self.registers.x.bytes[4] = arch::Byte::new(30 + (value  % 10) as u8);
+        }
+        else if instruction.modification() == 5 {
+            let address = self.get_indexed_address(instruction);
+            self.registers.a = arch::Word::from_value(self.registers.a.read() ^ self.memory[address as usize].read());
         }
         else {
             panic!("Unknown halt/num/char")
@@ -966,6 +967,15 @@ impl Computer {
             _ => panic!("Unknown index specifier {:?}", val)
         }
     }
+
+    pub fn get_indexed_address(&self, instruction: Instruction) -> i16 { 
+        let address = instruction.address().read() + self.get_offset(instruction.index_specification());
+        if address < 0 || address >= 4000 {
+            panic!("Address {} cannot be negative or out of range", address)
+        }
+        address
+    }
+
 
 }
 
@@ -2192,7 +2202,7 @@ mod tests {
     fn test_hlt() {
         let mut c = Computer::new();
         assert_eq!(c.is_halted, false);
-        c.run_command(Instruction::new(instructions::OpCode::HaltNumChar, 2, 0, arch::HalfWord::from_value(1000)));
+        c.run_command(Instruction::new(instructions::OpCode::Special, 2, 0, arch::HalfWord::from_value(1000)));
         assert_eq!(c.is_halted, true);
     }
 
@@ -2249,7 +2259,7 @@ mod tests {
         let mut c = Computer::new();
         c.registers.a = arch::Word::from_values(true, 0, 0, 31, 32, 39);
         c.registers.x = arch::Word::from_values(true, 37, 57, 47, 30, 30);
-        c.run_command(Instruction::new(instructions::OpCode::HaltNumChar, 0, 0, arch::HalfWord::from_value(0)));
+        c.run_command(Instruction::new(instructions::OpCode::Special, 0, 0, arch::HalfWord::from_value(0)));
         assert_eq!(c.registers.x, arch::Word::from_values(true, 37, 57, 47, 30, 30));
         assert_eq!(c.registers.a, arch::Word::from_value(12977700));
     }
@@ -2259,7 +2269,7 @@ mod tests {
         let mut c = Computer::new();
         c.registers.a = arch::Word::from_values(false, 11, 0, 27, 63, 57);
         c.registers.x = arch::Word::from_values(true, 4, 12, 41, 22, 34);
-        c.run_command(Instruction::new(instructions::OpCode::HaltNumChar, 0, 0, arch::HalfWord::from_value(0)));
+        c.run_command(Instruction::new(instructions::OpCode::Special, 0, 0, arch::HalfWord::from_value(0)));
         assert_eq!(c.registers.x, arch::Word::from_values(true, 4, 12, 41, 22, 34));
         assert_eq!(c.registers.a, arch::Word::from_value(-300));
     }
@@ -2269,7 +2279,7 @@ mod tests {
         let mut c = Computer::new();
         c.registers.a = arch::Word::from_value(-12977700);
         c.registers.x = arch::Word::from_values(false, 4, 12, 41, 22, 34);
-        c.run_command(Instruction::new(instructions::OpCode::HaltNumChar, 1, 0, arch::HalfWord::from_value(0)));
+        c.run_command(Instruction::new(instructions::OpCode::Special, 1, 0, arch::HalfWord::from_value(0)));
         assert_eq!(c.registers.a, arch::Word::from_values(false, 30, 30, 31, 32, 39));
         assert_eq!(c.registers.x, arch::Word::from_values(false, 37, 37, 37, 30, 30));
     }
@@ -2282,6 +2292,15 @@ mod tests {
         c.run_command(Instruction::new(instructions::OpCode::MUL, 5, 0, arch::HalfWord::from_value(2000)));
         c.run_command(Instruction::new(instructions::OpCode::MOVE, 60, 0, arch::HalfWord::from_value(2000)));
         assert_eq!(c.timer.get_time_to_run(), 134);
+    }
+
+    #[test]
+    fn test_xor() {
+        let mut c = Computer::new();
+        c.registers.a = arch::Word::from_value( 0b0110);
+        c.memory[0] = arch::Word::from_value(0b1100);
+        c.run_command(Instruction::new(instructions::OpCode::Special, 5, 0, arch::HalfWord::from_value(0)));
+        assert_eq!(c.registers.a, arch::Word::from_value(0b1010));
     }
 
 }
