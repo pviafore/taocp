@@ -1,0 +1,182 @@
+* Buddy Reserve
+TLINK           EQU     1:2
+LINKF           EQU     1:2
+LINKB           EQU     3:4
+KVAL            EQU     5:5
+
+
+
+MAIN            ORIG    100 
+
+                JMP     SETUP_MEMORY
+                JMP     SHOWBLOCKS
+
+                OUT     EMPTY(18)
+                OUT     EMPTY(18)
+
+                ENT6    8
+                JMP     RESERVE
+                JMP     SHOW_RESERVED
+                ENT6    3
+                JMP     RESERVE
+                JMP     SHOW_RESERVED
+                ENT6    5
+                JMP     RESERVE
+                JMP     SHOW_RESERVED
+                ENT6    5
+                JMP     RESERVE
+                JMP     SHOW_RESERVED
+
+                OUT     EMPTY(18)
+
+                JMP     SHOWBLOCKS
+
+                HLT
+
+
+* I6 is the k in 2^k for reservation
+* I1 is the out value for what the address will be
+RESERVE         STJ     9F
+                ENT1    0
+                ENT5    0,6  * will be k, I6 will be j
+* go until I6 finds a block that will fit
+R1              CMP6    =11=
+                JE      9F  * no blocks available
+
+                ENTA    AVAIL,6
+                CMPA    AVAIL,6(LINKB)
+                JNE     R2
+                INC6    1
+                JMP     R1
+
+R2              LD1     AVAIL,6(LINKB)     * L 
+                LD2     0,1(LINKB)   * P
+                ST2     AVAIL,6(LINKB)
+                STA     0,2(LINKF)
+                LDA     0,1(LINKF)
+                STA     0,1(TLINK)
+
+R3              DEC6    0,5 
+                J6Z     9F
+                INC6    0,5
+
+R4              DEC6    1
+                ENT2    0,1
+                LD3     POWERS_OF_2,6
+                INC2    0,3
+                ENN3    0,6
+                ST3     0,2
+                ST6     0,2(KVAL)
+
+                ENTA    AVAIL,6
+                STA     0,2(LINKF)
+                STA     0,2(LINKB)
+                ST2     AVAIL,6(LINKF)
+                ST2     AVAIL,6(LINKB)
+                JMP     R3
+
+9H              JMP     *
+
+SETUP_MEMORY    STJ     9F
+                ENTA    -10 * sets tag to one and kval to 19
+                STA     MEMORY
+
+                ENT1    10
+                ENTA    AVAIL,1
+                STA     MEMORY(LINKF)
+                STA     MEMORY(LINKB)
+                ENTA    MEMORY
+                STA     AVAIL,1(LINKF)
+                STA     AVAIL,1(LINKB)
+
+                ENT1    9
+SETUP_LOOP      ENTA    AVAIL,1 
+                STA     AVAIL,1(LINKF)
+                STA     AVAIL,1(LINKB)
+                DEC1    1
+
+                J1NN    SETUP_LOOP
+9H              JMP     *
+
+SHOWBLOCKS      STJ     9F
+                ENT1    0
+AVAILLOOP       LDA     MEMLBL 
+                STA     OUTBUF
+                LDA     MEMLBL+1
+                STA     OUTBUF+2
+
+                ENTA    0,1
+                CHAR
+                STX     OUTBUF+2(4:5)
+
+                ENT6    4
+
+                ENT2     AVAIL,1
+                CMP2     AVAIL,1(LINKF)
+                JE       2F
+                
+
+3H              LD2      0,2(LINKF)
+                ENTA     0,2
+                DECA     MEMORY
+                CHAR
+                STX      OUTBUF,6
+
+                CMP2     AVAIL,1(LINKB)
+                JE       2F
+                INC6     2
+                JMP      3B
+
+2H              OUT     OUTBUF(18)
+                JMP     CLEAR_OUT
+                INC1    1
+                CMP1    =11=
+                JNE     AVAILLOOP
+9H              JMP     *
+
+CLEAR_OUT       STJ     9F
+                ENT5    23
+1H              STZ     OUTBUF,5
+                DEC5    1
+                J5NN    1B
+9H              JMP     *
+
+
+SHOW_RESERVED   STJ     9F
+                LDA     RESERVE_LBL
+                STA     OUTBUF
+                LDA     RESERVE_LBL+1
+                STA     OUTBUF+1
+
+                ENTA    0,1
+                DECA    MEMORY
+                CHAR
+                STX     OUTBUF+3
+                OUT     OUTBUF(18)
+                JMP     CLEAR_OUT
+9H              JMP     *
+
+OUTBUF          ORIG *+24
+EMPTY           ORIG *+24
+AVAIL           ORIG *+11
+MEMORY          ORIG *+1024
+
+MEMLBL          ALF BLOCK
+                ALF 2**
+RESERVE_LBL     ALF RESER
+                ALF VED @
+
+POWERS_OF_2     CON 1
+                CON 2
+                CON 4
+                CON 8
+                CON 16 
+                CON 32 
+                CON 64 
+                CON 128 
+                CON 256 
+                CON 512 
+                CON 1024 
+
+                END MAIN
+

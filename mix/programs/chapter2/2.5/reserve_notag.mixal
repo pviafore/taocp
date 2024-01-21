@@ -1,0 +1,211 @@
+TSIZE           EQU     0:2
+SIZE            EQU     1:2
+LINK            EQU     4:5
+c               EQU     10
+MAIN            ORIG    100
+                JMP     SETUP_MEMORY
+                JMP     SHOW_BLOCKS
+                OUT     EMPTY(18)
+                OUT     EMPTY(18)
+
+                ENT6    5
+                JMP     RESERVE
+                ENT6    50
+                JMP     RESERVE
+                ENT6    160
+                JMP     RESERVE
+
+                JMP     SHOW_BLOCKS
+                HLT
+
+SETUP_MEMORY    STJ     9F
+                ENTA    MEMORY
+                STA     FREE(LINK)
+                ENTA    MEMORY
+                STA     MEMORY(LINK)
+* free blocks
+                ENTA    -26
+                STA     MEMORY(TSIZE) 
+                STA     MEMORY+25(TSIZE) 
+                ENTA    MEMORY+151
+                STA     MEMORY(LINK)
+                ENTA    FREE
+                STA     MEMORY+1(LINK)
+
+                ENTA    125
+                STA     MEMORY+26(TSIZE)
+
+                ENTA    -5
+                STA     MEMORY+151(TSIZE)
+                STA     MEMORY+155(TSIZE)
+                ENTA    MEMORY+201
+                STA     MEMORY+151(LINK)
+                ENTA    0
+                STA     MEMORY+152(LINK)
+
+                ENTA    45
+                STA     MEMORY+156(TSIZE)
+
+                ENTA    -100
+                STA     MEMORY+201(TSIZE)
+                STA     MEMORY+300(TSIZE)
+                ENTA    MEMORY+301
+                STA     MEMORY+201(LINK)
+                ENTA    MEMORY+151
+                STA     MEMORY+202(LINK)
+
+                ENTA    -100
+                STA     MEMORY+301(TSIZE)
+                STA     MEMORY+400(TSIZE)
+                ENTA    MEMORY+500
+                STA     MEMORY+301(LINK)
+                ENTA    MEMORY+201
+                STA     MEMORY+302(LINK)
+
+                ENTA    9
+                STA     MEMORY+401(TSIZE)
+                ENTA    10 
+                STA     MEMORY+410(TSIZE)
+                STA     MEMORY+420(TSIZE)
+                STA     MEMORY+430(TSIZE)
+                STA     MEMORY+440(TSIZE)
+                STA     MEMORY+450(TSIZE)
+                STA     MEMORY+460(TSIZE)
+
+                ENTA    30 
+                STA     MEMORY+470(TSIZE)
+
+
+                ENTA    -4
+                STA     MEMORY+500(TSIZE)
+                STA     MEMORY+503(TSIZE)
+                ENTA    MEMORY+506
+                STA     MEMORY+500(LINK)
+                ENTA    MEMORY+201
+                STA     MEMORY+501(LINK)
+
+                ENTA    2
+                STA     MEMORY+504(TSIZE)
+
+                ENTA    -245
+                STA     MEMORY+506(TSIZE)
+                STA     MEMORY+750(TSIZE)
+                ENTA    ENDMEM
+                STA     MEMORY+506(LINK)
+                ENTA    500
+                STA     MEMORY+507(LINK)
+                
+                ENTA    250
+                STA     MEMORY+750(TSIZE)
+                
+9H              JMP     *
+
+* I6 is the number of blocks to RESERVE
+* I5 will be the block that is reserved
+RESERVE         STJ     9F
+                LD1     FREE(LINK)
+1H              CMP1    =ENDMEM=
+                JE      9F
+COLLAPSE        LD2     0,1(SIZE)
+                INC2    0,1 * 2 is the next block now
+                LD3     0,2(TSIZE)
+                J3NN    CHECK_FIT
+
+                LDA     0,2(SIZE)
+                ADD     0,1(SIZE)
+                STA     0,1(SIZE)
+                LD3     0,2(LINK)  * build up list again
+                ST3     0,1(LINK) 
+                ST1     1,3(LINK)
+                JMP     COLLAPSE   * check if we can do it again
+CHECK_FIT       LDA     0,1(SIZE)
+                DECA    0,6
+                JANN    ALLOCATE
+                JMP     NEXT
+ALLOCATE        JAZ     ALLOCATE_ALL
+* A at this point is the amount of size left over
+                STA     0,1(SIZE)   * update smaller size
+                LD5     0,1(SIZE)
+                INC5    0,1
+                ST6     0,5(TSIZE)
+                JMP     9F
+ALLOCATE_ALL    ST6     0,1(TSIZE) * change tag to +
+                LD3     0,1(LINK)
+                LD4     1,1(LINK)
+                ST4     1,3(LINK)
+                ST3     0,4(LINK) * eliminate node 
+
+                ENT5    0,1
+                JMP     9F
+
+NEXT            LD1     0,1(LINK)
+                JMP     1B
+9H              JMP     *
+
+
+SHOW_BLOCKS     STJ     9F
+                LDA     FREE_LBL
+                STA     OUTBUF
+                OUT     OUTBUF(18)
+                OUT     EMPTY(18)
+                LD1     FREE(LINK)
+                JMP     SHOW_LIST
+                
+9H              JMP     *
+
+SHOW_LIST       STJ     9F
+1H              CMP1    =ENDMEM=
+                JE      9F
+
+                ENTA    0,1
+                DECA    MEMORY
+                CHAR
+                STX     OUTBUF
+
+                LDA     HYPHEN
+                STA     OUTBUF+1
+
+                ENTA    0,1
+                ADD     0,1(SIZE)
+                DECA    1
+                DECA    MEMORY
+                CHAR
+                STX     OUTBUF+2
+
+                OUT     OUTBUF(18)
+                STZ     OUTBUF+1
+                STZ     OUTBUF+2
+
+                LD1     0,1(LINK)
+                JMP     1B
+9H              JMP     *
+
+* Intended Blocks: 
+* 0-25: FREE
+* 26-150: In Use
+* 151-155: Free
+* 156-200: In Use
+* 201-400: Free
+* 401-499: In Use
+* 500-503: Free
+* 504-505: In Use
+* 506-750: Free
+* 751: In use
+AVAIL           CON     0
+FREE            CON     MEMORY
+                CON     0
+
+FREE_LBL        ALF FREE
+USED_LBL        ALF USED
+RSRV_LBL        ALF RESER
+                ALF VED
+AT_LBL          ALF   AT
+HYPHEN          ALF    -
+
+OUTBUF          ORIG *+24
+EMPTY           ORIG *+24
+MEMORY          ORIG    *+1000
+                CON     0
+ENDMEM          CON     3999
+
+            END     MAIN
