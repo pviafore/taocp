@@ -75,6 +75,7 @@ fn to_opcode_str(val: u8, modifier: u8) -> &'static str {
         (5, 0) => "NUM",
         (5, 1) => "CHAR",
         (5, 2) => "HALT",
+        (5, 5) => "XOR",
         (6, 0) => "SLA",
         (6, 1) => "SRA",
         (6, 2) => "SLAX",

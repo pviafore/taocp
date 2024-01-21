@@ -17,22 +17,37 @@ MAIN            ORIG    100
                 ENT6    8
                 JMP     RESERVE
                 JMP     SHOW_RESERVED
+                ST1     ALLOC_1
                 ENT6    3
                 JMP     RESERVE
                 JMP     SHOW_RESERVED
-                ENT6    5
+                ST1     ALLOC_2
+                ENT6    4
                 JMP     RESERVE
                 JMP     SHOW_RESERVED
-                ENT6    5
-                JMP     RESERVE
-                JMP     SHOW_RESERVED
+                ST1     ALLOC_3
+                JMP     SHOWBLOCKS
+                OUT     EMPTY(18)
+                OUT     EMPTY(18)
 
+                LD1     ALLOC_2
+                ENT2    3
+                JMP     LIBERATE
+                LD1     ALLOC_3
+                ENT2    4
+                JMP     LIBERATE
+                LD1     ALLOC_1
+                ENT2    8
+                JMP     LIBERATE
+                
                 OUT     EMPTY(18)
 
                 JMP     SHOWBLOCKS
 
-                HLT
-
+HALT            HLT
+ALLOC_1         CON  0
+ALLOC_2         CON  0
+ALLOC_3         CON  0
 
 * I6 is the k in 2^k for reservation
 * I1 is the out value for what the address will be
@@ -66,7 +81,6 @@ R4              DEC6    1
                 INC2    0,3
                 ENN3    0,6
                 ST3     0,2
-                ST6     0,2(KVAL)
 
                 ENTA    AVAIL,6
                 STA     0,2(LINKF)
@@ -74,6 +88,51 @@ R4              DEC6    1
                 ST2     AVAIL,6(LINKF)
                 ST2     AVAIL,6(LINKB)
                 JMP     R3
+
+9H              JMP     *
+
+*I1 is the location of the block to free
+*I2 is the size of k
+LIBERATE        STJ     9F
+S1              ENTA    0,1 
+                XOR     POWERS_OF_2,2
+                STA     *+1(0:2)
+                ENT3    *      * this is now P (the buddy)
+
+                CMP2    =10=
+                JE      S3
+                LDA     0,3
+                JAP     S3
+                CMP2    0,3(KVAL)
+                JNE     S3
+
+S2              LD4     0,3(LINKF)
+                LD5     0,3(LINKB)
+                ST4     0,5(LINKF)               
+
+                LD4     0,3(LINKF)
+                ST5     0,4(LINKB)
+
+                INC2    1
+                DEC3    0,1
+                J3P     S1
+                INC3    0,1
+                ENT1    0,3
+
+                JMP     S1
+
+S3              LDAN     0,1(1:5)
+                STA      0,1
+
+                LD4      AVAIL,2(LINKF) * P
+                ST4      0,1(LINKF)
+                ST1      0,4(LINKB)
+                ST2      0,1(KVAL) 
+
+                ENT4     AVAIL,2
+                ST4      0,1(LINKB)
+                ST1      AVAIL,2(LINKF)
+
 
 9H              JMP     *
 
@@ -159,6 +218,7 @@ SHOW_RESERVED   STJ     9F
 OUTBUF          ORIG *+24
 EMPTY           ORIG *+24
 AVAIL           ORIG *+11
+                ORIG 1024
 MEMORY          ORIG *+1024
 
 MEMLBL          ALF BLOCK

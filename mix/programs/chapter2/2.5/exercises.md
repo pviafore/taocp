@@ -148,3 +148,12 @@ You need to remove links arbitrarily, and when you add them back in, you don't n
 27) Write a mix program for Algorithm R and measure it's running time.
 
     See [buddy-reserve.mixal](buddy-reserve.mixal)
+
+
+    Running time is (assuming that you have n blocks to split above you):
+
+    28u + 31u*n
+
+28) Write a MIX program for Algorithm S.
+
+    See [buddy-liberate.mixal](buddy-liberate.mixal)
