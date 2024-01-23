@@ -1,0 +1,231 @@
+TSIZE           EQU     0:2
+SIZE            EQU     1:2
+T               EQU     3:3
+LINK            EQU     0:2
+INFO            EQU     4:5
+
+
+MAIN                ORIG    100
+                    JMP     SETUPMEMORY
+                    JMP     COLLECT_COMPACT
+                    JMP     SHOW_MEMORY
+                    HLT
+
+SETUPMEMORY         STJ     9F
+                    ENTA    1
+                    STA     MEMORY+1(T)
+                    STA     MEMORY+2(INFO)
+                    STA     MEMORY+3(T)
+
+                    ENTA    2
+                    STA     MEMORY+1(SIZE)
+                    STA     MEMORY+6(SIZE)
+                    STA     MEMORY+4(INFO)
+                    STA     MEMORY+8(T)
+
+                    ENTA    3
+                    STA     MEMORY+3(SIZE)
+                    STA     MEMORY+5
+                    STA     MEMORY+8(LINK)
+                    STA     MEMORY+10(LINK)
+
+                    ENTA    4
+                    STA     MEMORY+7
+
+                    ENTA    5
+                    STA     MEMORY+9(INFO)
+                    ENTA    6
+                    STA     MEMORY+10(INFO)
+                    STA     MEMORY+2(LINK)
+
+                    ENTA    8
+                    STA     MEMORY+4(LINK)
+                    STA     MEMORY+9(LINK)
+
+9H                  JMP     *
+
+COLLECT_COMPACT     STJ     9F
+                    ENT1    1
+CLEAR_ALL           CMP1    SENTINEL
+                    JE      WALK_USED
+
+                    LD3N    MEMORY,1(SIZE)
+                    ST3     MEMORY,1(TSIZE)   * mark it as negative
+                    DEC1    0,3  * this advances the I1 to the next block
+                    JMP     CLEAR_ALL
+                    
+WALK_USED           LD1     USE   * what we'll walk
+                    INC1    MEMORY
+                    ENT2    AVAIL  * stack for nodes to mark (if this runs out of space, you'll have to do the stack in-tree)
+                    ST1     0,2
+                    INC2    1
+WALK_LOOP           CMP2    =AVAIL=
+                    JE      COMPACT  * no more nodes in use
+                    LD1     -1,2 
+                    DEC2    1
+                    LDA     0,1(SIZE)
+                    STA     0,1(TSIZE) * write a positive size
+
+                    LD3     0,1(T)  * number of link fields                    
+1H                  J3Z     NEXT_WALK
+                    ENT4    0,3
+                    INC4    0,1
+
+                    LD5     0,4(LINK)
+                    INC5    MEMORY
+                    LDA     0,5(TSIZE)
+                    JAP     2F * already marked, do not add to stack
+
+                    ST5     0,2 * add to stack
+                    INC2    1
+
+2H                  DEC3    1  * for next iteration
+                    JMP     1B
+
+NEXT_WALK           JMP     WALK_LOOP
+
+* I6 is the current block
+* I1 is the current free block to move to
+COMPACT             ENT1 0
+                    ENT6 1
+COMPACT_LOOP        CMP6 SENTINEL 
+                    JE   COMPACT_DONE 
+
+                    LDA  MEMORY,6(SIZE)
+                    STA  TEMP
+                    LDA  MEMORY,6(TSIZE)
+                    JAP  SHIFT_LEFT
+FREE_BLK            J1NZ NEXT_COMPACT
+                    ENT1 0,6  * mark the empty block
+                    JMP  NEXT_COMPACT
+
+SHIFT_LEFT          J1Z  NEXT_COMPACT
+                    ENT5 0
+                    ENTX 0,1 * save this off as start of new block
+                    LD4  MEMORY,6(SIZE)
+                    ENT3 0,6
+                    INC3 0,4 * next block
+1H                  ENT4  MEMORY,6 
+                    INC4  0,5
+                    LDA  0,4 * word from current block 
+                    ENT4  MEMORY,1
+                    STA   0,4 * write block
+
+
+                    INC1 1 
+                    INC5 1
+                    CMP5 TEMP 
+                    JNE  1B 
+
+UPDATE_NEXT_LINKS   ENT2  0,3 * start at current block and move forward
+UPDATE_NEXT_LOOP    CMP2  SENTINEL
+                    JE    UPDATE_PREV_LINKS
+
+                    LDA   MEMORY,2(TSIZE)
+                    JAN   2F
+
+                    LD3   MEMORY,2(T) * number of links
+1H                  J3Z   2F
+
+                    ENT4  MEMORY,2
+                    INC4  0,3
+                    LDA   0,4(LINK)
+                    DECA  0,6
+                    JANZ   3F * check to see if we are equal
+
+                    STX   0,4(LINK) * store the new block
+                     
+3H                  DEC3  1
+                    JMP   1B
+
+2H                  LD5    MEMORY,2(SIZE)
+                    INC2   0,5
+                    JMP    UPDATE_NEXT_LOOP
+
+UPDATE_PREV_LINKS   ENT2   1  * start at start of list and go until you hit current
+UPDATE_PREV_LOOP    LD3    TEMP
+                    INCX   0,3
+                    DECX   0,2
+                    JXZ    NEXT_COMPACT
+                    INCX   0,2
+                    DECX   0,3
+
+                    LDA   MEMORY,2(TSIZE)
+                    JAN   2F
+
+                    LD3   MEMORY,2(T) * number of links
+1H                  J3Z   2F
+
+                    ENT4  MEMORY,2
+                    INC4  0,3
+                    LDA   0,4(LINK)
+                    DECA  0,6
+                    JANZ   3F * check to see if we are equal
+
+                    STX   0,4(LINK) * store the new block
+                     
+3H                  DEC3  1
+                    JMP   1B
+
+2H                  LD5    MEMORY,2(SIZE)
+                    INC2   0,5
+                    JMP    UPDATE_PREV_LOOP
+
+
+NEXT_COMPACT        LD4  TEMP
+                    INC6 0,4 * advance to next block
+                    JMP  COMPACT_LOOP
+COMPACT_DONE        ST1  AVAIL
+                    ENTA 1
+                    STA  USE
+9H                  JMP     *
+
+SHOW_MEMORY         STJ   9F
+                    ENT1  1 
+1H                  JMP   SHOW_BLOCK
+                    INC1  1
+                    CMP1  SENTINEL
+                    JNE  1B
+                    
+9H                  JMP   *
+TEMP                CON   0
+
+SHOW_BLOCK          STJ   9F
+                    ENTA  0,1
+                    CHAR  
+                    STX   OUTBUF
+
+                    STZ   OUTBUF+2
+                    LDA   MEMORY,1
+                    JANN  1F
+                    LDA   MINUS
+                    STA   OUTBUF+2
+
+1H                  LDA   MEMORY,1(1:1)
+                    CHAR
+                    STX   OUTBUF+3
+                    
+                    LDA   MEMORY,1(2:2)
+                    CHAR
+                    STX   OUTBUF+5
+                    LDA   MEMORY,1(3:3)
+                    CHAR
+                    STX   OUTBUF+7
+                    LDA   MEMORY,1(4:4)
+                    CHAR
+                    STX   OUTBUF+9
+                    LDA   MEMORY,1(5:5)
+                    CHAR
+                    STX   OUTBUF+11
+                    OUT   OUTBUF(18)
+
+9H                  JMP   *
+
+MEMORY              ORIG *+20
+AVAIL               CON   11
+SENTINEL            CON   11
+USE                 CON   3
+OUTBUF              ORIG  *+24
+PLUS                ALF      +
+MINUS               ALF      -
+                    END      MAIN

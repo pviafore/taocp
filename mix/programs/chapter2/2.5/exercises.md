@@ -157,3 +157,45 @@ You need to remove links arbitrarily, and when you add them back in, you don't n
 28) Write a MIX program for Algorithm S.
 
     See [buddy-liberate.mixal](buddy-liberate.mixal)
+
+29) Could the buddy system do without the tag bit in the reserved block
+
+    Yup, but when collapsing buddies, you won't be able to tell if your buddy is free or not. You'll have to walk the list, which could be quite a lot for smaller values of k.
+
+    Given that you have n collapses, running time is 
+
+    There is a base cost of 11-14u to check if you have an available buddy
+
+    To return to the list, you have 18u. Then if you do have a buddy, you have to do n*16u in the worst case.
+
+30) I am not planning on doing a statistical analysis of running time.
+
+31) Can storage allocation use the buddy system like Fibonacci numbers instead of binary.
+
+    Without doing a lot of simulation, I'm curious how this goes. You have slightly slower exponential growth (around 1.613 instead of 2), so you'll have more buckets than a powers-of-2 buddy. THis means the lists might not be as deep, but it 's not like we do a lot of searching anyway. 
+
+    In order to make this work, you have to know how to split the block, and how to collapse a buddy. I suggest a lookup table given a fibonacci number, what is it's next and what is it's previous. Then, you can always split a node by looking at hte next two smaller numbers, (rather than power of 2). To collapse, you'd have to know which "half" of the buddy you are. If space is at a premium, you could use the "+/-" as which half you are, and search for the opposite buddy in the appropriate list (where the less-deep lists will come into play).
+
+32) Not only do I know know how to calculate this, I don't even know why this problem is related to the chapter.
+
+33) Create the garbage collection and compact algorithm.
+
+    So, first, we have to distinguish which nodes are free and which are in use. We can go through all of the blocks and tag them as negative. Then, we can traverse the use list with a BFS and mark the nodes in use as positive. 
+
+    The next trick will be to compact the garbage collection. Now, we can start at node 1 and do the following:
+
+    If the current node is empty, then go until we have found the next in use node. Move that node to the empty node.
+
+    Now we have the problem of updating links. I have no idea how to do this other than a linear scan of the list and updating it. 
+
+    See [collect-compact.mixal](collect-compact.mixal)
+
+34) See above.
+
+
+    Note, I missed that LINK was in the first word too, so I just used the tag bit and an external stack. I don't think that greatly changes the meaning of the code.
+
+    My code is unfortunately quadratic, as for each node that you move to the left, you have a linear scan to update links (you don't update links as you go). Knuth uses the link tag I forgot about to create a lookup for where you're moving, so there is no scan. His is a linear search.
+
+    My running time is: 
+
