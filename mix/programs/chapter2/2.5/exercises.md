@@ -197,5 +197,45 @@ You need to remove links arbitrarily, and when you add them back in, you don't n
 
     My code is unfortunately quadratic, as for each node that you move to the left, you have a linear scan to update links (you don't update links as you go). Knuth uses the link tag I forgot about to create a lookup for where you're moving, so there is no scan. His is a linear search.
 
-    My running time is: 
+    My running time (worst-case) is: 
 
+    * 2 for the entry
+    * 9 for each of the n blocks to mark as negative
+    * 7 + 14n + 12m, where m is the total number of links for marking use
+    * 2 + 14n + 7j + 12k, where j is the number of in-use blocks and k is the size of in-use blocks for shifting
+    * 12n + 22mn  for updating links 
+    * 6 for updating variables at the end
+
+    for a total of 17 + 49n + 22mn + 12m + 7j + 12k.
+
+35) Compare and contrast this chapter with the dynamic table reallocation in 2.2.2
+
+    In that example, we had multiple sequential tables that would automatically shrink or grow as their usage waned. This dynamic allocation can let the tables grow by allocating new tables, rearranging, and so on, with an always compacting memory layout. Thus, tables wouldn't have to do a lot of the boundary growing/shrinking while worrying about other tables. In fact, this reminds me a lot more of what a std::vector might do in C++.
+
+36) If you have 23 seats, and you can sit one or two people at a time, prove that you can always seat someone as long as a single person does not sit in n mod 3 == 2 and that there are not 16 people there.
+
+    She would have to do the following arrangement: Seat doubles of people in mod3 =1 and mod3 = 2. Fill up as many pairs as you can as they come in. Once a single person comes in, put them in the next spot where you can fit a block at 0,6,12 or 18 as 1-2-1-2 or 2-1-2-1. This way, you always have a way to fill singles in, and you never run the risk of fragmenting with a 1-0-1-0 quadruplet (since you inherently waste space here). The goal is that for any sextet, you either have enough space to seat someone, or there has to be at least 2 wide somewhere else for a double to single person to sit down in.
+
+    You have enough space for doubles, but what if 16 singles come in? In this case, you have 8 people seated, and you need 8 more seats. Make the 1-0-0-0-0-1 sextet into a 1-0-1-1-0-1 way of handling it. Now, if any one person leaves, you have room for a double to come in.  
+
+    I know that wasn't super clear, but I think as long as you have the middle seat always reserved for a double, you would be fine.
+
+37) Why does this not work with 22 seats?
+
+    If you assign people to the mod 3 = 0 and mod 3 = 2 seats, then you can fit 15 singles at this point (using 1-indices - 1,3,4,6,7,9,10,12,13,15,16,18,19,21,22)
+
+    However, even if you have 14, you can get into a case where 22 is the seat that is not taken, and a pair can walk in, and have nowhere to sit.
+
+38) Determine N(n,2) N(16,2) = 23.
+
+    So if you have this value 2, you can always extend the 1,0,1 pattern. For every block of 3, you allocate 2 seats, so this means you have n/2*3 seats, and you need on less than this, because you just need to fill a double, and you don't need all 3 seats for that.
+
+39) Requires higher math, I'm not sure how I would solve this.
+
+40) An unsolved problem with figuring out N(3) and N(4), and requires math that I don't grasp -> I don't know where to start, so skip.
+
+41) Prove that the worst case of buddy system cannot be worse than 1 + 1/2 r memory, where r is the alloation in $2^{r+1}$ reservations. 
+
+    I am not sure I can prove it, but what I can tell from the text is that you will never collapse the memory. There is always a block at a index of a power of 2. This means that you will not be able to fit blocks in as you keep re-reserving, as there just isn't enough memory to fit. For a block of 2^r+2 of memory, you have to essentially prove that all the blocks you couldn't re-reserve fit into half the memory space past the original boundary.
+
+42-44) Very very mathy and I don't understand them.
